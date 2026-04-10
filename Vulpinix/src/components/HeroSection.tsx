@@ -20,7 +20,13 @@ export function HeroSection() {
   }, []);
 
   const handleGetStarted = () => {
-    navigate(localStorage.getItem("userInfo") ? "/upload" : "/signup");
+    const isAuthenticated = !!localStorage.getItem("userInfo") || localStorage.getItem("isAuthenticated") === "true";
+    if (isAuthenticated) {
+      navigate("/upload");
+    } else {
+      const isReturning = !!localStorage.getItem("userEmail") || !!localStorage.getItem("returningUser");
+      navigate(isReturning ? "/login" : "/signup");
+    }
   };
 
   const getUserInitials = () => {

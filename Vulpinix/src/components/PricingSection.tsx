@@ -7,15 +7,12 @@ export function PricingSection() {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    // Check if user is already logged in
-    const savedUserInfo = localStorage.getItem("userInfo");
-    
-    if (savedUserInfo) {
-      // User is logged in, go directly to upload page
+    const isAuthenticated = !!localStorage.getItem("userInfo") || localStorage.getItem("isAuthenticated") === "true";
+    if (isAuthenticated) {
       navigate("/upload");
     } else {
-      // New user, go to auth page
-      navigate("/auth");
+      const isReturning = !!localStorage.getItem("userEmail") || !!localStorage.getItem("returningUser");
+      navigate(isReturning ? "/login" : "/signup");
     }
   };
 

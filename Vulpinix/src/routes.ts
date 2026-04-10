@@ -11,7 +11,9 @@ import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import BlogsPage from "./pages/BlogsPage";
-
+import CampaignsDashboardPage from "./pages/CampaignsDashboardPage";
+import CampaignAnalyticsPage from "./pages/CampaignAnalyticsPage";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -68,6 +70,18 @@ export const router = createBrowserRouter([
       {
         path: "blogs",
         Component: BlogsPage,
+      },
+      {
+        path: "dashboard/campaigns",
+        Component: CampaignsDashboardPage,
+      },
+      {
+        path: "dashboard/campaigns/:id/analytics",
+        Component: CampaignAnalyticsPage,
+      },
+      {
+        path: "admin",
+        Component: AdminDashboard,
       },
     ],
   },

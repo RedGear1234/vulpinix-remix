@@ -24,6 +24,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { toast } from "sonner@2.0.3";
+import PaymentSuccessModal from "../components/PaymentSuccessModal";
 
 type PaymentMethod = "upi" | "card" | "wallet" | null;
 
@@ -31,7 +32,8 @@ export default function PaymentPage() {
   const navigate = useNavigate();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   // OTP state
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otp, setOtp] = useState("");
@@ -212,41 +214,91 @@ export default function PaymentPage() {
     }
 
     setIsProcessing(true);
-    
+
     // Simulate payment processing
     setTimeout(() => {
       setIsProcessing(false);
-      
-      // Save campaign to localStorage as "in review"
+
+      // Get saved user info for business name
+      const savedUserInfo = localStorage.getItem("userInfo");
+      const userInfo = savedUserInfo ? JSON.parse(savedUserInfo) : {};
+
+      // Get saved ad preview image
+      const savedAdImage = localStorage.getItem("adPreviewImage") || null;
+
+      // Build enriched campaign object
       const newCampaign = {
         id: Date.now().toString(),
+        businessName: userInfo.company || userInfo.name || "My Business",
+        userEmail: userInfo.email || localStorage.getItem("userEmail") || "No email provided",
+        userName: userInfo.name || "Anonymous User",
+        adImage: savedAdImage,
         name: campaignData.name,
         platforms: campaignData.platforms,
         budget: campaignData.budget,
-        status: "review",
-        createdAt: new Date().toISOString().split('T')[0],
+        budgetType: campaignData.budgetType,
+        duration: campaignData.duration,
+        locations: campaignData.locations,
+        audience: campaignData.audience,
+        languages: campaignData.languages,
+        estimatedReach: campaignData.estimatedReach,
+        status: "pending" as const,
+        dateSubmitted: new Date().toISOString().split("T")[0],
         paymentMethod: selectedMethod,
+        rejectionReason: "",
+        analytics: {
+          impressions: 0,
+          reach: 0,
+          clicks: 0,
+          ctr: 0,
+          conversions: 0,
+          adSpend: 0,
+          roas: 0,
+        },
       };
 
-      // Get existing campaigns
-      const existingCampaigns = localStorage.getItem("userCampaigns");
-      const campaigns = existingCampaigns ? JSON.parse(existingCampaigns) : { inReview: [], history: [] };
-      
-      // Add to in-review campaigns
-      campaigns.inReview.push(newCampaign);
-      
-      // Save back to localStorage
+      // Get existing campaigns array (supports both old and new format)
+      const existingRaw = localStorage.getItem("userCampaigns");
+      let campaigns: typeof newCampaign[] = [];
+      if (existingRaw) {
+        const parsed = JSON.parse(existingRaw);
+        // Handle legacy { inReview, history } format
+        if (Array.isArray(parsed)) {
+          campaigns = parsed;
+        } else {
+          const legacy = [...(parsed.inReview || []), ...(parsed.history || [])];
+          campaigns = legacy.map((c: Record<string, unknown>) => ({
+            ...newCampaign,
+            ...c,
+            status: (c.status === "review" ? "in_review" : c.status) as "pending" | "in_review" | "approved" | "rejected",
+          }));
+        }
+      }
+      campaigns.unshift(newCampaign);
       localStorage.setItem("userCampaigns", JSON.stringify(campaigns));
-      
-      toast.success("Congratulations! Payment Successful 🎉", {
-        description: "Your payment has been done successfully and your ad is in review. Please wait for 12 hours for approval.",
-        duration: 6000,
+
+      // Seed a demo admin notification
+      const existingNotifs = localStorage.getItem("adminNotifications");
+      const notifs = existingNotifs ? JSON.parse(existingNotifs) : [];
+      const hasWelcomeNotif = notifs.some((n: { type: string }) => n.type === "submission_received");
+      if (!hasWelcomeNotif) {
+        notifs.unshift({
+          id: Date.now().toString(),
+          type: "submission_received",
+          message: "✅ We received your campaign submission! Our team will review it within 12 hours.",
+          timestamp: new Date().toISOString(),
+          dismissed: false,
+        });
+        localStorage.setItem("adminNotifications", JSON.stringify(notifs));
+      }
+
+      toast.success("Payment Successful! 🎉", {
+        description: "Your campaign is submitted for review.",
+        duration: 4000,
       });
-      
-      // Navigate to profile to see the campaign
-      setTimeout(() => {
-        navigate('/profile');
-      }, 2000);
+
+      // Show modal — no auto-redirect
+      setShowSuccessModal(true);
     }, 2000);
   };
 
@@ -276,6 +328,11 @@ export default function PaymentPage() {
   };
 
   return (
+    <>
+    <PaymentSuccessModal
+      isOpen={showSuccessModal}
+      onConfirm={() => navigate("/dashboard/campaigns")}
+    />
     <motion.div
       initial={{ opacity: 0, x: 100 }}
       animate={{ opacity: 1, x: 0 }}
@@ -852,5 +909,6 @@ export default function PaymentPage() {
         </div>
       </footer>
     </motion.div>
+    </>  
   );
 }
