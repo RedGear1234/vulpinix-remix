@@ -1,5 +1,5 @@
 import { Button } from "./ui/button";
-import { Play, Instagram, Facebook, Linkedin, Twitter, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload, User, Volume2, Maximize2 } from "lucide-react";
+import { Play, Instagram, Facebook, Linkedin, Twitter, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload, User, Volume2, Maximize2, RotateCcw, RotateCw, Pause } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../hooks/useTheme";
@@ -16,10 +16,83 @@ export function HeroSection() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [barsReady, setBarsReady] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (showDemo && videoRef.current) {
+      videoRef.current.play();
+      setIsPlaying(true);
+    }
+  }, [showDemo]);
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = Number(e.target.value);
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (videoRef.current) {
+      if (!document.fullscreenElement) {
+        videoRef.current.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  const skip = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime += seconds;
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+  };
 
   useEffect(() => {
     const savedUserInfo = localStorage.getItem("userInfo");
@@ -128,8 +201,27 @@ export function HeroSection() {
         .anim-pulse { animation: pulse-subtle 3s ease-in-out infinite; }
         
         .vx-video-container video::-webkit-media-controls {
-          background-color: rgba(0,0,0,0.5);
-          backdrop-filter: blur(10px);
+          display: none !important;
+        }
+
+        .vx-progress-slider {
+          -webkit-appearance: none;
+          width: 100%;
+          height: 3px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 5px;
+          outline: none;
+          cursor: pointer;
+        }
+        .vx-progress-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 12px;
+          height: 12px;
+          background: #fff;
+          border-radius: 50%;
+          cursor: pointer;
+          border: 2px solid #a78bfa;
         }
       `}</style>
       {/* ══════════ NAVBAR ══════════ */}
@@ -463,12 +555,9 @@ export function HeroSection() {
                 display: "flex", justifyContent: "space-between", alignItems: "center"
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(167, 139, 250, 0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Sparkles size={20} color="#a78bfa" />
-                  </div>
+                  <VulpinixLogo size="sm" />
                   <div>
                     <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", margin: 0 }}>Vulpinix AI Guide</h3>
-                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", margin: 0 }}>Watch in High Definition</p>
                   </div>
                 </div>
                 
@@ -488,32 +577,83 @@ export function HeroSection() {
               </div>
 
               {/* Video Player */}
-              <div style={{ width: "100%", background: "#000", flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: "100%", background: "#000", flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
                 <video
                   ref={videoRef}
                   src={demoVideo}
                   autoPlay
-                  controls
                   playsInline
+                  onTimeUpdate={handleTimeUpdate}
+                  onLoadedMetadata={handleLoadedMetadata}
+                  onClick={togglePlay}
                   style={{
                     width: "100%",
-                    maxHeight: "75vh", // Limit height to keep it sharp and fitting
+                    maxHeight: "75vh",
                     display: "block",
-                    objectFit: "contain"
+                    objectFit: "contain",
+                    cursor: "pointer"
                   }}
                 />
+
+                {/* Custom Controls Overlay */}
+                <div style={{
+                  position: "absolute", bottom: 0, left: 0, right: 0,
+                  background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
+                  padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "center"
+                }}>
+                  {/* Bottom Center Controls */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+                    <button 
+                      onClick={() => skip(-10)} 
+                      style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.8, transition: "opacity 0.2s" }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+                      onMouseLeave={e => e.currentTarget.style.opacity = "0.8"}
+                    >
+                      <RotateCcw size={18} />
+                    </button>
+
+                    <button 
+                      onClick={togglePlay} 
+                      style={{ background: "#fff", border: "none", color: "#000", cursor: "pointer", width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", transition: "transform 0.2s" }}
+                      onMouseEnter={e => e.currentTarget.style.transform = "scale(1.1)"}
+                      onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                    >
+                      {isPlaying ? <Pause size={18} fill="#000" /> : <Play size={18} fill="#000" style={{ marginLeft: 2 }} />}
+                    </button>
+
+                    <button 
+                      onClick={() => skip(10)} 
+                      style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.8, transition: "opacity 0.2s" }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+                      onMouseLeave={e => e.currentTarget.style.opacity = "0.8"}
+                    >
+                      <RotateCw size={18} />
+                    </button>
+                  </div>
+
+                  {/* Bottom Right Controls */}
+                  <div style={{
+                    position: "absolute", bottom: 16, right: 32,
+                    display: "flex", alignItems: "center", gap: 16
+                  }}>
+                    <button onClick={toggleMute} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", opacity: 0.8 }}>
+                      {isMuted ? <span style={{fontSize: 16}}>🔇</span> : <Volume2 size={18} />}
+                    </button>
+                    
+                    <button onClick={toggleFullscreen} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", opacity: 0.8 }}>
+                      <Maximize2 size={18} />
+                    </button>
+                  </div>
+
+                  {/* Time info tucked in corner */}
+                  <div style={{ position: "absolute", bottom: 26, left: 32, fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </div>
+                </div>
               </div>
 
               {/* Footer Info */}
-              <div style={{ padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0a0c14", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                <div style={{ display: "flex", gap: 24 }}>
-                   <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
-                     <Volume2 size={16} /> HD Stereo
-                   </div>
-                   <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
-                     <Maximize2 size={16} /> 1080p Crystal Clear
-                   </div>
-                </div>
+              <div style={{ padding: "20px 32px", display: "flex", justifyContent: "flex-end", alignItems: "center", background: "#0a0c14", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
                 <button
                    onClick={() => { setShowDemo(false); navigate("/upload"); }}
                    style={{ padding: "12px 28px", borderRadius: 12, background: "#fff", color: "#000", border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "transform 0.2s" }}
