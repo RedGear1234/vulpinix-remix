@@ -100,6 +100,9 @@ export function IntegrationsSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
+            <div style={{ color: "var(--vx-text-muted)", fontSize: 12, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 12 }}>
+              How it's done
+            </div>
             <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 800, color: "var(--vx-text-primary)", marginBottom: 20, letterSpacing: "-0.02em" }}>
               One Hub, Every Platform
             </h2>

@@ -5,6 +5,8 @@ import { WorkflowSection } from "../components/WorkflowSection";
 import { AnalyticsSection } from "../components/AnalyticsSection";
 import { IntegrationsSection } from "../components/IntegrationsSection";
 import { PricingSection } from "../components/PricingSection";
+import { TestimonialsSection } from "../components/TestimonialsSection";
+import { ContactSection } from "../components/ContactSection";
 import { Footer } from "../components/Footer";
 
 export default function LandingPage() {
@@ -21,7 +23,9 @@ export default function LandingPage() {
       <IntegrationsSection />
       <WorkflowSection />
       <AnalyticsSection />
+      <TestimonialsSection />
       <PricingSection />
+      <ContactSection />
       <Footer />
     </motion.div>
   );

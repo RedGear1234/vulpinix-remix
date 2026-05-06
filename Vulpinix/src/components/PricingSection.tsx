@@ -51,11 +51,14 @@ export function PricingSection() {
         <div className="vx-reveal" style={{ textAlign: "center", marginBottom: 50 }}>
           <div style={{ color: "var(--vx-text-muted)", fontSize: 12, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 14 }}>Pricing</div>
           <h2
-            className="vx-heading-underline"
+            className="vx-heading"
             style={{ fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 800, color: "var(--vx-text-primary)", display: "inline-block" }}
           >
             Choose Your Plan
           </h2>
+          <p style={{ color: "var(--vx-text-secondary)", fontSize: 18, maxWidth: 600, margin: "0 auto", lineHeight: 1.6 }}>
+            Choose the perfect plan to grow and manage your social media with ease.
+          </p>
         </div>
 
         {/* Cards */}
