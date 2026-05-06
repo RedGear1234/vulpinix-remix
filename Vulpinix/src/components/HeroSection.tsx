@@ -1,9 +1,12 @@
 import { Button } from "./ui/button";
-import { Play, Instagram, Facebook, Linkedin, Twitter, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload, User } from "lucide-react";
+import { Play, Instagram, Facebook, Linkedin, Twitter, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload, User, Volume2, Maximize2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../hooks/useTheme";
 import { VulpinixLogo } from "./VulpinixLogo";
+import { motion, AnimatePresence } from "framer-motion";
+
+const demoVideo = "/watch_demo/demo.mp4";
 
 export function HeroSection() {
   const navigate = useNavigate();
@@ -12,9 +15,11 @@ export function HeroSection() {
   const [scrolled, setScrolled]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showDemo, setShowDemo] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [barsReady, setBarsReady] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const savedUserInfo = localStorage.getItem("userInfo");
@@ -121,6 +126,11 @@ export function HeroSection() {
         .anim-badge-2 { animation: float-badge-2 6.5s ease-in-out infinite 1.2s; }
         .anim-badge-3 { animation: float-badge-3 6s ease-in-out infinite 2s; }
         .anim-pulse { animation: pulse-subtle 3s ease-in-out infinite; }
+        
+        .vx-video-container video::-webkit-media-controls {
+          background-color: rgba(0,0,0,0.5);
+          backdrop-filter: blur(10px);
+        }
       `}</style>
       {/* ══════════ NAVBAR ══════════ */}
       <nav style={{
@@ -314,6 +324,7 @@ export function HeroSection() {
             </button>
 
             <button
+              onClick={() => setShowDemo(true)}
               style={{ padding: "14px 24px", background: "transparent", border: "1px solid var(--vx-border)", borderRadius: 8, color: "var(--vx-text-primary)", fontWeight: 600, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "all 0.25s" }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--vx-border-hover)"; (e.currentTarget as HTMLElement).style.background = "var(--vx-bg-card)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--vx-border)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
@@ -414,6 +425,108 @@ export function HeroSection() {
           </div>
         </div>
       </div>
+
+      {/* ══════════ DEMO MODAL ══════════ */}
+      <AnimatePresence>
+        {showDemo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowDemo(false)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 1000,
+              background: "rgba(0,0,0,0.92)", // Darker, cleaner background without blur
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "40px"
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: "100%", maxWidth: 1100,
+                background: "#000", borderRadius: 24,
+                border: "1px solid rgba(255,255,255,0.1)", overflow: "hidden",
+                boxShadow: "0 50px 100px rgba(0,0,0,0.8)",
+                position: "relative",
+                display: "flex", flexDirection: "column"
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{
+                padding: "20px 32px",
+                background: "#0a0c14",
+                borderBottom: "1px solid rgba(255,255,255,0.05)",
+                display: "flex", justifyContent: "space-between", alignItems: "center"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(167, 139, 250, 0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Sparkles size={20} color="#a78bfa" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", margin: 0 }}>Vulpinix AI Guide</h3>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", margin: 0 }}>Watch in High Definition</p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setShowDemo(false)}
+                  style={{
+                    width: 40, height: 40, borderRadius: "50%",
+                    background: "rgba(255,255,255,0.05)", border: "none",
+                    color: "#fff", cursor: "pointer", display: "flex",
+                    alignItems: "center", justifyContent: "center", transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Video Player */}
+              <div style={{ width: "100%", background: "#000", flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <video
+                  ref={videoRef}
+                  src={demoVideo}
+                  autoPlay
+                  controls
+                  playsInline
+                  style={{
+                    width: "100%",
+                    maxHeight: "75vh", // Limit height to keep it sharp and fitting
+                    display: "block",
+                    objectFit: "contain"
+                  }}
+                />
+              </div>
+
+              {/* Footer Info */}
+              <div style={{ padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0a0c14", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                <div style={{ display: "flex", gap: 24 }}>
+                   <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
+                     <Volume2 size={16} /> HD Stereo
+                   </div>
+                   <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
+                     <Maximize2 size={16} /> 1080p Crystal Clear
+                   </div>
+                </div>
+                <button
+                   onClick={() => { setShowDemo(false); navigate("/upload"); }}
+                   style={{ padding: "12px 28px", borderRadius: 12, background: "#fff", color: "#000", border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "transform 0.2s" }}
+                   onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                   onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                >
+                  Get Started for Free
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom gradient fade removed */}
     </section>
