@@ -210,13 +210,13 @@ export function AnalyticsSection() {
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                  <div style={{ padding: "16px 20px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid var(--vx-border)" }}>
+                  <div style={{ padding: "16px 20px", borderRadius: 20, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)" }}>
                     <div style={{ color: "var(--vx-text-muted)", fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Likes</div>
                     <div style={{ color: "var(--vx-text-primary)", fontSize: 22, fontWeight: 800 }}>
                       {platform.likes}{platform.likesSuffix}
                     </div>
                   </div>
-                  <div style={{ padding: "16px 20px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid var(--vx-border)" }}>
+                  <div style={{ padding: "16px 20px", borderRadius: 20, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)" }}>
                     <div style={{ color: "var(--vx-text-muted)", fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Comments</div>
                     <div style={{ color: "var(--vx-text-primary)", fontSize: 22, fontWeight: 800 }}>
                       {platform.comments}{platform.commentsSuffix}

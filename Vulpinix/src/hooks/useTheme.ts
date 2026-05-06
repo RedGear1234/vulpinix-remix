@@ -18,7 +18,13 @@ function getInitialTheme(): boolean {
 }
 
 function applyTheme(isDark: boolean) {
-  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  const root = document.documentElement;
+  root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  if (isDark) {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
   localStorage.setItem(STORAGE_KEY, isDark ? 'dark' : 'light');
 }
 

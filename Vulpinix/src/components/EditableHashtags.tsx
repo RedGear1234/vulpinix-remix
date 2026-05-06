@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Hash, Edit2, Check, X, Plus } from "lucide-react";
 import { Button } from "./ui/button";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface EditableHashtagsProps {
   hashtags: string[];
@@ -46,10 +46,10 @@ export function EditableHashtags({ hashtags, onUpdate }: EditableHashtagsProps) 
 
   return (
     <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30 backdrop-blur-sm hover:border-cyan-400/50 transition-all">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Hash className="w-5 h-5 text-cyan-400" />
-          <h4 className="text-white font-medium">Hashtags</h4>
+          <h4 style={{ color: "var(--vx-text-primary)" }} className="font-medium">Hashtags</h4>
         </div>
         {!isEditing && (
           <Button
@@ -90,8 +90,13 @@ export function EditableHashtags({ hashtags, onUpdate }: EditableHashtagsProps) 
               value={newHashtag}
               onChange={(e) => setNewHashtag(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Add hashtag..."
-              className="flex-1 px-3 py-2 rounded-lg bg-gray-900/50 border-2 border-cyan-500/30 text-white text-sm placeholder-gray-500 focus:border-cyan-400/50 focus:outline-none transition-all"
+              className="flex-1 px-3 py-2 rounded-lg border-2 text-sm transition-all"
+              style={{ 
+                background: "var(--vx-bg-input)", 
+                borderColor: "var(--vx-border)",
+                color: "var(--vx-text-primary)" 
+              }}
+              placeholder="Add tag..."
             />
             <Button
               size="sm"
