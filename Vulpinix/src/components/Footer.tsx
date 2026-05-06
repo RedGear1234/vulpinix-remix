@@ -549,7 +549,7 @@ export function Footer() {
                 Terms of Service
               </button>
               <span className="vx-footer__bottom-sep">·</span>
-              <button className="vx-footer__bottom-link" onClick={() => navigate("/contact")}>
+              <button className="vx-footer__bottom-link" onClick={() => navigate("/cookies")}>
                 Cookie Policy
               </button>
             </div>

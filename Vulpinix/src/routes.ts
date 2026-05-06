@@ -15,6 +15,7 @@ import ArticlePage from "./pages/ArticlePage";
 import CampaignsDashboardPage from "./pages/CampaignsDashboardPage";
 import CampaignAnalyticsPage from "./pages/CampaignAnalyticsPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import CookiePage from "./pages/CookiePage";
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -67,6 +68,10 @@ export const router = createBrowserRouter([
       {
         path: "contact",
         Component: ContactPage,
+      },
+      {
+        path: "cookies",
+        Component: CookiePage,
       },
       {
         path: "blogs",
