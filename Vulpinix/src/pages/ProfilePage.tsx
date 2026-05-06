@@ -1,42 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import {
-  ArrowLeft,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Building2,
-  Edit2,
-  Save,
-  X,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
-  Eye,
-  MousePointer,
-  DollarSign,
-  Calendar,
-  Instagram,
-  Facebook,
-  Youtube,
-  Linkedin,
-  Twitter,
-  Globe,
-  Link as LinkIcon,
-  Sparkles,
-  AlertCircle,
-  BarChart3,
-  History,
-  LogOut,
-  Camera,
-  Upload
+  User, Mail, Phone, MapPin, Building2, Edit2, Save, X, Clock,
+  CheckCircle2, TrendingUp, Eye, MousePointer, DollarSign, Calendar,
+  Instagram, Facebook, Youtube, Linkedin, Twitter, Globe,
+  Link as LinkIcon, Sparkles, AlertCircle, BarChart3, History, Camera
 } from "lucide-react";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface UserInfo {
   name: string;
@@ -87,25 +58,13 @@ export default function ProfilePage() {
       setProfilePicture(parsed.picture || null);
       return parsed;
     }
-    return {
-      name: "",
-      email: "",
-      phone: "",
-      company: "",
-      location: "",
-      website: "",
-      picture: ""
-    };
+    return { name: "", email: "", phone: "", company: "", location: "", website: "", picture: "" };
   });
 
   // Social Media Links State
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(
     savedSocialLinks ? JSON.parse(savedSocialLinks) : {
-      instagram: "",
-      facebook: "",
-      youtube: "",
-      twitter: "",
-      linkedin: ""
+      instagram: "", facebook: "", youtube: "", twitter: "", linkedin: ""
     }
   );
 
@@ -122,9 +81,7 @@ export default function ProfilePage() {
     setUserInfo(tempUserInfo);
     localStorage.setItem("userInfo", JSON.stringify(tempUserInfo));
     setIsEditingProfile(false);
-    toast.success("Profile Updated Successfully!", {
-      description: "Your personal information has been saved.",
-    });
+    toast.success("Profile Updated Successfully!");
   };
 
   const handleCancelProfile = () => {
@@ -136,9 +93,7 @@ export default function ProfilePage() {
     setSocialLinks(tempSocialLinks);
     localStorage.setItem("socialLinks", JSON.stringify(tempSocialLinks));
     setIsEditingSocial(false);
-    toast.success("Social Links Updated!", {
-      description: "Your social media links have been saved.",
-    });
+    toast.success("Social Links Updated!");
   };
 
   const handleCancelSocial = () => {
@@ -146,97 +101,49 @@ export default function ProfilePage() {
     setIsEditingSocial(false);
   };
 
-  // Validation for Create New Campaign
   const handleCreateCampaign = () => {
-    // Check if user is authenticated
     const isAuthenticated = localStorage.getItem("isAuthenticated");
-    
     if (!isAuthenticated || isAuthenticated !== "true") {
-      toast.error("Authentication Required", {
-        description: "Please login with Google, Apple, or fill in your details to continue.",
-        duration: 4000,
-      });
+      toast.error("Authentication Required");
       navigate("/auth");
       return;
     }
-
-    // Check if user has filled basic information
     if (!userInfo.name || !userInfo.email) {
-      toast.error("Profile Incomplete", {
-        description: "Please complete your profile (Name and Email required) before creating a campaign.",
-        duration: 4000,
-      });
+      toast.error("Profile Incomplete");
       setIsEditingProfile(true);
-      // Scroll to profile section
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-
-    // All validation passed, proceed to upload page
     navigate("/upload");
   };
 
   const getStatusBadge = (status: Ad["status"]) => {
     switch (status) {
-      case "review":
-        return (
-          <span className="px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-400/50 text-yellow-400 text-xs flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            In Review
-          </span>
-        );
-      case "active":
-        return (
-          <span className="px-3 py-1 rounded-full bg-green-500/20 border border-green-400/50 text-green-400 text-xs flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-            Active
-          </span>
-        );
-      case "completed":
-        return (
-          <span className="px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/50 text-blue-400 text-xs flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-            Completed
-          </span>
-        );
-      case "paused":
-        return (
-          <span className="px-3 py-1 rounded-full bg-gray-500/20 border border-gray-400/50 text-gray-400 text-xs flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            Paused
-          </span>
-        );
+      case "review": return <span style={{ padding: "4px 12px", borderRadius: 20, background: "rgba(234, 179, 8, 0.1)", border: "1px solid rgba(234, 179, 8, 0.2)", color: "#eab308", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><Clock size={12} /> In Review</span>;
+      case "active": return <span style={{ padding: "4px 12px", borderRadius: 20, background: "rgba(34, 197, 94, 0.1)", border: "1px solid rgba(34, 197, 94, 0.2)", color: "#22c55e", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={12} /> Active</span>;
+      case "completed": return <span style={{ padding: "4px 12px", borderRadius: 20, background: "rgba(56, 189, 248, 0.1)", border: "1px solid rgba(56, 189, 248, 0.2)", color: "#38bdf8", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><CheckCircle2 size={12} /> Completed</span>;
+      case "paused": return <span style={{ padding: "4px 12px", borderRadius: 20, background: "rgba(156, 163, 175, 0.1)", border: "1px solid rgba(156, 163, 175, 0.2)", color: "#9ca3af", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}><AlertCircle size={12} /> Paused</span>;
     }
   };
 
   const getPlatformIcon = (platform: string) => {
     switch (platform.toLowerCase()) {
-      case "instagram":
-        return <Instagram className="w-4 h-4" />;
-      case "facebook":
-        return <Facebook className="w-4 h-4" />;
-      case "youtube":
-        return <Youtube className="w-4 h-4" />;
-      case "twitter":
-        return <Twitter className="w-4 h-4" />;
-      case "linkedin":
-        return <Linkedin className="w-4 h-4" />;
-      default:
-        return <Globe className="w-4 h-4" />;
+      case "instagram": return <Instagram size={14} />;
+      case "facebook": return <Facebook size={14} />;
+      case "youtube": return <Youtube size={14} />;
+      case "twitter": return <Twitter size={14} />;
+      case "linkedin": return <Linkedin size={14} />;
+      default: return <Globe size={14} />;
     }
   };
 
-  // Handle profile picture upload
   const handleProfilePictureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast.error("Image too large", {
-          description: "Please select an image under 5MB",
-        });
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image too large");
         return;
       }
-
       const reader = new FileReader();
       reader.onloadend = () => {
         const imageData = reader.result as string;
@@ -245,638 +152,291 @@ export default function ProfilePage() {
         setUserInfo(updatedUserInfo);
         setTempUserInfo(updatedUserInfo);
         localStorage.setItem("userInfo", JSON.stringify(updatedUserInfo));
-        toast.success("Profile Picture Updated!", {
-          description: "Your profile picture has been changed successfully.",
-        });
+        toast.success("Profile Picture Updated!");
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // Get user initials for fallback
   const getUserInitials = () => {
     if (!userInfo?.name) return "U";
     const names = userInfo.name.split(" ");
-    if (names.length >= 2) {
-      return `${names[0][0]}${names[1][0]}`.toUpperCase();
-    }
+    if (names.length >= 2) return `${names[0][0]}${names[1][0]}`.toUpperCase();
     return userInfo.name[0].toUpperCase();
   };
 
+  const inputStyle = { width: "100%", padding: "12px 16px", borderRadius: 12, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", fontSize: 14, outline: "none", marginTop: 8 };
+  const labelStyle = { display: "block", fontSize: 11, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" } as const;
+
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="min-h-screen bg-gradient-to-b from-[#0a0e27] via-[#0f1235] to-black"
+      style={{ background: "var(--vx-bg-primary)", minHeight: "100vh", position: "relative", zIndex: 1, fontFamily: "var(--inter, 'Inter', sans-serif)" }}
     >
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-cyan-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
+      <div style={{ position: "relative", zIndex: 10, maxWidth: 1280, margin: "0 auto", padding: "60px 24px 100px" }}>
+        
+        {/* Back Button */}
+        <button
+          onClick={() => navigate("/")}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--vx-text-muted)", fontSize: 14, fontWeight: 600, cursor: "pointer", marginBottom: 40, transition: "color 0.2s" }}
+          onMouseEnter={e => e.currentTarget.style.color = "var(--vx-text-primary)"}
+          onMouseLeave={e => e.currentTarget.style.color = "var(--vx-text-muted)"}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Back to Dashboard
+        </button>
 
-      {/* AI Circuit Pattern */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none">
-        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="circuit-profile" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-              <circle cx="50" cy="50" r="2" fill="#00ffff" />
-              <line x1="50" y1="50" x2="100" y2="50" stroke="#00ffff" strokeWidth="0.5" />
-              <line x1="50" y1="50" x2="50" y2="0" stroke="#00ffff" strokeWidth="0.5" />
-              <circle cx="0" cy="50" r="2" fill="#a855f7" />
-              <circle cx="50" cy="0" r="2" fill="#3b82f6" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#circuit-profile)" />
-        </svg>
-      </div>
+        {/* Profile Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 24, marginBottom: 40 }}>
+          <div style={{ position: "relative" }}>
+            <div style={{ width: 100, height: 100, borderRadius: "50%", background: "var(--vx-bg-card)", border: "2px solid var(--vx-border)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {profilePicture ? (
+                <img src={profilePicture} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <div style={{ fontSize: 32, fontWeight: 800, color: "var(--vx-text-primary)" }}>{getUserInitials()}</div>
+              )}
+            </div>
+            <label htmlFor="profile-upload" style={{ position: "absolute", bottom: 0, right: 0, width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg, #a78bfa, #38bdf8)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", border: "2px solid var(--vx-bg-primary)" }}>
+              <Camera size={14} />
+            </label>
+            <input id="profile-upload" type="file" accept="image/*" onChange={handleProfilePictureUpload} style={{ display: "none" }} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: "clamp(2rem, 4vw, 2.5rem)", fontWeight: 800, color: "var(--vx-text-primary)", marginBottom: 8, letterSpacing: "-0.02em" }}>My Profile</h1>
+            <p style={{ fontSize: 16, color: "var(--vx-text-secondary)" }}>Manage your account and active campaigns.</p>
+          </div>
+        </div>
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/")}
-              className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 mb-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-
-            <div className="flex items-center gap-6 mb-2">
-              {/* Profile Picture with Upload */}
-              <div className="relative group">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-purple-500/50 bg-gradient-to-br from-purple-600 to-cyan-600 shadow-lg shadow-cyan-500/50 group-hover:border-cyan-400 transition-all duration-300">
-                  {profilePicture ? (
-                    <img 
-                      src={profilePicture} 
-                      alt={userInfo.name || "Profile"} 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white font-bold text-3xl">
-                      {getUserInitials()}
-                    </div>
-                  )}
+        {/* Grid Layout */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))", gap: 32, alignItems: "start" }}>
+          
+          {/* LEFT COLUMN */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+            
+            {/* Personal Info */}
+            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(167, 139, 250, 0.15)", border: "1px solid rgba(167, 139, 250, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#a78bfa" }}>
+                    <User size={18} />
+                  </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--vx-text-primary)" }}>Personal Information</h3>
                 </div>
-                <label 
-                  htmlFor="profile-picture-upload"
-                  className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 flex items-center justify-center cursor-pointer shadow-lg shadow-purple-500/50 hover:shadow-cyan-500/70 transition-all duration-300 hover:scale-110 border-2 border-gray-900"
-                >
-                  <Camera className="w-5 h-5 text-white" />
-                </label>
-                <input
-                  id="profile-picture-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfilePictureUpload}
-                  className="hidden"
-                />
+                {!isEditingProfile ? (
+                  <button onClick={() => setIsEditingProfile(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600, cursor: "pointer" }}><Edit2 size={12} /> Edit</button>
+                ) : (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={handleCancelProfile} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", borderRadius: 12, cursor: "pointer" }}><X size={14} /></button>
+                    <button onClick={handleSaveProfile} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", padding: "6px 16px", borderRadius: 12, fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}><Save size={14} /> Save</button>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {isEditingProfile ? (
+                  <>
+                    <div><label style={labelStyle}>Full Name</label><input style={inputStyle} value={tempUserInfo.name} onChange={e => setTempUserInfo({...tempUserInfo, name: e.target.value})} /></div>
+                    <div><label style={labelStyle}>Email</label><input style={inputStyle} value={tempUserInfo.email} onChange={e => setTempUserInfo({...tempUserInfo, email: e.target.value})} /></div>
+                    <div><label style={labelStyle}>Phone</label><input style={inputStyle} value={tempUserInfo.phone} onChange={e => setTempUserInfo({...tempUserInfo, phone: e.target.value})} /></div>
+                    <div><label style={labelStyle}>Company</label><input style={inputStyle} value={tempUserInfo.company} onChange={e => setTempUserInfo({...tempUserInfo, company: e.target.value})} /></div>
+                    <div><label style={labelStyle}>Location</label><input style={inputStyle} value={tempUserInfo.location} onChange={e => setTempUserInfo({...tempUserInfo, location: e.target.value})} /></div>
+                    <div><label style={labelStyle}>Website</label><input style={inputStyle} value={tempUserInfo.website} onChange={e => setTempUserInfo({...tempUserInfo, website: e.target.value})} /></div>
+                  </>
+                ) : (
+                  <>
+                    {[
+                      { icon: <User size={16}/>, label: "Name", val: userInfo.name },
+                      { icon: <Mail size={16}/>, label: "Email", val: userInfo.email },
+                      { icon: <Phone size={16}/>, label: "Phone", val: userInfo.phone },
+                      { icon: <Building2 size={16}/>, label: "Company", val: userInfo.company },
+                      { icon: <MapPin size={16}/>, label: "Location", val: userInfo.location },
+                      { icon: <Globe size={16}/>, label: "Website", val: userInfo.website }
+                    ].map((item, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 16 }}>
+                        <div style={{ color: "var(--vx-text-muted)" }}>{item.icon}</div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", marginBottom: 2 }}>{item.label}</div>
+                          <div style={{ fontSize: 14, color: "var(--vx-text-primary)", fontWeight: 500 }}>{item.val || "Not set"}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Social Links */}
+            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#38bdf8" }}>
+                    <LinkIcon size={18} />
+                  </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--vx-text-primary)" }}>Social Links</h3>
+                </div>
+                {!isEditingSocial ? (
+                  <button onClick={() => setIsEditingSocial(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", padding: "6px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600, cursor: "pointer" }}><Edit2 size={12} /> Edit</button>
+                ) : (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={handleCancelSocial} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", borderRadius: 12, cursor: "pointer" }}><X size={14} /></button>
+                    <button onClick={handleSaveSocial} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", padding: "6px 16px", borderRadius: 12, fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}><Save size={14} /> Save</button>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {isEditingSocial ? (
+                  <>
+                    <div><label style={labelStyle}>Instagram</label><input style={inputStyle} value={tempSocialLinks.instagram} onChange={e => setTempSocialLinks({...tempSocialLinks, instagram: e.target.value})} placeholder="https://instagram.com/..." /></div>
+                    <div><label style={labelStyle}>Facebook</label><input style={inputStyle} value={tempSocialLinks.facebook} onChange={e => setTempSocialLinks({...tempSocialLinks, facebook: e.target.value})} placeholder="https://facebook.com/..." /></div>
+                    <div><label style={labelStyle}>YouTube</label><input style={inputStyle} value={tempSocialLinks.youtube} onChange={e => setTempSocialLinks({...tempSocialLinks, youtube: e.target.value})} placeholder="https://youtube.com/..." /></div>
+                    <div><label style={labelStyle}>Twitter</label><input style={inputStyle} value={tempSocialLinks.twitter} onChange={e => setTempSocialLinks({...tempSocialLinks, twitter: e.target.value})} placeholder="https://twitter.com/..." /></div>
+                    <div><label style={labelStyle}>LinkedIn</label><input style={inputStyle} value={tempSocialLinks.linkedin} onChange={e => setTempSocialLinks({...tempSocialLinks, linkedin: e.target.value})} placeholder="https://linkedin.com/in/..." /></div>
+                  </>
+                ) : (
+                  <>
+                    {Object.entries(socialLinks).map(([key, val]) => {
+                      if (!val) return null;
+                      return (
+                        <div key={key} style={{ display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 16 }}>
+                          <div style={{ color: "var(--vx-text-muted)" }}>{getPlatformIcon(key)}</div>
+                          <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", marginBottom: 2 }}>{key}</div>
+                            <a href={val} target="_blank" rel="noreferrer" style={{ fontSize: 14, color: "var(--vx-text-primary)", fontWeight: 500, textDecoration: "none" }}>{val}</a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {Object.values(socialLinks).every(v => !v) && (
+                      <div style={{ textAlign: "center", padding: "32px 0", color: "var(--vx-text-muted)", fontSize: 14 }}>No social links added yet.</div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+            
+            {/* Quick Action */}
+            <button
+              onClick={handleCreateCampaign}
+              style={{ width: "100%", padding: "24px", borderRadius: 24, background: "linear-gradient(135deg, #a78bfa, #38bdf8)", color: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, fontSize: 16, fontWeight: 700, transition: "transform 0.2s", boxShadow: "0 10px 30px rgba(167, 139, 250, 0.3)" }}
+              onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
+              onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
+            >
+              <Sparkles size={20} /> Create New Campaign
+            </button>
+
+            {/* Ads in Review */}
+            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(234, 179, 8, 0.15)", border: "1px solid rgba(234, 179, 8, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#eab308" }}>
+                  <Clock size={18} />
+                </div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--vx-text-primary)", flex: 1 }}>Ads in Review</h3>
+                <span style={{ padding: "4px 12px", borderRadius: 20, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", fontSize: 12, fontWeight: 700 }}>{adsInReview.length}</span>
               </div>
               
-              <div>
-                <h1 className="text-4xl sm:text-5xl text-white bg-gradient-to-r from-purple-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                  My Profile
-                </h1>
-                <p className="text-xl text-gray-400">
-                  Manage your account and campaigns
-                </p>
+              {adsInReview.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "var(--vx-text-muted)" }}>
+                  <Clock size={40} style={{ margin: "0 auto 16px", opacity: 0.5 }} />
+                  <div style={{ fontSize: 14 }}>No ads currently in review</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {adsInReview.map(ad => (
+                    <div key={ad.id} style={{ background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 16, padding: 20 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                        <div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--vx-text-primary)", marginBottom: 4 }}>{ad.name}</div>
+                          <div style={{ fontSize: 12, color: "var(--vx-text-muted)", display: "flex", alignItems: "center", gap: 4 }}><Calendar size={12}/> {new Date(ad.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        {getStatusBadge(ad.status)}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                        {ad.platforms.map(p => (
+                          <span key={p} style={{ padding: "4px 10px", borderRadius: 20, background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", fontSize: 11, fontWeight: 600, color: "var(--vx-text-primary)", display: "flex", alignItems: "center", gap: 4 }}>
+                            {getPlatformIcon(p)} {p}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ borderTop: "1px solid var(--vx-border)", paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--vx-text-primary)", display: "flex", alignItems: "center", gap: 4 }}><DollarSign size={14} color="#06d6c7"/> {ad.budget}</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "#eab308", display: "flex", alignItems: "center", gap: 4 }}><AlertCircle size={12}/> Waiting for approval</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Campaign History */}
+            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#38bdf8" }}>
+                  <History size={18} />
+                </div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--vx-text-primary)", flex: 1 }}>Campaign History</h3>
+                <span style={{ padding: "4px 12px", borderRadius: 20, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", fontSize: 12, fontWeight: 700 }}>{previousAds.length}</span>
               </div>
-            </div>
-          </div>
-
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* LEFT COLUMN - Personal Info & Social Links */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Personal Information Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="p-6 rounded-2xl bg-gradient-to-br from-gray-900/90 via-purple-900/20 to-cyan-900/20 border-2 border-purple-500/30 backdrop-blur-sm shadow-2xl shadow-purple-500/20"
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl text-white font-semibold flex items-center gap-2">
-                    <User className="w-5 h-5 text-cyan-400" />
-                    Personal Information
-                  </h3>
-                  {!isEditingProfile ? (
-                    <Button
-                      onClick={() => setIsEditingProfile(true)}
-                      variant="ghost"
-                      size="sm"
-                      className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-                    >
-                      <Edit2 className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleSaveProfile}
-                        size="sm"
-                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
-                      >
-                        <Save className="w-4 h-4 mr-1" />
-                        Save
-                      </Button>
-                      <Button
-                        onClick={handleCancelProfile}
-                        variant="ghost"
-                        size="sm"
-                        className="text-gray-400 hover:text-gray-300"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+              
+              {previousAds.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "var(--vx-text-muted)" }}>
+                  <BarChart3 size={40} style={{ margin: "0 auto 16px", opacity: 0.5 }} />
+                  <div style={{ fontSize: 14 }}>No campaign history yet</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {previousAds.map(ad => (
+                    <div key={ad.id} style={{ background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 16, padding: 20 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                        <div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--vx-text-primary)", marginBottom: 4 }}>{ad.name}</div>
+                          <div style={{ fontSize: 12, color: "var(--vx-text-muted)", display: "flex", alignItems: "center", gap: 4 }}><Calendar size={12}/> {new Date(ad.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        {getStatusBadge(ad.status)}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                        {ad.platforms.map(p => (
+                          <span key={p} style={{ padding: "4px 10px", borderRadius: 20, background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", fontSize: 11, fontWeight: 600, color: "var(--vx-text-primary)", display: "flex", alignItems: "center", gap: 4 }}>
+                            {getPlatformIcon(p)} {p}
+                          </span>
+                        ))}
+                      </div>
+                      
+                      {/* Stats Grid */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 12, padding: 16 }}>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}><Eye size={10} color="#a78bfa"/> Reach</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--vx-text-primary)" }}>{ad.reach}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}><MousePointer size={10} color="#06d6c7"/> Clicks</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--vx-text-primary)" }}>{ad.clicks}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}><TrendingUp size={10} color="#38bdf8"/> Impr.</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--vx-text-primary)" }}>{ad.impressions}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}><DollarSign size={10} color="#22c55e"/> Spent</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--vx-text-primary)" }}>{ad.spent}</div>
+                        </div>
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-
-                <div className="space-y-4">
-                  {isEditingProfile ? (
-                    <>
-                      <div>
-                        <Label className="text-gray-300 text-sm">Full Name</Label>
-                        <Input
-                          value={tempUserInfo.name}
-                          onChange={(e) => setTempUserInfo({ ...tempUserInfo, name: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm">Email</Label>
-                        <Input
-                          value={tempUserInfo.email}
-                          onChange={(e) => setTempUserInfo({ ...tempUserInfo, email: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm">Phone</Label>
-                        <Input
-                          value={tempUserInfo.phone}
-                          onChange={(e) => setTempUserInfo({ ...tempUserInfo, phone: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm">Company</Label>
-                        <Input
-                          value={tempUserInfo.company}
-                          onChange={(e) => setTempUserInfo({ ...tempUserInfo, company: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm">Location</Label>
-                        <Input
-                          value={tempUserInfo.location}
-                          onChange={(e) => setTempUserInfo({ ...tempUserInfo, location: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm">Website</Label>
-                        <Input
-                          value={tempUserInfo.website}
-                          onChange={(e) => setTempUserInfo({ ...tempUserInfo, website: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-purple-500/20">
-                        <User className="w-5 h-5 text-purple-400" />
-                        <div>
-                          <p className="text-xs text-gray-400">Name</p>
-                          <p className="text-white">{userInfo.name || "Not set"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-cyan-500/20">
-                        <Mail className="w-5 h-5 text-cyan-400" />
-                        <div>
-                          <p className="text-xs text-gray-400">Email</p>
-                          <p className="text-white text-sm">{userInfo.email || "Not set"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-purple-500/20">
-                        <Phone className="w-5 h-5 text-purple-400" />
-                        <div>
-                          <p className="text-xs text-gray-400">Phone</p>
-                          <p className="text-white">{userInfo.phone || "Not set"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-cyan-500/20">
-                        <Building2 className="w-5 h-5 text-cyan-400" />
-                        <div>
-                          <p className="text-xs text-gray-400">Company</p>
-                          <p className="text-white">{userInfo.company || "Not set"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-purple-500/20">
-                        <MapPin className="w-5 h-5 text-purple-400" />
-                        <div>
-                          <p className="text-xs text-gray-400">Location</p>
-                          <p className="text-white">{userInfo.location || "Not set"}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-cyan-500/20">
-                        <Globe className="w-5 h-5 text-cyan-400" />
-                        <div>
-                          <p className="text-xs text-gray-400">Website</p>
-                          <p className="text-white text-sm">{userInfo.website || "Not set"}</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </motion.div>
-
-              {/* Social Media Links Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="p-6 rounded-2xl bg-gradient-to-br from-gray-900/90 via-cyan-900/20 to-purple-900/20 border-2 border-cyan-500/30 backdrop-blur-sm shadow-2xl shadow-cyan-500/20"
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl text-white font-semibold flex items-center gap-2">
-                    <LinkIcon className="w-5 h-5 text-purple-400" />
-                    Social Media Links
-                  </h3>
-                  {!isEditingSocial ? (
-                    <Button
-                      onClick={() => setIsEditingSocial(true)}
-                      variant="ghost"
-                      size="sm"
-                      className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
-                    >
-                      <Edit2 className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleSaveSocial}
-                        size="sm"
-                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
-                      >
-                        <Save className="w-4 h-4 mr-1" />
-                        Save
-                      </Button>
-                      <Button
-                        onClick={handleCancelSocial}
-                        variant="ghost"
-                        size="sm"
-                        className="text-gray-400 hover:text-gray-300"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  {isEditingSocial ? (
-                    <>
-                      <div>
-                        <Label className="text-gray-300 text-sm flex items-center gap-2">
-                          <Instagram className="w-4 h-4 text-pink-400" />
-                          Instagram
-                        </Label>
-                        <Input
-                          value={tempSocialLinks.instagram}
-                          onChange={(e) => setTempSocialLinks({ ...tempSocialLinks, instagram: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                          placeholder="https://instagram.com/username"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm flex items-center gap-2">
-                          <Facebook className="w-4 h-4 text-blue-400" />
-                          Facebook
-                        </Label>
-                        <Input
-                          value={tempSocialLinks.facebook}
-                          onChange={(e) => setTempSocialLinks({ ...tempSocialLinks, facebook: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                          placeholder="https://facebook.com/username"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm flex items-center gap-2">
-                          <Youtube className="w-4 h-4 text-red-400" />
-                          YouTube
-                        </Label>
-                        <Input
-                          value={tempSocialLinks.youtube}
-                          onChange={(e) => setTempSocialLinks({ ...tempSocialLinks, youtube: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                          placeholder="https://youtube.com/@username"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm flex items-center gap-2">
-                          <Twitter className="w-4 h-4 text-sky-400" />
-                          Twitter
-                        </Label>
-                        <Input
-                          value={tempSocialLinks.twitter}
-                          onChange={(e) => setTempSocialLinks({ ...tempSocialLinks, twitter: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                          placeholder="https://twitter.com/username"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-gray-300 text-sm flex items-center gap-2">
-                          <Linkedin className="w-4 h-4 text-blue-500" />
-                          LinkedIn
-                        </Label>
-                        <Input
-                          value={tempSocialLinks.linkedin}
-                          onChange={(e) => setTempSocialLinks({ ...tempSocialLinks, linkedin: e.target.value })}
-                          className="mt-2 bg-gray-900/50 border-purple-500/30 text-white focus:border-cyan-400/50"
-                          placeholder="https://linkedin.com/in/username"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {!socialLinks.instagram && !socialLinks.facebook && !socialLinks.youtube && !socialLinks.twitter && !socialLinks.linkedin ? (
-                        <div className="text-center py-8">
-                          <LinkIcon className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                          <p className="text-gray-400 mb-2">No social links added yet</p>
-                          <p className="text-gray-500 text-sm">Click Edit to add your social media profiles</p>
-                        </div>
-                      ) : (
-                        <>
-                          {socialLinks.instagram && (
-                            <a
-                              href={socialLinks.instagram}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-purple-500/20 hover:border-pink-400/50 transition-all group"
-                            >
-                              <Instagram className="w-5 h-5 text-pink-400" />
-                              <div className="flex-1">
-                                <p className="text-xs text-gray-400">Instagram</p>
-                                <p className="text-white text-sm group-hover:text-pink-400 transition-colors">{socialLinks.instagram}</p>
-                              </div>
-                            </a>
-                          )}
-                          {socialLinks.facebook && (
-                            <a
-                              href={socialLinks.facebook}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-cyan-500/20 hover:border-blue-400/50 transition-all group"
-                            >
-                              <Facebook className="w-5 h-5 text-blue-400" />
-                              <div className="flex-1">
-                                <p className="text-xs text-gray-400">Facebook</p>
-                                <p className="text-white text-sm group-hover:text-blue-400 transition-colors">{socialLinks.facebook}</p>
-                              </div>
-                            </a>
-                          )}
-                          {socialLinks.youtube && (
-                            <a
-                              href={socialLinks.youtube}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-purple-500/20 hover:border-red-400/50 transition-all group"
-                            >
-                              <Youtube className="w-5 h-5 text-red-400" />
-                              <div className="flex-1">
-                                <p className="text-xs text-gray-400">YouTube</p>
-                                <p className="text-white text-sm group-hover:text-red-400 transition-colors">{socialLinks.youtube}</p>
-                              </div>
-                            </a>
-                          )}
-                          {socialLinks.twitter && (
-                            <a
-                              href={socialLinks.twitter}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-cyan-500/20 hover:border-sky-400/50 transition-all group"
-                            >
-                              <Twitter className="w-5 h-5 text-sky-400" />
-                              <div className="flex-1">
-                                <p className="text-xs text-gray-400">Twitter</p>
-                                <p className="text-white text-sm group-hover:text-sky-400 transition-colors">{socialLinks.twitter}</p>
-                              </div>
-                            </a>
-                          )}
-                          {socialLinks.linkedin && (
-                            <a
-                              href={socialLinks.linkedin}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 p-3 rounded-xl bg-gray-900/50 border border-purple-500/20 hover:border-blue-500/50 transition-all group"
-                            >
-                              <Linkedin className="w-5 h-5 text-blue-500" />
-                              <div className="flex-1">
-                                <p className="text-xs text-gray-400">LinkedIn</p>
-                                <p className="text-white text-sm group-hover:text-blue-500 transition-colors">{socialLinks.linkedin}</p>
-                              </div>
-                            </a>
-                          )}
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-              </motion.div>
+              )}
             </div>
 
-            {/* RIGHT COLUMN - Ads & History */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Ads in Review */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="p-6 rounded-2xl bg-gradient-to-br from-gray-900/90 via-yellow-900/10 to-orange-900/10 border-2 border-yellow-500/30 backdrop-blur-sm shadow-2xl shadow-yellow-500/20"
-              >
-                <div className="flex items-center gap-2 mb-6">
-                  <Clock className="w-6 h-6 text-yellow-400" />
-                  <h3 className="text-2xl text-white font-semibold">Ads in Review</h3>
-                  <span className="px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-sm">
-                    {adsInReview.length}
-                  </span>
-                </div>
-
-                {adsInReview.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Clock className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-                    <p className="text-gray-400">No ads currently in review</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {adsInReview.map((ad) => (
-                      <div
-                        key={ad.id}
-                        className="p-5 rounded-xl bg-gray-900/50 border border-yellow-500/20 hover:border-yellow-400/50 transition-all"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h4 className="text-white font-semibold mb-1">{ad.name}</h4>
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                              <Calendar className="w-4 h-4" />
-                              Created: {new Date(ad.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                          {getStatusBadge(ad.status)}
-                        </div>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {ad.platforms.map((platform) => (
-                            <span
-                              key={platform}
-                              className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white text-xs flex items-center gap-1"
-                            >
-                              {getPlatformIcon(platform)}
-                              {platform}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="flex items-center justify-between pt-3 border-t border-gray-700/50">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="w-4 h-4 text-cyan-400" />
-                            <span className="text-white font-semibold">{ad.budget}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-yellow-400">
-                            <AlertCircle className="w-4 h-4" />
-                            Waiting for approval (12hrs)
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
-
-              {/* Previous Ads / History */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="p-6 rounded-2xl bg-gradient-to-br from-gray-900/90 via-blue-900/10 to-purple-900/10 border-2 border-blue-500/30 backdrop-blur-sm shadow-2xl shadow-blue-500/20"
-              >
-                <div className="flex items-center gap-2 mb-6">
-                  <History className="w-6 h-6 text-blue-400" />
-                  <h3 className="text-2xl text-white font-semibold">Campaign History</h3>
-                  <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm">
-                    {previousAds.length}
-                  </span>
-                </div>
-
-                {previousAds.length === 0 ? (
-                  <div className="text-center py-12">
-                    <BarChart3 className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-                    <p className="text-gray-400">No campaign history yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {previousAds.map((ad) => (
-                      <div
-                        key={ad.id}
-                        className="p-5 rounded-xl bg-gray-900/50 border border-blue-500/20 hover:border-blue-400/50 transition-all"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h4 className="text-white font-semibold mb-1">{ad.name}</h4>
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                              <Calendar className="w-4 h-4" />
-                              {new Date(ad.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                          {getStatusBadge(ad.status)}
-                        </div>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {ad.platforms.map((platform) => (
-                            <span
-                              key={platform}
-                              className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white text-xs flex items-center gap-1"
-                            >
-                              {getPlatformIcon(platform)}
-                              {platform}
-                            </span>
-                          ))}
-                        </div>
-
-                        {/* Performance Metrics */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-lg bg-gray-900/70 border border-gray-700/30">
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <Eye className="w-3 h-3 text-purple-400" />
-                              <p className="text-xs text-gray-400">Reach</p>
-                            </div>
-                            <p className="text-white font-semibold text-sm">{ad.reach}</p>
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <MousePointer className="w-3 h-3 text-cyan-400" />
-                              <p className="text-xs text-gray-400">Clicks</p>
-                            </div>
-                            <p className="text-white font-semibold text-sm">{ad.clicks}</p>
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <TrendingUp className="w-3 h-3 text-blue-400" />
-                              <p className="text-xs text-gray-400">Impressions</p>
-                            </div>
-                            <p className="text-white font-semibold text-sm">{ad.impressions}</p>
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <DollarSign className="w-3 h-3 text-green-400" />
-                              <p className="text-xs text-gray-400">Spent</p>
-                            </div>
-                            <p className="text-white font-semibold text-sm">{ad.spent}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
-
-              {/* Quick Action Button */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-              >
-                <Button
-                  onClick={handleCreateCampaign}
-                  size="lg"
-                  className="w-full px-12 py-6 bg-gradient-to-r from-purple-600 via-cyan-600 to-blue-600 hover:from-purple-700 hover:via-cyan-700 hover:to-blue-700 text-white rounded-xl shadow-lg shadow-cyan-500/50 hover:shadow-cyan-500/70 transition-all duration-300 hover:scale-105"
-                >
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Create New Campaign
-                </Button>
-              </motion.div>
-            </div>
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-purple-500/20 bg-gray-900/50 backdrop-blur-sm py-8 px-4 mt-16">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-gray-400">
-            <span className="bg-gradient-to-r from-purple-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent font-semibold">
-              VULPINIX AI 1.0
-            </span>
-            {" "}— Automate Your Digital World
-          </p>
-        </div>
-      </footer>
     </motion.div>
   );
 }
