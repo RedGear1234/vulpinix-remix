@@ -3,6 +3,7 @@ import { HeroSection } from "../components/HeroSection";
 import { AboutSection } from "../components/AboutSection";
 import { WorkflowSection } from "../components/WorkflowSection";
 import { AnalyticsSection } from "../components/AnalyticsSection";
+import { IntegrationsSection } from "../components/IntegrationsSection";
 import { PricingSection } from "../components/PricingSection";
 import { Footer } from "../components/Footer";
 
@@ -17,6 +18,7 @@ export default function LandingPage() {
     >
       <HeroSection />
       <AboutSection />
+      <IntegrationsSection />
       <WorkflowSection />
       <AnalyticsSection />
       <PricingSection />

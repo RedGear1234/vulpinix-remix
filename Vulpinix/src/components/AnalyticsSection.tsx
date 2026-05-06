@@ -1,4 +1,5 @@
-import { TrendingUp, Heart, MessageCircle, BarChart2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { TrendingUp, Heart, MessageCircle, BarChart2, Eye } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube } from "react-icons/si";
 import { FaLinkedin } from "react-icons/fa";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
@@ -15,6 +16,7 @@ export function AnalyticsSection() {
     { icon: TrendingUp,    label: "Total Engagement", value: "82%",   delta: "↑ 12% this week", iconColor: "#a78bfa" },
     { icon: Heart,         label: "Total Likes",      value: "12.1M", delta: "↑ 8% this week",  iconColor: "#22d3ee" },
     { icon: MessageCircle, label: "Total Comments",   value: "2.2M",  delta: "↑ 15% this week", iconColor: "#60a5fa" },
+    { icon: Eye,           label: "Total Reach",      value: "45.8M", delta: "↑ 24% this week", iconColor: "#4ade80" },
   ];
 
   const chartData = [
@@ -164,49 +166,72 @@ export function AnalyticsSection() {
                 style={{ 
                   background: "var(--vx-bg-card)", 
                   border: "1px solid var(--vx-border)", 
-                  borderRadius: 20, 
-                  padding: "24px", 
-                  transition: "all 0.3s ease", 
+                  borderRadius: 24, 
+                  padding: "32px", 
+                  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)", 
                   display: "flex", 
                   flexDirection: "column",
-                  position: "relative"
+                  position: "relative",
+                  overflow: "hidden",
+                  boxShadow: "var(--vx-shadow-card)"
                 }}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.borderColor = "var(--vx-border-hover)";
-                  el.style.transform = "translateY(-2px)";
-                  el.style.boxShadow = "var(--vx-shadow-card)";
+                  el.style.borderColor = platform.barColor;
+                  el.style.transform = "translateY(-6px)";
+                  el.style.boxShadow = `0 20px 40px ${platform.barColor}15`;
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement;
                   el.style.borderColor = "var(--vx-border)";
                   el.style.transform = "translateY(0)";
-                  el.style.boxShadow = "none";
+                  el.style.boxShadow = "var(--vx-shadow-card)";
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", flexShrink: 0 }}>
-                    <platform.icon size={24} style={{ color: platform.barColor }} />
+                {/* Brand Accent Light */}
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${platform.barColor}, transparent)` }} />
+                <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, background: `radial-gradient(circle, ${platform.barColor}15 0%, transparent 70%)`, pointerEvents: "none" }} />
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: platform.barColor, boxShadow: `0 8px 16px ${platform.barColor}10` }}>
+                    <platform.icon size={28} />
                   </div>
-                  <div>
-                    <span style={{ color: "var(--vx-text-primary)", fontSize: 20, fontWeight: 800 }}>{platform.name}</span>
-                    <div style={{ color: "#10b981", fontSize: 14, fontWeight: 700, marginTop: 4 }}>{platform.growth} YoY</div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ color: "var(--vx-text-muted)", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Growth</div>
+                    <div style={{ color: "#10b981", fontSize: 18, fontWeight: 800, display: "flex", alignItems: "center", gap: 4 }}>
+                      <TrendingUp size={16} /> {platform.growth}
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 24, marginTop: "auto" }}>
-                  <div style={{ flex: 1, background: "var(--vx-bg-input)", padding: "16px", borderRadius: 16, border: "1px solid var(--vx-border)" }}>
-                    <div style={{ color: "var(--vx-text-muted)", fontSize: 12, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>Likes</div>
-                    <div style={{ color: "var(--vx-text-primary)", fontSize: 24, fontWeight: 800 }}>
-                      {platform.likes.toLocaleString()}{platform.likesSuffix}
+                <div style={{ marginBottom: 32 }}>
+                  <h4 style={{ color: "var(--vx-text-primary)", fontSize: 24, fontWeight: 800, marginBottom: 4 }}>{platform.name}</h4>
+                  <p style={{ color: "var(--vx-text-muted)", fontSize: 14, fontWeight: 500 }}>Performance Snapshot</p>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div style={{ padding: "16px 20px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid var(--vx-border)" }}>
+                    <div style={{ color: "var(--vx-text-muted)", fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Likes</div>
+                    <div style={{ color: "var(--vx-text-primary)", fontSize: 22, fontWeight: 800 }}>
+                      {platform.likes}{platform.likesSuffix}
                     </div>
                   </div>
-                  <div style={{ flex: 1, background: "var(--vx-bg-input)", padding: "16px", borderRadius: 16, border: "1px solid var(--vx-border)" }}>
-                    <div style={{ color: "var(--vx-text-muted)", fontSize: 12, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>Comments</div>
-                    <div style={{ color: "var(--vx-text-primary)", fontSize: 24, fontWeight: 800 }}>
-                      {platform.comments.toLocaleString()}{platform.commentsSuffix}
+                  <div style={{ padding: "16px 20px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid var(--vx-border)" }}>
+                    <div style={{ color: "var(--vx-text-muted)", fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Comments</div>
+                    <div style={{ color: "var(--vx-text-primary)", fontSize: 22, fontWeight: 800 }}>
+                      {platform.comments}{platform.commentsSuffix}
                     </div>
                   </div>
+                </div>
+
+                {/* Mini Visualization */}
+                <div style={{ marginTop: 24, height: 4, width: "100%", background: "var(--vx-bg-input)", borderRadius: 2, overflow: "hidden" }}>
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    whileInView={{ width: "70%" }}
+                    transition={{ duration: 1, delay: 0.5 }}
+                    style={{ height: "100%", background: platform.barColor, borderRadius: 2 }}
+                  />
                 </div>
               </div>
             ))}
