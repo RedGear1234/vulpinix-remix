@@ -248,8 +248,16 @@ export function HeroSection() {
                 href={link.href}
                 className="vx-nav-link"
                 style={{ padding: "8px 16px", fontSize: 14, fontWeight: 500, color: "var(--vx-text-secondary)", textDecoration: "none", borderRadius: 8, transition: "color 0.2s, background 0.2s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--vx-text-primary)"; (e.currentTarget as HTMLElement).style.background = "var(--vx-bg-input)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--vx-text-secondary)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                onMouseEnter={e => { 
+                  (e.currentTarget as HTMLElement).style.color = "var(--vx-text-primary)"; 
+                  (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; 
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={e => { 
+                  (e.currentTarget as HTMLElement).style.color = "var(--vx-text-secondary)"; 
+                  (e.currentTarget as HTMLElement).style.background = "transparent"; 
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                }}
               >
                 {link.label}
               </a>
