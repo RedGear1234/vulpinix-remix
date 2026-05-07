@@ -382,7 +382,7 @@ export function HeroSection() {
 
           {/* Badge */}
           <div
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "4px 12px", borderRadius: 6, border: "1px solid var(--vx-border)", background: "var(--vx-bg-card)", marginBottom: 28 }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "6px 16px", borderRadius: 10, border: "1px solid rgba(167, 139, 250, 0.3)", background: "linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(56, 189, 248, 0.1))", marginBottom: 32, backdropFilter: "blur(10px)" }}
           >
             <span style={{ background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>NEW</span>
             <span style={{ color: "var(--vx-text-secondary)", fontSize: 12, fontWeight: 500 }}>Smart Automation Engine</span>

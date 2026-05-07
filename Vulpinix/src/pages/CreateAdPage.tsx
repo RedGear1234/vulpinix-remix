@@ -174,6 +174,10 @@ export default function CreateAdPage() {
           >
             <ArrowLeft size={16} /> Back to Content
           </button>
+
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 99, background: "linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(56, 189, 248, 0.15))", border: "1px solid rgba(167, 139, 250, 0.3)", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "#a78bfa", marginBottom: 20, marginTop: 12 }}>
+            <Sparkles size={12} fill="currentColor" /> Smart Automation Engine
+          </div>
           <h1 style={{ fontSize: "clamp(2rem, 5vw, 2.8rem)", fontWeight: 800, letterSpacing: "-0.04em", margin: 0, lineHeight: 1, paddingTop: 20 }}>
             Configure Your <span style={{ background: "linear-gradient(135deg, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Campaign</span>
           </h1>
