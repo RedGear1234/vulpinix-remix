@@ -223,17 +223,97 @@ export function HeroSection() {
           cursor: pointer;
           border: 2px solid #a78bfa;
         }
+
+        /* ── NAVBAR CLASSES ── */
+        .vx-navbar {
+          position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .vx-navbar--scrolled {
+          background: var(--vx-bg-card);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-bottom: 1px solid var(--vx-border);
+          padding-block: 4px;
+        }
+        .vx-nav-container {
+          max-width: 1280px; margin: 0 auto; padding: 16px 24px;
+          display: grid; grid-template-columns: auto 1fr auto;
+          align-items: center; position: relative; gap: 20px;
+        }
+        @media (max-width: 767px) {
+          .vx-nav-container { 
+            grid-template-columns: 1fr auto;
+            padding: 10px 16px;
+            gap: 8px;
+          }
+          .vx-nav-links-desktop { display: none !important; }
+          .vx-get-started-btn span { display: none; }
+          .vx-get-started-btn { padding: 8px 10px !important; }
+        }
+        .vx-mobile-menu {
+          position: absolute; top: 100%; left: 0; right: 0;
+          background: var(--vx-bg-card);
+          border-bottom: 1px solid var(--vx-border);
+          padding: 12px 24px 24px;
+          display: flex; flex-direction: column; gap: 4px;
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+          z-index: 100;
+        }
+        .vx-mobile-nav-link {
+          display: block; padding: 14px 16px;
+          font-size: 16px; font-weight: 600;
+          color: var(--vx-text-primary); text-decoration: none;
+          border-radius: 12px; transition: all 0.2s;
+        }
+        .vx-mobile-nav-link:active {
+          background: var(--vx-bg-input);
+          transform: scale(0.98);
+        }
+
+        /* ── HERO CONTENT CLASSES ── */
+        .vx-hero-grid {
+          position: relative; z-index: 10; flex: 1;
+          display: flex; align-items: center;
+          padding: 140px 24px 80px; max-width: 1280px; margin: 0 auto;
+          width: 100%; gap: 60px;
+        }
+        @media (max-width: 1024px) {
+          .vx-hero-grid {
+            flex-direction: column;
+            padding-top: 100px;
+            padding-bottom: 40px;
+            text-align: center;
+            gap: 40px;
+          }
+          .vx-hero-left {
+            display: flex; flex-direction: column; align-items: center;
+            max-width: 600px; margin: 0 auto;
+          }
+          .vx-hero-btns {
+            justify-content: center;
+          }
+        }
+        @media (max-width: 480px) {
+          .vx-hero-grid {
+            padding-top: 90px;
+            padding-inline: 20px;
+          }
+          .vx-hero-btns {
+            flex-direction: column;
+            width: 100%;
+          }
+          .vx-hero-btns button {
+            width: 100%;
+            justify-content: center;
+          }
+        }
       `}</style>
       {/* ══════════ NAVBAR ══════════ */}
-      <nav style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
-        transition: "all 0.3s ease",
-        background: scrolled ? "var(--vx-bg-card)" : "transparent",
-        backdropFilter: scrolled ? "blur(12px)" : "none",
-        WebkitBackdropFilter: scrolled ? "blur(12px)" : "none",
-        borderBottom: scrolled ? "1px solid var(--vx-border)" : "1px solid transparent",
-      }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px", display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", position: "relative" }}>
+      <nav className={`vx-navbar ${scrolled ? "vx-navbar--scrolled" : ""}`}>
+        <div className="vx-nav-container">
           
           {/* Left: Logo */}
           <div style={{ display: "flex", justifyContent: "flex-start" }}>
@@ -241,13 +321,13 @@ export function HeroSection() {
           </div>
 
           {/* Middle: Desktop Nav Links */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }} className="md:flex hidden">
+          <div className="vx-nav-links-desktop" style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 className="vx-nav-link"
-                style={{ padding: "8px 16px", fontSize: 14, fontWeight: 500, color: "var(--vx-text-secondary)", textDecoration: "none", borderRadius: 8, transition: "color 0.2s, background 0.2s" }}
+                style={{ padding: "8px 16px", fontSize: 14, fontWeight: 500, color: "var(--vx-text-secondary)", textDecoration: "none", borderRadius: 8, transition: "all 0.2s" }}
                 onMouseEnter={e => { 
                   (e.currentTarget as HTMLElement).style.color = "var(--vx-text-primary)"; 
                   (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; 
@@ -265,22 +345,20 @@ export function HeroSection() {
           </div>
 
           {/* Right Action Area */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
             {/* Theme Toggle */}
             <button
               className="vx-theme-toggle"
               onClick={toggleTheme}
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              id="theme-toggle-btn"
-              style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "transparent", border: "1px solid transparent", cursor: "pointer", color: "var(--vx-text-secondary)" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--vx-text-primary)"; (e.currentTarget as HTMLElement).style.background = "var(--vx-bg-input)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--vx-text-secondary)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+              style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", color: "var(--vx-text-secondary)", fontSize: 18 }}
             >
               {isDark ? "☀️" : "🌙"}
             </button>
 
             <div style={{ position: "relative" }} ref={dropdownRef}>
               <button
+                className="vx-get-started-btn"
                 onClick={handleGetStarted}
                 style={{
                   padding: "8px 20px",
@@ -296,8 +374,6 @@ export function HeroSection() {
                   alignItems: "center",
                   gap: 8
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
               >
                 {userInfo ? (
                   <>
@@ -307,7 +383,12 @@ export function HeroSection() {
                     <span>Account</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ transform: dropdownOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}><path d="m6 9 6 6 6-6"/></svg>
                   </>
-                ) : "Get Started"}
+                ) : (
+                  <>
+                    <Zap size={14} className="sm:block hidden" />
+                    <span>Get Started</span>
+                  </>
+                )}
               </button>
 
               {dropdownOpen && (
@@ -364,29 +445,56 @@ export function HeroSection() {
               )}
             </div>
 
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ display: "none", background: "transparent", border: "none", cursor: "pointer", color: "var(--vx-text-primary)", padding: 8 }} className="md:hidden block">
+            {/* Mobile Menu Toggle */}
+            <button 
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)} 
+              className="md:hidden flex items-center justify-center p-2 text-[var(--vx-text-primary)] bg-transparent border-none cursor-pointer"
+            >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div style={{ borderTop: "1px solid var(--vx-border)", background: "var(--vx-bg-primary)", padding: "12px 24px 16px" }} className="md:hidden">
-            {navLinks.map((link) => (
-              <a key={link.label} href={link.href} onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "12px 16px", fontSize: 15, fontWeight: 500, color: "var(--vx-text-primary)", textDecoration: "none", borderRadius: 8, marginBottom: 4 }}>
-                {link.label}
-              </a>
-            ))}
-          </div>
-        )}
+        {/* Mobile Menu Overlay */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="vx-mobile-menu md:hidden"
+            >
+              {navLinks.map((link) => (
+                <a 
+                  key={link.label} 
+                  href={link.href} 
+                  onClick={() => setMobileMenuOpen(false)} 
+                  className="vx-mobile-nav-link"
+                  style={{ color: "var(--vx-text-secondary)" }}
+                  onMouseEnter={e => e.currentTarget.style.color = "var(--vx-text-primary)"}
+                  onMouseLeave={e => e.currentTarget.style.color = "var(--vx-text-secondary)"}
+                >
+                  {link.label}
+                </a>
+              ))}
+              <div style={{ padding: "12px 16px", marginTop: 8 }}>
+                <Button 
+                   onClick={() => { setMobileMenuOpen(false); handleGetStarted(); }}
+                   className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white rounded-xl py-6 font-bold text-lg"
+                >
+                  Get Started
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* ══════════ HERO CONTENT ══════════ */}
-      <div style={{ position: "relative", zIndex: 10, flex: 1, display: "flex", alignItems: "center", padding: "100px 24px 60px", maxWidth: 1280, margin: "0 auto", width: "100%", gap: 60 }}>
+      <div className="vx-hero-grid">
 
         {/* ── LEFT ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="vx-hero-left" style={{ flex: 1, minWidth: 0 }}>
 
           {/* Badge */}
           <div
@@ -411,7 +519,7 @@ export function HeroSection() {
           </p>
 
           {/* CTA Buttons */}
-          <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
+          <div className="vx-hero-btns" style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
             <button
               onClick={handleGetStarted}
               style={{ padding: "14px 28px", background: "var(--vx-text-primary)", border: "1px solid transparent", borderRadius: 8, color: "var(--vx-bg-primary)", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "all 0.25s" }}

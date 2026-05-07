@@ -55,13 +55,28 @@ export function AnalyticsSection() {
   ];
 
   return (
-    <section style={{ padding: "100px 24px", position: "relative" }}>
+    <section style={{ padding: "clamp(60px, 8vw, 100px) 16px", position: "relative" }}>
       <style>{`
         @keyframes sparkline-grow { 0%{transform:scaleY(0);opacity:0} 100%{transform:scaleY(1);opacity:1} }
-        @media (min-width:1024px) { 
+        
+        .vx-bento-wide { grid-column: 1 / -1; }
+        
+        @media (min-width: 1024px) { 
           .vx-bento-wide { grid-column: span 2 !important; }
           .vx-main-grid { grid-template-columns: 1fr 2fr !important; }
         }
+        
+        @media (max-width: 768px) {
+          .vx-card-scene { height: 120px !important; }
+          .vx-stat-card { height: 120px !important; }
+        }
+
+        @media (max-width: 480px) {
+          .vx-reveal h2 { font-size: 1.5rem !important; }
+          .vx-reveal p { font-size: 15px !important; }
+          .vx-bento-wide { padding: 20px !important; }
+        }
+
         .vx-card-scene { perspective: 1200px; }
         .vx-card-inner {
           position: relative;
@@ -90,21 +105,21 @@ export function AnalyticsSection() {
 
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         {/* Heading */}
-        <div className="vx-reveal" style={{ textAlign: "center", marginBottom: 60 }}>
+        <div className="vx-reveal" style={{ textAlign: "center", marginBottom: "clamp(30px, 5vw, 60px)" }}>
           <div style={{ color: "var(--vx-text-muted)", fontSize: 13, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 16 }}>
             Command Center
           </div>
           <h2 style={{ fontSize: "clamp(1.8rem,4vw,2.8rem)", fontWeight: 800, color: "var(--vx-text-primary)", lineHeight: 1.15, letterSpacing: "-0.02em", marginBottom: 16 }}>
             Smart Analytics Dashboard
           </h2>
-          <p style={{ color: "var(--vx-text-secondary)", fontSize: 18, maxWidth: 600, margin: "0 auto", lineHeight: 1.6 }}>
+          <p style={{ color: "var(--vx-text-secondary)", fontSize: "clamp(15px, 2vw, 18px)", maxWidth: 600, margin: "0 auto", lineHeight: 1.6 }}>
             Track your performance, audience growth, and engagement metrics in real-time across all your connected social platforms.
           </p>
         </div>
 
         {/* Main Chart */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))", gap: 24, marginBottom: 24 }}>
-          <div className="vx-reveal vx-bento-wide" style={{ gridColumn: "1/-1", background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 36, boxShadow: "0 24px 50px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 340px),1fr))", gap: 24, marginBottom: 24 }}>
+          <div className="vx-reveal vx-bento-wide" style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: "clamp(20px, 4vw, 36px)", boxShadow: "0 24px 50px rgba(0,0,0,0.2)", display: "flex", flexDirection: "column" }}>
             <div style={{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
               <div>
                 <h3 style={{ color: "var(--vx-text-primary)", fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Audience Growth</h3>
@@ -136,7 +151,7 @@ export function AnalyticsSection() {
         </div>
 
         {/* Stats & Platforms Paired Layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", gap: "clamp(16px, 3vw, 24px)" }}>
           {stats.map((s, i) => {
             const p = platforms[i];
             const frequencyData = p ? p.chart.map((v, idx) => ({ x: idx, y: v })) : [];
@@ -145,15 +160,15 @@ export function AnalyticsSection() {
               <div key={i} style={{ display: "contents" }}>
                 {/* Stat Card */}
                 <div
-                  className={`vx-reveal vx-delay-${i+1}`}
-                  style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 20, padding: "24px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", transition: "all 0.3s ease", position: "relative", overflow: "hidden", height: 140, gridColumn: p ? "auto" : "1 / -1" }}
+                  className={`vx-reveal vx-delay-${i+1} vx-stat-card`}
+                  style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 20, padding: "clamp(16px, 4vw, 24px) clamp(20px, 4vw, 28px)", display: "flex", alignItems: "center", justifyContent: "space-between", transition: "all 0.3s ease", position: "relative", overflow: "hidden", height: 140, gridColumn: p ? "auto" : "1 / -1" }}
                   onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform="translateY(-4px)"; el.style.borderColor=`${s.iconColor}50`; el.style.boxShadow=`0 12px 24px ${s.iconColor}15`; }}
                   onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform="translateY(0)"; el.style.borderColor="var(--vx-border)"; el.style.boxShadow="none"; }}
                 >
                   <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg,${s.iconColor}10,transparent)`, opacity: 0.5, pointerEvents: "none" }} />
                   <div>
                     <div style={{ color: "var(--vx-text-muted)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>{s.label}</div>
-                    <div style={{ fontSize: 32, fontWeight: 800, color: "var(--vx-text-primary)", lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
+                    <div style={{ fontSize: "clamp(24px, 5vw, 32px)", fontWeight: 800, color: "var(--vx-text-primary)", lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
                     <div style={{ color: s.iconColor, fontSize: 13, fontWeight: 600 }}>{s.delta}</div>
                   </div>
                   <div style={{ width: 48, height: 48, borderRadius: 14, background: `${s.iconColor}15`, border: `1px solid ${s.iconColor}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -199,14 +214,14 @@ export function AnalyticsSection() {
                             </AreaChart>
                           </ResponsiveContainer>
                         </div>
-                        <div style={{ width: 100, flexShrink: 0 }}>
+                        <div style={{ width: "clamp(80px, 15vw, 100px)", flexShrink: 0 }}>
                           <div style={{ marginBottom: 8 }}>
                             <div style={{ color: "var(--vx-text-muted)", fontSize: 8, fontWeight: 800, textTransform: "uppercase" }}>Reach</div>
-                            <div style={{ color: "var(--vx-text-primary)", fontSize: 14, fontWeight: 800 }}>{p.reach}</div>
+                            <div style={{ color: "var(--vx-text-primary)", fontSize: "clamp(12px, 3vw, 14px)", fontWeight: 800 }}>{p.reach}</div>
                           </div>
                           <div>
                             <div style={{ color: "var(--vx-text-muted)", fontSize: 8, fontWeight: 800, textTransform: "uppercase" }}>Impr.</div>
-                            <div style={{ color: "var(--vx-text-primary)", fontSize: 14, fontWeight: 800 }}>{p.impressions}</div>
+                            <div style={{ color: "var(--vx-text-primary)", fontSize: "clamp(12px, 3vw, 14px)", fontWeight: 800 }}>{p.impressions}</div>
                           </div>
                         </div>
                       </div>
@@ -219,7 +234,7 @@ export function AnalyticsSection() {
         </div>
 
         {/* Slider at the bottom spanning full width */}
-        <div style={{ maxWidth: 300, margin: "40px auto 0" }}>
+        <div style={{ width: "100%", maxWidth: 400, margin: "clamp(30px, 6vw, 50px) auto 0" }}>
           <PlatformFlipSlider flipped={flipped} onFlip={setFlipped} />
         </div>
       </div>

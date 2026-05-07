@@ -40,7 +40,7 @@ export function AboutSection() {
     <section
       id="about"
       ref={sectionRef}
-      style={{ position: "relative", padding: "40px 24px 100px", overflow: "hidden", background: "transparent" }}
+      style={{ position: "relative", padding: "clamp(40px, 8vw, 60px) 16px 100px", overflow: "hidden", background: "transparent" }}
     >
       <style>{`
         @keyframes vx-tab-fade {
@@ -63,6 +63,18 @@ export function AboutSection() {
           0% { transform: scaleY(0); }
           100% { transform: scaleY(1); }
         }
+        
+        @media (max-width: 768px) {
+          .vx-dashboard-body { flex-direction: column !important; }
+          .vx-dashboard-sidebar { border-right: none !important; border-bottom: 1px solid var(--vx-border) !important; flex: none !important; width: 100% !important; }
+          .vx-dashboard-main { flex: none !important; width: 100% !important; min-height: 400px !important; }
+          .vx-feature-card { padding: 12px !important; }
+        }
+
+        @media (max-width: 480px) {
+          .vx-mockup-container { padding: 4px !important; }
+          .vx-reveal h2 { font-size: 1.75rem !important; }
+        }
       `}</style>
       <div style={{ maxWidth: 1280, margin: "0 auto", position: "relative", zIndex: 1 }}>
         
@@ -78,13 +90,13 @@ export function AboutSection() {
             What is <span style={{ color: "var(--vx-text-secondary)" }}>Vulpinix 1.0?</span>
           </h2>
 
-          <p style={{ fontSize: "1.1rem", color: "var(--vx-text-secondary)", lineHeight: 1.7 }}>
+          <p style={{ fontSize: "clamp(1rem, 1.5vw, 1.1rem)", color: "var(--vx-text-secondary)", lineHeight: 1.7 }}>
             Vulpinix AI is your intelligent marketing co-pilot. Built for the modern digital landscape, it completely automates the bridge between raw content creation and strategic publishing.
           </p>
         </div>
 
         {/* ── Dashboard Interface Mockup ── */}
-        <div className="vx-reveal" style={{ background: "var(--vx-bg-primary)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 6, boxShadow: "0 24px 64px rgba(0,0,0,0.15)", marginTop: 20 }}>
+        <div className="vx-reveal vx-mockup-container" style={{ background: "var(--vx-bg-primary)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 6, boxShadow: "0 24px 64px rgba(0,0,0,0.15)", marginTop: 20 }}>
           <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", minHeight: 460 }}>
             
             {/* Window Header */}
@@ -95,17 +107,18 @@ export function AboutSection() {
               
               <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, padding: "4px 12px", background: "var(--vx-bg-primary)", borderRadius: 999, border: "1px solid var(--vx-border)", fontSize: 11, fontWeight: 700, color: "var(--vx-text-muted)" }}>
                 <Zap size={12} style={{ color: "#38bdf8" }} />
-                AI ENGINE ACTIVE
+                <span className="hidden sm:inline">AI ENGINE ACTIVE</span>
               </div>
             </div>
 
             {/* Window Body - App Layout */}
-            <div style={{ display: "flex", flex: 1, flexDirection: "row", flexWrap: "wrap" }}>
+            <div className="vx-dashboard-body" style={{ display: "flex", flex: 1, flexDirection: "row", flexWrap: "wrap" }}>
                 {/* Left Sidebar - Features List */}
-               <div style={{ flex: "1 1 320px", borderRight: "1px solid var(--vx-border)", padding: 24, display: "flex", flexDirection: "column", gap: 16, background: "var(--vx-bg-primary)" }}>
+               <div className="vx-dashboard-sidebar" style={{ flex: "1 1 320px", borderRight: "1px solid var(--vx-border)", padding: "clamp(16px, 3vw, 24px)", display: "flex", flexDirection: "column", gap: 16, background: "var(--vx-bg-primary)" }}>
                  {features.map((feature, i) => (
                    <div 
                      key={i} 
+                     className="vx-feature-card"
                      onClick={() => setActiveFeature(i)}
                      style={{ 
                        padding: 20, 
@@ -120,11 +133,11 @@ export function AboutSection() {
                        <div style={{ width: 32, height: 32, borderRadius: 8, background: i === activeFeature ? feature.color : "var(--vx-bg-input)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s ease" }}>
                          <feature.icon size={16} color={i === activeFeature ? "#fff" : "var(--vx-text-secondary)"} />
                        </div>
-                       <span style={{ fontWeight: 800, fontSize: "1rem", color: i === activeFeature ? "var(--vx-text-primary)" : "var(--vx-text-secondary)", transition: "all 0.2s ease" }}>
+                       <span style={{ fontWeight: 800, fontSize: "clamp(0.9rem, 2vw, 1rem)", color: i === activeFeature ? "var(--vx-text-primary)" : "var(--vx-text-secondary)", transition: "all 0.2s ease" }}>
                          {feature.title}
                        </span>
                      </div>
-                     <p style={{ fontSize: "0.9rem", color: "var(--vx-text-secondary)", lineHeight: 1.6, margin: 0 }}>
+                     <p style={{ fontSize: "0.85rem", color: "var(--vx-text-secondary)", lineHeight: 1.6, margin: 0 }}>
                        {feature.description}
                      </p>
                    </div>
@@ -132,7 +145,7 @@ export function AboutSection() {
                </div>
 
                {/* Right Main Area - Visual Output */}
-               <div style={{ flex: "2 1 400px", padding: 24, display: "flex", background: "var(--vx-bg-card)", minHeight: 340 }}>
+               <div className="vx-dashboard-main" style={{ flex: "2 1 400px", padding: "clamp(16px, 4vw, 24px)", display: "flex", background: "var(--vx-bg-card)", minHeight: 340 }}>
                   <div style={{ flex: 1, width: "100%", minHeight: 320, borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
                      
                      <div key={activeFeature} style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", animation: "vx-tab-fade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards" }}>
@@ -211,7 +224,7 @@ export function AboutSection() {
                            </div>
 
                            {/* Foreground floating card */}
-                           <div style={{ width: "100%", maxWidth: 320, background: "var(--vx-bg-card)", borderRadius: 24, border: "1px solid var(--vx-border)", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 30px 60px rgba(0,0,0,0.25)", zIndex: 2, marginRight: 60, animation: "float-fg 7s ease-in-out infinite 1s" }}>
+                           <div style={{ width: "100%", maxWidth: 320, background: "var(--vx-bg-card)", borderRadius: 24, border: "1px solid var(--vx-border)", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 30px 60px rgba(0,0,0,0.25)", zIndex: 2, marginRight: "clamp(20px, 10vw, 60px)", animation: "float-fg 7s ease-in-out infinite 1s" }}>
                               <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: "1px solid var(--vx-border)" }}>
                                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)", padding: 2 }}>
                                    <div style={{ width: "100%", height: "100%", background: "var(--vx-bg-card)", borderRadius: "50%", border: "2px solid var(--vx-bg-card)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -241,17 +254,17 @@ export function AboutSection() {
 
                        {/* TAB 2: Predictive Analytics (Bar Chart Mockup) */}
                        {activeFeature === 2 && (
-                          <div style={{ width: "100%", maxWidth: 360, background: "var(--vx-bg-primary)", borderRadius: 20, border: "1px solid var(--vx-border)", padding: 32, boxShadow: "0 24px 48px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column" }}>
+                          <div style={{ width: "100%", maxWidth: 360, background: "var(--vx-bg-primary)", borderRadius: 20, border: "1px solid var(--vx-border)", padding: "clamp(16px, 5vw, 32px)", boxShadow: "0 24px 48px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column" }}>
                              <div style={{ fontSize: 12, fontWeight: 800, color: "var(--vx-text-muted)", marginBottom: 24, letterSpacing: "0.1em", display: "flex", alignItems: "center", gap: 8 }}>
                                <BarChart3 size={16} style={{ color: "#818cf8" }} />
                                ENGAGEMENT FORECAST
                              </div>
                              <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 40 }}>
-                               <div style={{ fontSize: "3.5rem", fontWeight: 800, color: "var(--vx-text-primary)", lineHeight: 1 }}>2.4<span style={{ fontSize: "1.5rem" }}>k</span></div>
+                               <div style={{ fontSize: "clamp(2.5rem, 6vw, 3.5rem)", fontWeight: 800, color: "var(--vx-text-primary)", lineHeight: 1 }}>2.4<span style={{ fontSize: "1.5rem" }}>k</span></div>
                                <div style={{ padding: "4px 8px", background: "rgba(34, 197, 94, 0.1)", color: "#22c55e", borderRadius: 6, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>+14.2%</div>
                              </div>
                              {/* Bar Chart with animated growing bars */}
-                             <div style={{ display: "flex", alignItems: "flex-end", gap: 12, height: 120 }}>
+                             <div style={{ display: "flex", alignItems: "flex-end", gap: "clamp(6px, 2vw, 12px)", height: 120 }}>
                                <div style={{ flex: 1, height: "40%", background: "var(--vx-bg-input)", borderRadius: "6px 6px 0 0", transformOrigin: "bottom", animation: "bar-grow 0.6s cubic-bezier(0.16, 1, 0.3, 1) both" }} />
                                <div style={{ flex: 1, height: "60%", background: "var(--vx-bg-input)", borderRadius: "6px 6px 0 0", transformOrigin: "bottom", animation: "bar-grow 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both" }} />
                                <div style={{ flex: 1, height: "45%", background: "var(--vx-bg-input)", borderRadius: "6px 6px 0 0", transformOrigin: "bottom", animation: "bar-grow 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both" }} />

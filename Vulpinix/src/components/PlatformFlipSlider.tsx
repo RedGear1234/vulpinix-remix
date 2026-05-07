@@ -61,6 +61,17 @@ export function PlatformFlipSlider({ onFlip, flipped }: PlatformFlipSliderProps)
         .vx-arrow-icon {
           animation: ${!dragging && !flipped ? "arrowBounce 1s infinite" : "none"};
         }
+        
+        @media (max-width: 480px) {
+          #analytics-flip-slider { height: 28px !important; }
+          .vx-slider-thumb { width: 24px !important; height: 24px !important; }
+          .vx-slider-label { font-size: 8px !important; }
+        }
+        @media (min-width: 1024px) {
+          #analytics-flip-slider { height: 40px !important; }
+          .vx-slider-thumb { width: 36px !important; height: 36px !important; }
+          .vx-slider-label { font-size: 11px !important; }
+        }
       `}</style>
 
       <div
@@ -103,21 +114,25 @@ export function PlatformFlipSlider({ onFlip, flipped }: PlatformFlipSliderProps)
         }} />
 
         {/* Label */}
-        <div style={{
-          position: "absolute", inset: 0,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 10, fontWeight: 700, letterSpacing: "0.04em",
-          color: flipped ? "#ffffff" : `rgba(255,255,255,${0.25 + pct * 0.5})`,
-          pointerEvents: "none",
-          transition: "color 0.2s ease",
-        }}>{label}</div>
+        <div 
+          className="vx-slider-label"
+          style={{
+            position: "absolute", inset: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 10, fontWeight: 700, letterSpacing: "0.04em",
+            color: flipped ? "#ffffff" : `rgba(255,255,255,${0.25 + pct * 0.5})`,
+            pointerEvents: "none",
+            transition: "color 0.2s ease",
+          }}>{label}</div>
 
         {/* Thumb */}
         <div
           className="vx-slider-thumb"
           style={{
             position: "absolute",
-            top: 2, left: drag + 2,
+            top: "50%",
+            transform: "translateY(-50%)",
+            left: drag + 2,
             width: THUMB - 4, height: THUMB - 4,
             borderRadius: 999,
             background: flipped
