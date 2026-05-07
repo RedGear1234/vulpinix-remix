@@ -174,8 +174,6 @@ export default function CreateAdPage() {
           >
             <ArrowLeft size={16} /> Back to Content
           </button>
-          
-          
           <h1 style={{ fontSize: "clamp(2rem, 5vw, 2.8rem)", fontWeight: 800, letterSpacing: "-0.04em", margin: 0, lineHeight: 1, paddingTop: 20 }}>
             Configure Your <span style={{ background: "linear-gradient(135deg, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Campaign</span>
           </h1>
