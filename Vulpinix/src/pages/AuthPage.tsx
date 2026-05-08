@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { useGoogleAuthSimple } from "../hooks/useGoogleAuthSimple";
+import { GoogleLogin } from "@react-oauth/google";
 import { VulpinixLogo } from "../components/VulpinixLogo";
 
 type AuthMode = "login" | "signup";
@@ -40,33 +40,51 @@ export default function AuthPage() {
   useEffect(() => { localStorage.setItem("returningUser", "true"); }, []);
   useEffect(() => { const u = localStorage.getItem("userInfo"), a = localStorage.getItem("isAuthenticated"); if (u || a === "true") navigate("/upload", { replace: true }); }, [navigate]);
 
-  const handleGoogleSuccess = useCallback(async (googleUser: any) => {
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setIsLoading(true);
     try {
       const res = await fetch("http://localhost:5000/api/users/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: googleUser.name, email: googleUser.email, googleId: googleUser.sub, picture: googleUser.picture }),
+        body: JSON.stringify({ credential: credentialResponse.credential }),
       });
       const data = await res.json();
-      if (data.token) {
-        localStorage.setItem("authToken", data.token);
-        localStorage.setItem("userInfo", JSON.stringify({ ...data.user, picture: googleUser.picture }));
-      } else {
-        localStorage.setItem("userInfo", JSON.stringify({ name: googleUser.name, email: googleUser.email, picture: googleUser.picture, googleId: googleUser.sub }));
+      
+      if (!res.ok) {
+        toast.error(data.message || "Google Sign-In Failed");
+        setIsLoading(false);
+        return;
       }
-    } catch {
-      localStorage.setItem("userInfo", JSON.stringify({ name: googleUser.name, email: googleUser.email, picture: googleUser.picture, googleId: googleUser.sub }));
-    }
-    toast.success(<div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-green-400" /><div><p className="font-semibold">Welcome, {googleUser.name}!</p><p className="text-xs text-gray-400 mt-0.5">Signed in via Google</p></div></div>, { duration: 5000 });
-    localStorage.setItem("isAuthenticated", "true");
-    localStorage.setItem("authProvider", "google");
-    localStorage.setItem("socialLinks", JSON.stringify({ instagram: "", facebook: "", youtube: "", twitter: "", linkedin: "" }));
-    setTimeout(() => navigate("/upload"), 1000);
-  }, [navigate]);
 
-  const handleGoogleError = useCallback((error: string) => { toast.error("Google Sign-In Failed", { description: error }); }, []);
-  const { isGoogleLoaded, initializeGoogle } = useGoogleAuthSimple();
-  useEffect(() => { if (isGoogleLoaded) initializeGoogle("google-signin-button", handleGoogleSuccess, handleGoogleError); }, [isGoogleLoaded, initializeGoogle, handleGoogleSuccess, handleGoogleError]);
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("userInfo", JSON.stringify(data.user));
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("authProvider", "google");
+      localStorage.setItem("socialLinks", JSON.stringify({ instagram: "", facebook: "", youtube: "", twitter: "", linkedin: "" }));
+      
+      toast.success(
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="w-5 h-5 text-green-400" />
+          <div>
+            <p className="font-semibold">Welcome, {data.user.name}!</p>
+            <p className="text-xs text-gray-400 mt-0.5">Signed in via Google</p>
+          </div>
+        </div>, 
+        { duration: 5000 }
+      );
+
+      setTimeout(() => navigate("/upload"), 1000);
+    } catch (err) {
+      console.error("Google login error:", err);
+      toast.error("Could not reach server. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => { 
+    toast.error("Google Sign-In Failed", { description: "An error occurred during Google authentication." }); 
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,7 +305,10 @@ export default function AuthPage() {
 
         @media (max-width: 480px) { .auth-card { padding: 28px 20px; } .auth-socials { flex-direction: column; } }
 
-        #google-signin-button { position: absolute; inset: 0; opacity: 0; z-index: 10; display: flex !important; width: 100% !important; height: 100% !important; }
+        .google-btn-container { position: relative; flex: 1; height: 44px; overflow: hidden; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); transition: all 0.2s; }
+        .google-btn-container:hover { background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.18); transform: translateY(-1px); }
+        .google-login-wrapper { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .google-login-wrapper iframe { width: 100% !important; height: 100% !important; cursor: pointer !important; }
       `}</style>
 
       <div className="auth-blob auth-blob-1" />
@@ -311,11 +332,21 @@ export default function AuthPage() {
               <div className="auth-subheading">Sign in to continue to Vulpinix AI</div>
 
               <div className="auth-socials">
-                <div style={{ position: "relative", flex: 1, height: "44px" }}>
-                  <button type="button" className="auth-soc-btn" style={{ width: "100%", height: "100%" }}>
+                <div className="google-btn-container">
+                  <button type="button" className="auth-soc-btn" style={{ width: "100%", height: "100%", border: "none", background: "none" }}>
                     <GoogleIcon /> Google
                   </button>
-                  <div id="google-signin-button" />
+                  <div className="google-login-wrapper">
+                    <GoogleLogin 
+                      onSuccess={handleGoogleSuccess} 
+                      onError={handleGoogleError}
+                      useOneTap
+                      theme="filled_black"
+                      shape="rectangular"
+                      size="large"
+                      width="400"
+                    />
+                  </div>
                 </div>
                 <button type="button" className="auth-soc-btn" style={{ flex: 1 }}>
                   <AppleIcon /> Apple
@@ -365,9 +396,22 @@ export default function AuthPage() {
               <div className="auth-subheading">Join 500+ marketers — free to start</div>
 
               <div className="auth-socials">
-                <button type="button" className="auth-soc-btn" style={{ flex: 1 }}>
-                  <GoogleIcon /> Google
-                </button>
+                <div className="google-btn-container">
+                  <button type="button" className="auth-soc-btn" style={{ width: "100%", height: "100%", border: "none", background: "none" }}>
+                    <GoogleIcon /> Google
+                  </button>
+                  <div className="google-login-wrapper">
+                    <GoogleLogin 
+                      onSuccess={handleGoogleSuccess} 
+                      onError={handleGoogleError}
+                      useOneTap
+                      theme="filled_black"
+                      shape="rectangular"
+                      size="large"
+                      width="400"
+                    />
+                  </div>
+                </div>
                 <button type="button" className="auth-soc-btn" style={{ flex: 1 }}>
                   <AppleIcon /> Apple
                 </button>

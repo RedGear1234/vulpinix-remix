@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, default: "" },
     company: { type: String, default: "" },
     googleId: { type: String, default: "" },
+    picture: { type: String, default: "" },
   },
   { timestamps: true }
 );

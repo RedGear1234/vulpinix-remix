@@ -66,20 +66,48 @@ const loginUser = async (req, res) => {
   }
 };
 
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 // ── Google Auth (upsert) ──────────────────────────────────────────────────────
 const googleAuth = async (req, res) => {
   try {
-    const { name, email, googleId, picture } = req.body;
+    const { credential } = req.body;
 
-    if (!email || !googleId) return res.status(400).json({ success: false, message: "Missing Google credentials" });
+    if (!credential) {
+      return res.status(400).json({ success: false, message: "Missing Google credential" });
+    }
+
+    // Verify the ID token
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    if (!email || !googleId) {
+      return res.status(400).json({ success: false, message: "Invalid token payload" });
+    }
 
     let user = await User.findOne({ $or: [{ googleId }, { email: email.toLowerCase() }] });
 
     if (user) {
-      // Update googleId if it was missing
-      if (!user.googleId) { user.googleId = googleId; await user.save(); }
+      // Update googleId or picture if it was missing/changed
+      let updated = false;
+      if (!user.googleId) { user.googleId = googleId; updated = true; }
+      if (picture && user.picture !== picture) { user.picture = picture; updated = true; }
+      if (updated) await user.save();
     } else {
-      user = await User.create({ name, email: email.toLowerCase(), googleId, company: "", phone: "" });
+      user = await User.create({
+        name,
+        email: email.toLowerCase(),
+        googleId,
+        picture: picture || "",
+        company: "",
+        phone: "",
+      });
     }
 
     const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -88,11 +116,17 @@ const googleAuth = async (req, res) => {
       success: true,
       message: "Google auth successful",
       token,
-      user: { id: user._id, name: user.name, email: user.email, googleId: user.googleId },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        googleId: user.googleId,
+        picture: user.picture
+      },
     });
   } catch (err) {
     console.error("Google auth error:", err);
-    res.status(500).json({ success: false, message: "Server error during Google auth" });
+    res.status(500).json({ success: false, message: "Authentication failed. Please try again." });
   }
 };
 

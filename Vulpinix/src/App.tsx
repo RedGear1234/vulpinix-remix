@@ -5,6 +5,9 @@ import { useEffect } from 'react';
 import { initAnimations } from './utils/animations';
 import { useTheme } from './hooks/useTheme';
 import { BackToTop } from './components/BackToTop';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+const GOOGLE_CLIENT_ID = "337485838125-qfsbcv57q8tcabtgtg8shulukt932mr4.apps.googleusercontent.com";
 
 export default function App() {
   // Initialize theme (sets data-theme on <html>, reads from localStorage)
@@ -56,11 +59,11 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <RouterProvider router={router} />
       <BackToTop />
       <Toaster />
-    </>
+    </GoogleOAuthProvider>
   );
 }
 
