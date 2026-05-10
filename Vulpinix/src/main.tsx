@@ -4,6 +4,7 @@
   import "./index.css";
   import "./styles/animations.css";
   import "./styles/theme.css";
+  import "./styles/globals.css";
 
   createRoot(document.getElementById("root")!).render(<App />);
   

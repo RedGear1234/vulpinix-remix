@@ -14,7 +14,7 @@ connectDB();
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use("/api/campaign", require("./API routes/campaignRoutes"));
 app.use("/api/admin", require("./API routes/adminRoutes"));
-// app.use("/api/users", require("./API routes/userroutes")); // stub — no user routes needed yet
+app.use("/api/users", require("./API routes/userroutes"));
 
 app.get("/", (req, res) => {
   res.send("Vulpinix AI Backend is running 🚀");

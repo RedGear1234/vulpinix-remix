@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Sparkles, Edit2, Check, X } from "lucide-react";
 import { Button } from "./ui/button";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface EditableCaptionProps {
   caption: string;
@@ -32,21 +32,23 @@ export function EditableCaption({ caption, onSave }: EditableCaptionProps) {
 
   return (
     <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 backdrop-blur-sm hover:border-purple-400/50 transition-all">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-purple-400" />
-          <h4 className="text-white font-medium">Caption</h4>
+          <h4 style={{ color: "var(--vx-text-primary)" }} className="font-medium">Caption</h4>
         </div>
-        {!isEditing && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-cyan-400 hover:text-cyan-300"
-            onClick={handleEdit}
-          >
-            <Edit2 className="w-4 h-4" />
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {!isEditing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-cyan-400 hover:text-cyan-300"
+              onClick={handleEdit}
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
       </div>
       {isEditing ? (
         <div className="space-y-2">
@@ -54,8 +56,13 @@ export function EditableCaption({ caption, onSave }: EditableCaptionProps) {
             value={tempCaption}
             onChange={(e) => setTempCaption(e.target.value)}
             rows={4}
-            className="w-full px-3 py-2 rounded-lg bg-gray-900/50 border-2 border-purple-500/30 text-white text-sm placeholder-gray-500 focus:border-cyan-400/50 focus:outline-none transition-all resize-none"
-            placeholder="Enter your caption..."
+            className="w-full px-3 py-2 rounded-lg border-2 text-sm transition-all resize-none"
+            style={{ 
+              background: "var(--vx-bg-input)", 
+              borderColor: "var(--vx-border)",
+              color: "var(--vx-text-primary)" 
+            }}
+            placeholder="Write your caption here..."
           />
           <div className="flex gap-2">
             <Button

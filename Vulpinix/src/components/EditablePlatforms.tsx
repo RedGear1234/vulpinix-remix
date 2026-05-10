@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Target, Edit2, Check } from "lucide-react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
-import { toast } from "sonner@2.0.3";
-import { Instagram, Facebook, Youtube, Linkedin, Twitter } from "lucide-react";
+import { toast } from "sonner";
+import { SiInstagram, SiFacebook, SiYoutube, SiX } from "react-icons/si";
+import { FaLinkedin } from "react-icons/fa";
 
 interface Platform {
   id: string;
@@ -26,31 +27,31 @@ export function EditablePlatforms({
     {
       id: "instagram",
       name: "Instagram",
-      icon: Instagram,
+      icon: SiInstagram,
       selected: selectedPlatforms.includes("Instagram"),
     },
     {
       id: "facebook",
       name: "Facebook",
-      icon: Facebook,
+      icon: SiFacebook,
       selected: selectedPlatforms.includes("Facebook"),
     },
     {
       id: "youtube",
       name: "YouTube",
-      icon: Youtube,
+      icon: SiYoutube,
       selected: selectedPlatforms.includes("YouTube"),
     },
     {
       id: "linkedin",
       name: "LinkedIn",
-      icon: Linkedin,
+      icon: FaLinkedin,
       selected: selectedPlatforms.includes("LinkedIn"),
     },
     {
       id: "twitter",
       name: "Twitter",
-      icon: Twitter,
+      icon: SiX,
       selected: selectedPlatforms.includes("Twitter"),
     },
   ]);
@@ -73,11 +74,11 @@ export function EditablePlatforms({
   };
 
   return (
-    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 backdrop-blur-sm hover:border-blue-400/50 transition-all">
+    <div className="p-4 rounded-xl border backdrop-blur-sm transition-all" style={{ background: "var(--vx-bg-card)", borderColor: "var(--vx-border)" }}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Target className="w-5 h-5 text-blue-400" />
-          <h4 className="text-white font-medium">Platforms</h4>
+          <h4 style={{ color: "var(--vx-text-primary)" }} className="font-medium">Platforms</h4>
         </div>
         {!isEditing && (
           <Button
@@ -98,11 +99,12 @@ export function EditablePlatforms({
             return (
               <div
                 key={platform.id}
-                className="flex items-center justify-between p-2 rounded-lg bg-gray-900/30 hover:bg-gray-900/50 transition-all"
+                className="flex items-center justify-between p-2 rounded-lg transition-all"
+                style={{ background: "var(--vx-bg-input)" }}
               >
                 <div className="flex items-center gap-2">
                   <Icon className="w-4 h-4 text-cyan-400" />
-                  <span className="text-sm text-white">{platform.name}</span>
+                  <span className="text-sm" style={{ color: "var(--vx-text-primary)" }}>{platform.name}</span>
                 </div>
                 <Switch
                   checked={platform.selected}
@@ -123,7 +125,7 @@ export function EditablePlatforms({
       ) : (
         <div className="space-y-1">
           {selectedPlatforms.map((platform, i) => (
-            <p key={i} className="text-sm text-gray-300">
+            <p key={i} className="text-sm" style={{ color: "var(--vx-text-secondary)" }}>
               ✓ {platform}
             </p>
           ))}

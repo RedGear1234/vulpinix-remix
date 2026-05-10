@@ -12,12 +12,20 @@ html { scroll-behavior: smooth; }
 #vx-scroll-progress {
   position: fixed;
   top: 0; left: 0;
-  height: 2px;
+  height: 3px;
   width: 0%;
-  background: linear-gradient(90deg, #6333ff, #06d6c7);
+  background: linear-gradient(90deg, #a78bfa, #38bdf8, #a78bfa);
+  background-size: 200% auto;
   z-index: 9999;
   pointer-events: none;
-  transition: width 0.05s linear;
+  transition: width 0.08s linear;
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
+  animation: vx-shimmer-progress 2s linear infinite;
+}
+
+@keyframes vx-shimmer-progress {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
 }
 
 /* ── Custom cursor ────────────────────────────────────────────────────────── */
@@ -62,34 +70,31 @@ html { scroll-behavior: smooth; }
 }
 .vx-orb-1 {
   width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(99,51,255,0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(99,51,255,0.1) 0%, transparent 70%);
   top: -200px; left: -200px;
-  animation: orbFloat1 12s ease-in-out infinite;
 }
 .vx-orb-2 {
   width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(0,212,200,0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(0,212,200,0.07) 0%, transparent 70%);
   bottom: -150px; right: -150px;
-  animation: orbFloat2 15s ease-in-out infinite;
 }
 .vx-orb-3 {
   width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
   top: 50%; left: 50%;
-  animation: orbFloat3 18s ease-in-out infinite;
+  transform: translate(-50%, -50%);
 }
 
-/* ── Global grid overlay (animates across entire body) ────────────────────── */
+/* ── Global grid overlay (static) ────────────────────────────────────────── */
 .vx-grid-overlay {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   background-image:
-    linear-gradient(rgba(99,51,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99,51,255,0.04) 1px, transparent 1px);
+    linear-gradient(rgba(99,51,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,51,255,0.03) 1px, transparent 1px);
   background-size: 50px 50px;
-  animation: gridMove 20s linear infinite;
 }
 
 /* ── IntersectionObserver reveal classes ─────────────────────────────────── */
@@ -144,22 +149,7 @@ html { scroll-behavior: smooth; }
 }
 
 /* ── Keyframes ────────────────────────────────────────────────────────────── */
-@keyframes orbFloat1 {
-  0%, 100% { transform: translate(0, 0); }
-  50%       { transform: translate(60px, 80px); }
-}
-@keyframes orbFloat2 {
-  0%, 100% { transform: translate(0, 0); }
-  50%       { transform: translate(-80px, -60px); }
-}
-@keyframes orbFloat3 {
-  0%, 100% { transform: translate(-50%, -50%); }
-  50%       { transform: translate(-45%, -55%); }
-}
-@keyframes gridMove {
-  from { background-position: 0 0; }
-  to   { background-position: 50px 50px; }
-}
+/* Orb and grid animations removed for cleaner experience */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-10px); }
@@ -232,63 +222,54 @@ html { scroll-behavior: smooth; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Navbar shimmer border ────────────────────────────────────────────────── */
+/* ── Navbar bottom border (static) ───────────────────────────────────────── */
 .vx-nav-shimmer {
   position: absolute;
   bottom: -1px; left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #6333ff, #06d6c7, #6333ff, transparent);
-  background-size: 200% auto;
-  animation: shimmer 3s linear infinite;
+  background: var(--vx-border);
   opacity: 0;
   transition: opacity 0.3s;
 }
 .vx-nav-shimmer.vx-nav-scrolled { opacity: 1; }
 
 /* ── Nav link hover underline ─────────────────────────────────────────────── */
+/* ── Nav link hover (underline removed as requested) ────────────────────────── */
 .vx-nav-link {
   position: relative;
   text-decoration: none;
+  transition: transform 0.2s ease;
 }
-.vx-nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 1.5px;
-  background: linear-gradient(90deg, #a78bfa, #06d6c7);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
+.vx-nav-link:hover {
+  transform: translateY(-1px);
 }
-.vx-nav-link:hover::after { transform: scaleX(1); }
 
-/* ── Badge animated border ────────────────────────────────────────────────── */
+/* ── Badge (static border, no rotation) ──────────────────────────────────── */
 .vx-badge-animated {
   position: relative;
-  overflow: hidden;
-}
-.vx-badge-animated::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: conic-gradient(from var(--angle, 0deg), #6333ff, #06d6c7, #6333ff);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: rotateBorder 3s linear infinite;
 }
 
-/* ── Gradient text animated ───────────────────────────────────────────────── */
+/* ── Gradient text (animated) ───────────────────────────────────────────────── */
 .vx-gradient-text-anim {
-  background: linear-gradient(270deg, #a78bfa, #38bdf8, #6333ff, #06d6c7);
-  background-size: 300% 300%;
+  background: linear-gradient(
+    to right,
+    #8b5cf6, /* Purple */
+    #ec4899, /* Pink */
+    #f97316, /* Orange */
+    #eab308, /* Yellow */
+    #38bdf8, /* Light Blue */
+    #8b5cf6  /* Purple (loop) */
+  );
+  background-size: 500% auto;
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: gradientShift 4s ease infinite;
+  -webkit-text-fill-color: transparent;
+  animation: vx-text-color-shift 6s linear infinite;
+}
+
+@keyframes vx-text-color-shift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
 }
 
 /* ── Section heading underline draw ──────────────────────────────────────── */
@@ -301,7 +282,7 @@ html { scroll-behavior: smooth; }
   position: absolute;
   bottom: -8px; left: 50%; right: 50%;
   height: 2px;
-  background: linear-gradient(90deg, #6333ff, #06d6c7);
+  background: var(--vx-text-primary);
   transform: scaleX(0);
   transform-origin: center;
   transition: transform 0.8s cubic-bezier(0.16,1,0.3,1);
@@ -311,11 +292,7 @@ html { scroll-behavior: smooth; }
   left: 0; right: 0;
 }
 
-/* ── Dashboard card float ────────────────────────────────────────────────── */
-.vx-card-float {
-  animation: floatCard 6s ease-in-out infinite;
-  will-change: transform;
-}
+
 
 /* ── Progress bar animated (width from 0 via CSS var) ─────────────────────── */
 .vx-bar-animated {
@@ -343,21 +320,18 @@ html { scroll-behavior: smooth; }
   opacity: 1 !important;
 }
 
-/* ── Pricing Pro card glow ────────────────────────────────────────────────── */
+/* ── Pricing Pro card glow (static) ──────────────────────────────────────── */
 .vx-pro-card {
-  box-shadow: 0 0 40px rgba(99,51,255,0.25), 0 0 0 1px rgba(99,51,255,0.3);
-  animation: countPulse 4s ease-in-out infinite;
+  border: 1px solid var(--vx-border-focus);
 }
 
-/* ── Most Popular badge shimmer ───────────────────────────────────────────── */
+/* ── Most Popular badge (static gradient) ─────────────────────────────────── */
 .vx-popular-badge {
-  background: linear-gradient(90deg, #7c3aed, #06b6d4, #7c3aed);
-  background-size: 200% auto;
-  animation: badgeShimmer 2.5s linear infinite;
+  background: var(--vx-text-primary);
+  color: var(--vx-bg-primary);
 }
 
-/* ── Delta badges pulse ───────────────────────────────────────────────────── */
-.vx-delta { animation: deltaPulse 2s ease-in-out infinite; }
+
 
 /* ── Stat counter pop ─────────────────────────────────────────────────────── */
 .vx-count-done { animation: countPulse 0.4s ease; }
@@ -372,12 +346,11 @@ html { scroll-behavior: smooth; }
   border-color: rgba(139,92,246,0.7) !important;
 }
 
-/* ── Divider shimmer ──────────────────────────────────────────────────────── */
+/* ── Divider (static subtle line) ────────────────────────────────────────── */
 .vx-divider-shimmer {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #6333ff, #06d6c7, transparent);
-  background-size: 200% auto;
-  animation: shimmer 3s linear infinite;
+  background: var(--vx-border);
+  opacity: 0.6;
 }
 
 /* ── Word-by-word hero heading animation ─────────────────────────────────── */

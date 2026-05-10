@@ -11,9 +11,13 @@ import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ContactPage from "./pages/ContactPage";
 import BlogsPage from "./pages/BlogsPage";
+import ArticlePage from "./pages/ArticlePage";
 import CampaignsDashboardPage from "./pages/CampaignsDashboardPage";
 import CampaignAnalyticsPage from "./pages/CampaignAnalyticsPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import CookiePage from "./pages/CookiePage";
+import NotFoundPage from "./pages/NotFoundPage";
+
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -68,8 +72,16 @@ export const router = createBrowserRouter([
         Component: ContactPage,
       },
       {
+        path: "cookies",
+        Component: CookiePage,
+      },
+      {
         path: "blogs",
         Component: BlogsPage,
+      },
+      {
+        path: "blogs/:id",
+        Component: ArticlePage,
       },
       {
         path: "dashboard/campaigns",
@@ -82,6 +94,10 @@ export const router = createBrowserRouter([
       {
         path: "admin",
         Component: AdminDashboard,
+      },
+      {
+        path: "*",
+        Component: NotFoundPage,
       },
     ],
   },

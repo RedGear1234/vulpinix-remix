@@ -1,420 +1,495 @@
-import { useState, useEffect, useRef } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { useNavigate } from "react-router";
-import {
-  ShieldAlert, CheckCircle2, XCircle, Clock, AlertCircle,
-  LogOut, Search, Lock, User, Eye, EyeOff, ArrowRight,
-  Instagram, Facebook, Youtube, Linkedin, Twitter, Globe,
-  Bell, X, ChevronLeft, ChevronRight, MessageSquare,
-  MapPin, Phone, Mail, DollarSign, Calendar, Tag, Users,
-  Shield, CreditCard, ReceiptText, Building2
-} from "lucide-react";
-import { toast } from "sonner";
+import { API_BASE } from "../../config/api";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Users, 
+  ShieldAlert, 
+  Search, 
+  CheckCircle2, 
+  XCircle, 
+  Eye, 
+  LogOut, 
+  Bell, 
+  User, 
+  Lock, 
+  EyeOff, 
+  ArrowRight,
+  Mail,
+  Phone,
+  Building2,
+  Tag,
+  DollarSign,
+  Clock,
+  Calendar,
+  MapPin,
+  X,
+  Instagram,
+  Facebook,
+  Youtube,
+  Twitter,
+  Linkedin,
+  Globe,
+  ExternalLink,
+  ChevronRight,
+  CreditCard,
+  Target,
+  Image as ImageIcon
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { VulpinixLogo } from '../../components/VulpinixLogo';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   TYPES
+   TYPES & INTERFACES
 ───────────────────────────────────────────────────────────────────────────── */
-type CampaignStatus = "pending" | "in_review" | "approved" | "rejected";
+type CampaignStatus = 'pending' | 'in_review' | 'approved' | 'rejected';
+
 interface Campaign {
   id: string;
-  businessName: string;
-  userName?: string;
-  userEmail?: string;
-  userPhone?: string;
-  businessGoal?: string;
-  businessCategory?: string;
-  adImage?: string;
   name: string;
-  platforms: string[];
-  platform?: string;
+  businessName: string;
+  businessCategory?: string;
+  businessGoal?: string;
   budget: string;
-  currency?: string;
-  duration?: string;
-  estimatedReach?: string;
-  startDatePreference?: string;
+  platforms: string[];
   dateSubmitted: string;
   status: CampaignStatus;
-  rejectionReason?: string;
-  adminMessage?: string;
-  analytics?: Record<string, number>;
-  targeting?: { location?: string[]; audience?: string[]; ageRange?: string; gender?: string; interests?: string[] };
-  socialHandles?: { instagram?: string; facebook?: string; twitter?: string; linkedin?: string };
-  adContentDescription?: string;
+  userName: string;
+  userEmail: string;
+  userPhone?: string;
+  duration?: string;
+  startDatePreference?: string;
+  targeting?: {
+    location?: string[];
+    ageRange?: string;
+    gender?: string;
+    interests?: string[];
+  };
+  socialHandles?: Record<string, string>;
+  adImage?: string;
   adCaption?: string;
   adCopyText?: string;
+  adContentDescription?: string;
   callToAction?: string;
-  content?: { mediaUrl?: string; caption?: string; hashtags?: string[] };
-  paymentAmount?: string;
+  rejectionReason?: string;
+  content?: { mediaUrl?: string };
+  creativeFiles?: any[];
+  analytics?: {
+    impressions: number;
+    reach: number;
+    clicks: number;
+    ctr: number;
+    conversions: number;
+    adSpend: number;
+    roas: number;
+  };
   paymentStatus?: string;
+  paymentAmount?: string;
   paymentId?: string;
   transactionId?: string;
   paymentDate?: string;
   payment?: { paymentId?: string; transactionId?: string; amount?: string; method?: string; timestamp?: string };
 }
 
+interface AdminUser {
+  _id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  role?: string;
+  authProvider?: string;
+  phone?: string;
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
-   CSS STYLES (injected — pure @keyframes, no JS library required)
+   CSS STYLES
 ───────────────────────────────────────────────────────────────────────────── */
 const ADMIN_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+  @keyframes adFadeIn      { from { opacity:0; } to { opacity:1; } }
+  @keyframes adSlideUp    { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes adGlowPulse   { 0%,100% { opacity:0.3; } 50% { opacity:0.6; } }
+  @keyframes adShimmer     { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+  @keyframes adFloat       { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-  @keyframes adNavSlide   { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
-  @keyframes adFadeUpStat { from { opacity:0; transform:translateY(24px);  } to { opacity:1; transform:translateY(0); } }
-  @keyframes adRowFadeUp  { from { opacity:0; transform:translateY(16px);  } to { opacity:1; transform:translateY(0); } }
-  @keyframes adShimmer    {
-    0%   { background-position: -400% center; }
-    100% { background-position:  400% center; }
-  }
-  @keyframes adPulseGlow  { 0%,100%{box-shadow:0 0 0 0 rgba(99,51,255,.0);} 50%{box-shadow:0 0 0 6px rgba(99,51,255,.18);} }
-  @keyframes adFloat      { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-14px);} }
-  @keyframes adOrb1       { 0%,100%{transform:translate(0,0) scale(1);}      50%{transform:translate(30px,-20px) scale(1.05);} }
-  @keyframes adOrb2       { 0%,100%{transform:translate(0,0) scale(1);}      50%{transform:translate(-20px,16px) scale(.97);} }
-  @keyframes adModalIn    {
-    from { opacity:0; transform:scale(.88) translateY(18px); }
-    to   { opacity:1; transform:scale(1)   translateY(0);    }
-  }
-  @keyframes adNewRow     {
-    0%  { background-color: rgba(251,191,36,.12); }
-    100%{ background-color: transparent; }
+  .vx-admin {
+    font-family: 'Inter', sans-serif;
+    background: #05070a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    padding-bottom: 80px;
   }
 
-  /* root */
-  .vx-admin { font-family:'DM Sans',ui-sans-serif,sans-serif; background:#080b14; min-height:100vh; color:#e2e8f0; overflow-x:hidden; }
+  .vx-admin__bg-glow {
+    position: fixed;
+    top: -10%;
+    right: -10%;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
 
-  /* grid bg */
   .vx-admin__grid {
-    position:fixed; inset:0; pointer-events:none; z-index:0;
-    background-image:linear-gradient(rgba(139,92,246,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,.04) 1px,transparent 1px);
-    background-size:60px 60px;
-  }
-  .vx-admin__orb1 {
-    position:fixed; top:-80px; left:8%; width:420px; height:420px; border-radius:50%;
-    background:radial-gradient(circle,rgba(99,51,255,.18) 0%,transparent 70%);
-    filter:blur(80px); pointer-events:none; z-index:0; animation:adOrb1 12s ease-in-out infinite;
-  }
-  .vx-admin__orb2 {
-    position:fixed; bottom:-60px; right:6%; width:340px; height:340px; border-radius:50%;
-    background:radial-gradient(circle,rgba(6,214,199,.13) 0%,transparent 70%);
-    filter:blur(70px); pointer-events:none; z-index:0; animation:adOrb2 14s ease-in-out infinite;
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 50px 50px;
+    mask-image: radial-gradient(circle at center, black, transparent 90%);
+    z-index: 0;
+    pointer-events: none;
   }
 
-  /* navbar */
   .vx-admin__nav {
-    position:sticky; top:0; z-index:50;
-    background:rgba(8,11,20,.92); backdrop-filter:blur(20px);
-    animation:adNavSlide .5s ease both;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(5, 7, 10, 0.7);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    animation: adFadeIn 0.8s ease;
   }
-  .vx-admin__nav-border {
-    height:1px;
-    background:linear-gradient(90deg,transparent,#6333ff,#06d6c7,transparent);
-    background-size:200% auto; animation:adShimmer 3.5s linear infinite;
-  }
+
   .vx-admin__nav-inner {
-    max-width:1280px; margin:0 auto; padding:0 28px;
-    height:64px; display:flex; align-items:center; justify-content:space-between;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 32px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
-  .vx-admin__logo { display:flex; align-items:center; gap:10px; }
-  .vx-admin__logo-icon {
-    width:34px; height:34px; border-radius:10px;
-    background:linear-gradient(135deg,#6333ff,#06d6c7);
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 0 18px rgba(99,51,255,.45);
-    font-weight:900; font-size:15px; color:#fff; flex-shrink:0;
-  }
-  .vx-admin__logo-name {
-    font-family:'Syne',sans-serif; font-weight:800; font-size:17px;
-    background:linear-gradient(90deg,#c4b5fd,#67e8f9); -webkit-background-clip:text;
-    -webkit-text-fill-color:transparent; background-clip:text;
-  }
+
   .vx-admin__badge {
-    display:inline-flex; align-items:center; gap:5px;
-    padding:3px 10px; border-radius:999px;
-    background:rgba(99,51,255,.15); border:1px solid rgba(99,51,255,.35);
-    font-size:11px; font-weight:600; color:#a78bfa; letter-spacing:.04em;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
+
   .vx-admin__badge-dot {
-    width:6px; height:6px; border-radius:50%;
-    background:#4ade80; box-shadow:0 0 6px #4ade80;
+    width: 6px;
+    height: 6px;
+    background: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #10b981;
   }
-  .vx-admin__nav-right { display:flex; align-items:center; gap:14px; }
-  .vx-admin__bell-btn {
-    position:relative; width:36px; height:36px; border-radius:10px;
-    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer; color:rgba(180,180,220,.7); transition:all .2s;
-  }
-  .vx-admin__bell-btn:hover { background:rgba(99,51,255,.15); color:#fff; border-color:rgba(99,51,255,.4); }
-  .vx-admin__bell-dot {
-    position:absolute; top:5px; right:5px; width:8px; height:8px;
-    border-radius:50%; background:#ef4444; border:2px solid #080b14;
-    box-shadow:0 0 6px #ef4444;
-  }
-  .vx-admin__admin-name { font-size:13px; color:rgba(180,180,220,.65); }
+
   .vx-admin__logout-btn {
-    display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:9px;
-    background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.25);
-    color:rgba(252,165,165,.85); font-size:13px; font-weight:600; cursor:pointer;
-    transition:all .2s;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
   }
-  .vx-admin__logout-btn:hover { background:rgba(239,68,68,.18); color:#fff; border-color:rgba(239,68,68,.5); }
+  .vx-admin__logout-btn:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #fca5a5; }
 
-  /* main */
-  .vx-admin__main { position:relative; z-index:1; max-width:1280px; margin:0 auto; padding:36px 28px 80px; }
-  .vx-admin__title { font-family:'Syne',sans-serif; font-weight:800; font-size:32px; color:#fff; margin-bottom:4px; }
-  .vx-admin__sub   { font-size:14px; color:rgba(180,180,220,.5); margin-bottom:32px; }
-
-  /* search bar */
-  .vx-admin__search-wrap { position:relative; margin-bottom:28px; max-width:400px; }
-  .vx-admin__search-icon { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:rgba(180,180,220,.4); }
-  .vx-admin__search {
-    width:100%; padding:10px 14px 10px 40px;
-    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
-    border-radius:12px; font-family:'DM Sans',sans-serif; font-size:14px;
-    color:#e2e8f0; outline:none; transition:all .2s;
+  .vx-admin__container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 48px 32px;
+    position: relative;
+    z-index: 1;
   }
-  .vx-admin__search::placeholder { color:rgba(180,180,220,.3); }
-  .vx-admin__search:focus { border-color:rgba(99,51,255,.5); box-shadow:0 0 12px rgba(99,51,255,.15); }
 
-  /* stats row */
-  .vx-admin__stats { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-bottom:36px; }
-  @media(max-width:768px){ .vx-admin__stats{grid-template-columns:repeat(2,1fr);} }
+  .vx-admin__title {
+    font-size: 40px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0 0 8px;
+  }
+
+  .vx-admin__stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-bottom: 48px;
+  }
+
   .vx-admin__stat-card {
-    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
-    border-radius:16px; padding:22px 20px; cursor:default;
-    transition:all .2s ease; animation:adFadeUpStat .6s ease both;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 24px;
+    padding: 32px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: adSlideUp 0.6s ease both;
   }
-  .vx-admin__stat-card:hover { transform:translateY(-2px); border-color:rgba(139,92,246,.3); box-shadow:0 8px 32px rgba(99,51,255,.1); }
-  .vx-admin__stat-dot { width:8px; height:8px; border-radius:50%; margin-bottom:14px; }
-  .vx-admin__stat-label { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:rgba(180,180,220,.5); margin-bottom:6px; }
-  .vx-admin__stat-num { font-family:'Syne',sans-serif; font-weight:800; font-size:38px; color:#fff; line-height:1; }
-
-  /* filter tabs */
-  .vx-admin__filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px; }
-  .vx-admin__filter-btn {
-    padding:7px 18px; border-radius:999px; font-size:13px; font-weight:600;
-    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03);
-    color:rgba(180,180,220,.6); cursor:pointer; transition:all .2s; text-transform:capitalize;
-  }
-  .vx-admin__filter-btn:hover { background:rgba(99,51,255,.12); color:#e2e8f0; border-color:rgba(99,51,255,.3); }
-  .vx-admin__filter-btn--active {
-    background:linear-gradient(135deg,#6333ff,#06d6c7);
-    color:#fff; border-color:transparent; box-shadow:0 0 14px rgba(99,51,255,.3);
+  .vx-admin__stat-card:hover {
+    transform: translateY(-8px);
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.12);
   }
 
-  /* table container */
-  .vx-admin__table-wrap {
-    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
-    border-radius:18px; overflow:hidden;
-  }
-  .vx-admin__table { width:100%; border-collapse:collapse; }
-  .vx-admin__thead { background:rgba(255,255,255,.04); }
-  .vx-admin__th {
-    padding:12px 16px; text-align:left; font-size:10px; font-weight:700;
-    letter-spacing:.1em; text-transform:uppercase; color:rgba(180,180,220,.4);
-    white-space:nowrap;
-  }
-  .vx-admin__tr {
-    border-top:1px solid rgba(255,255,255,.05);
-    transition:background .15s ease;
-    animation:adRowFadeUp .5s ease both;
-  }
-  .vx-admin__tr:hover { background:rgba(139,92,246,.06); }
-  .vx-admin__td { padding:14px 16px; vertical-align:middle; }
-  .vx-admin__avatar {
-    width:36px; height:36px; border-radius:10px;
-    background:linear-gradient(135deg,#6333ff55,#06d6c722);
-    border:1px solid rgba(99,51,255,.3);
-    display:flex; align-items:center; justify-content:center;
-    font-family:'Syne',sans-serif; font-weight:700; font-size:14px; color:#a78bfa;
-    flex-shrink:0;
-  }
-  .vx-admin__user-name { font-size:13px; font-weight:600; color:#e2e8f0; }
-  .vx-admin__user-email { font-size:11px; color:rgba(180,180,220,.45); margin-top:1px; }
-  .vx-admin__td-muted { font-size:13px; color:rgba(180,180,220,.65); }
-  .vx-admin__platform-pill {
-    display:inline-flex; align-items:center; gap:4px;
-    padding:3px 9px; border-radius:999px; border:1px solid rgba(255,255,255,.08);
-    background:rgba(255,255,255,.04); font-size:11px; color:rgba(180,180,220,.7);
+  .vx-admin__stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
   }
 
-  /* status badges */
-  .vx-admin__status { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.04em; white-space:nowrap; }
-  .vx-admin__status-dot { width:6px; height:6px; border-radius:50%; }
-  .vx-admin__status--pending  { background:rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.3); color:#fbbf24; }
-  .vx-admin__status--in_review{ background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.3); color:#60a5fa; }
-  .vx-admin__status--approved { background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.3); color:#34d399; }
-  .vx-admin__status--rejected { background:rgba(239,68,68,.12);  border:1px solid rgba(239,68,68,.3);  color:#f87171; }
+  .vx-admin__stat-value {
+    font-size: 42px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+  }
 
-  /* action buttons */
-  .vx-admin__actions { display:flex; gap:6px; flex-wrap:wrap; }
-  .vx-admin__btn {
-    padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600;
-    cursor:pointer; border:1px solid; transition:all .2s; display:flex; align-items:center; gap:5px;
+  .vx-admin__cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 24px;
   }
-  .vx-admin__btn:hover { transform:translateY(-1px); }
-  .vx-admin__btn:active { transform:scale(.97); }
-  .vx-admin__btn--view    { background:rgba(99,51,255,.1);  border-color:rgba(99,51,255,.3);  color:#a78bfa; }
-  .vx-admin__btn--view:hover { background:rgba(99,51,255,.2); border-color:rgba(99,51,255,.6); }
-  .vx-admin__btn--approve { background:rgba(16,185,129,.1); border-color:rgba(16,185,129,.3); color:#34d399; }
-  .vx-admin__btn--approve:hover { background:rgba(16,185,129,.2); box-shadow:0 0 12px rgba(16,185,129,.25); }
-  .vx-admin__btn--approve:disabled { opacity:.4; cursor:not-allowed; transform:none; }
-  .vx-admin__btn--reject  { background:rgba(239,68,68,.1);  border-color:rgba(239,68,68,.3);  color:#f87171; }
-  .vx-admin__btn--reject:hover { background:rgba(239,68,68,.2); box-shadow:0 0 12px rgba(239,68,68,.2); }
-  .vx-admin__btn--reject:disabled { opacity:.4; cursor:not-allowed; transform:none; }
-  .vx-admin__btn--msg     { background:rgba(59,130,246,.1); border-color:rgba(59,130,246,.3); color:#60a5fa; }
-  .vx-admin__btn--msg:hover { background:rgba(59,130,246,.2); }
 
-  /* empty state */
-  .vx-admin__empty { padding:80px 20px; text-align:center; }
-  .vx-admin__empty-icon { width:64px; height:64px; border-radius:16px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:rgba(180,180,220,.3); }
+  .vx-admin__card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 28px;
+    padding: 24px;
+    transition: all 0.4s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: adSlideUp 0.6s ease both;
+  }
+  .vx-admin__card:hover {
+    background: rgba(255,255,255,0.04);
+    transform: translateY(-4px);
+  }
 
-  /* ── DETAIL MODAL ── */
-  .vx-admin__overlay {
-    position:fixed; inset:0; z-index:100;
-    background:rgba(5,7,15,.85); backdrop-filter:blur(12px);
-    display:flex; align-items:center; justify-content:center; padding:20px;
+  .vx-admin__card-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    color: #fff;
+    font-size: 18px;
   }
-  .vx-admin__modal {
-    position:relative; width:100%; max-width:700px; max-height:90vh;
-    background:#0e1120; border-radius:20px; overflow:hidden;
-    display:flex; flex-direction:column;
-    animation:adModalIn .35s cubic-bezier(.22,1,.36,1) both;
-    border:1px solid rgba(255,255,255,.08);
-  }
-  .vx-admin__modal-topbar {
-    height:3px;
-    background:linear-gradient(90deg,#6333ff,#06d6c7);
-  }
-  .vx-admin__modal-header {
-    padding:22px 24px 16px; display:flex; align-items:center; justify-content:space-between;
-    border-bottom:1px solid rgba(255,255,255,.07);
-  }
-  .vx-admin__modal-title { font-family:'Syne',sans-serif; font-weight:700; font-size:18px; color:#fff; }
-  .vx-admin__modal-close {
-    width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center;
-    cursor:pointer; color:rgba(180,180,220,.6); transition:all .2s;
-  }
-  .vx-admin__modal-close:hover { background:rgba(239,68,68,.15); color:#f87171; border-color:rgba(239,68,68,.3); }
 
-  /* tabs */
-  .vx-admin__tabs { display:flex; gap:6px; padding:14px 24px; border-bottom:1px solid rgba(255,255,255,.07); overflow-x:auto; }
-  .vx-admin__tab {
-    padding:7px 16px; border-radius:999px; font-size:12px; font-weight:600;
-    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03);
-    color:rgba(180,180,220,.6); cursor:pointer; transition:all .2s; white-space:nowrap;
+  .vx-admin__card-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 20px;
   }
-  .vx-admin__tab:hover { background:rgba(99,51,255,.12); color:#e2e8f0; }
-  .vx-admin__tab--active { background:linear-gradient(135deg,#6333ff,#06d6c7); color:#fff; border-color:transparent; }
 
-  /* modal body */
-  .vx-admin__modal-body { flex:1; overflow-y:auto; padding:24px; scrollbar-width:thin; scrollbar-color:rgba(99,51,255,.3) transparent; }
-  .vx-admin__field-row { display:flex; flex-wrap:wrap; gap:16px; margin-bottom:16px; }
-  .vx-admin__field { flex:1; min-width:180px; }
-  .vx-admin__field-label { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(180,180,220,.4); margin-bottom:5px; }
-  .vx-admin__field-val { font-size:14px; color:#e2e8f0; }
-  .vx-admin__section-title { font-family:'Syne',sans-serif; font-weight:600; font-size:13px; color:rgba(180,180,220,.7); letter-spacing:.06em; text-transform:uppercase; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,.07); }
-  .vx-admin__tag { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; background:rgba(99,51,255,.12); border:1px solid rgba(99,51,255,.25); font-size:11px; color:#a78bfa; margin:2px; }
-  .vx-admin__receipt {
-    background:rgba(16,185,129,.06); border:1px solid rgba(16,185,129,.2);
-    border-radius:14px; padding:20px;
-  }
-  .vx-admin__receipt-badge {
-    display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px;
-    background:rgba(16,185,129,.15); border:1px solid rgba(16,185,129,.3);
-    font-size:12px; font-weight:700; color:#34d399; margin-bottom:16px;
-  }
-  .vx-admin__receipt-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:13px; }
-  .vx-admin__receipt-row:last-child { border-bottom:none; }
-  .vx-admin__receipt-key { color:rgba(180,180,220,.5); }
-  .vx-admin__receipt-val { color:#e2e8f0; font-weight:500; font-family:monospace; font-size:12px; }
+  .vx-admin__card-detail-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 4px; }
+  .vx-admin__card-detail-value { font-size: 14px; font-weight: 600; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* modal action bar */
-  .vx-admin__modal-actions {
-    padding:16px 24px; border-top:1px solid rgba(255,255,255,.07);
-    display:flex; gap:10px; flex-wrap:wrap;
+  .vx-admin__status-pill {
+    padding: 6px 12px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
-  .vx-admin__modal-btn-approve {
-    flex:1; padding:11px 20px; border-radius:11px; border:none; cursor:pointer; font-weight:700; font-size:14px; color:#fff;
-    background:linear-gradient(135deg,#6333ff,#06d6c7);
-    transition:all .2s; display:flex; align-items:center; justify-content:center; gap:6px;
-  }
-  .vx-admin__modal-btn-approve:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(99,51,255,.4); }
-  .vx-admin__modal-btn-approve:disabled { opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
-  .vx-admin__modal-btn-reject {
-    flex:1; padding:11px 20px; border-radius:11px; cursor:pointer; font-weight:700; font-size:14px; color:#f87171;
-    background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3);
-    transition:all .2s; display:flex; align-items:center; justify-content:center; gap:6px;
-  }
-  .vx-admin__modal-btn-reject:hover { transform:translateY(-2px); background:rgba(239,68,68,.2); box-shadow:0 8px 24px rgba(239,68,68,.2); }
-  .vx-admin__modal-btn-reject:disabled { opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
-  .vx-admin__reject-inline { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
-  .vx-admin__reject-textarea {
-    flex:1; min-width:200px; padding:10px 14px; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:13px;
-    background:rgba(255,255,255,.05); border:1px solid rgba(239,68,68,.3); color:#e2e8f0;
-    resize:none; outline:none; height:48px;
-    transition:border-color .2s;
-  }
-  .vx-admin__reject-textarea:focus { border-color:rgba(239,68,68,.6); }
-  .vx-admin__reject-confirm {
-    padding:10px 16px; border-radius:10px; background:#ef4444; border:none;
-    color:#fff; font-weight:700; font-size:13px; cursor:pointer; transition:all .2s; white-space:nowrap;
-  }
-  .vx-admin__reject-confirm:hover { background:#dc2626; transform:translateY(-1px); }
 
-  /* login screen */
-  .vx-admin__login { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; background:#080b14; position:relative; overflow:hidden; }
+  .vx-admin__status--pending   { background: rgba(234, 179, 8, 0.1); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.2); }
+  .vx-admin__status--approved  { background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
+  .vx-admin__status--rejected  { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+  .vx-admin__status--in_review { background: rgba(99, 102, 241, 0.1); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.2); }
+
+  .vx-admin__search-input {
+    width: 100%;
+    max-width: 400px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 14px 20px 14px 52px;
+    color: #fff;
+    outline: none;
+    margin-bottom: 32px;
+    transition: all 0.3s ease;
+  }
+  .vx-admin__search-input:focus { border-color: rgba(99, 102, 241, 0.4); background: rgba(255,255,255,0.05); }
+
+  .vx-admin__tab-btn {
+    padding: 12px 28px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #64748b;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    font-size: 14px;
+  }
+  .vx-admin__tab-btn--active { background: rgba(255,255,255,0.06); color: #fff; border-color: rgba(255,255,255,0.1); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+
+  .vx-admin__login-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #05070a;
+    padding: 24px;
+  }
   .vx-admin__login-card {
-    position:relative; z-index:1; width:100%; max-width:420px;
-    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
-    border-radius:24px; padding:40px; backdrop-filter:blur(20px);
-    box-shadow:0 32px 80px rgba(0,0,0,.5);
+    width: 100%;
+    max-width: 440px;
+    background: rgba(255,255,255,0.01);
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(40px);
+    border-radius: 40px;
+    padding: 56px;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.5);
   }
-  .vx-admin__login-topbar { position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,#6333ff,#06d6c7); border-radius:24px 24px 0 0; }
-  .vx-admin__login-icon {
-    width:60px; height:60px; border-radius:16px; margin:0 auto 22px;
-    background:linear-gradient(135deg,#6333ff,#06d6c7);
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 0 30px rgba(99,51,255,.4);
-  }
-  .vx-admin__login-title { font-family:'Syne',sans-serif; font-weight:800; font-size:26px; color:#fff; text-align:center; margin-bottom:6px; }
-  .vx-admin__login-sub { font-size:13px; color:rgba(180,180,220,.5); text-align:center; margin-bottom:28px; }
-  .vx-admin__input-wrap { position:relative; margin-bottom:16px; }
-  .vx-admin__input-icon { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:rgba(180,180,220,.4); }
-  .vx-admin__input {
-    width:100%; padding:12px 14px 12px 42px;
-    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
-    border-radius:12px; font-family:'DM Sans',sans-serif; font-size:14px;
-    color:#e2e8f0; outline:none; transition:all .2s;
-    box-sizing:border-box;
-  }
-  .vx-admin__input::placeholder { color:rgba(180,180,220,.3); }
-  .vx-admin__input:focus { border-color:rgba(99,51,255,.6); box-shadow:0 0 12px rgba(99,51,255,.2); }
-  .vx-admin__show-pwd { position:absolute; right:13px; top:50%; transform:translateY(-50%); cursor:pointer; color:rgba(180,180,220,.4); background:none; border:none; padding:0; }
-  .vx-admin__login-btn {
-    width:100%; padding:13px; border-radius:12px; border:none; cursor:pointer; font-weight:700; font-size:15px;
-    color:#fff; background:linear-gradient(135deg,#6333ff,#06d6c7);
-    margin-top:8px; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px;
-  }
-  .vx-admin__login-btn:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(99,51,255,.45); }
-  .vx-admin__login-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; box-shadow:none; }
-  .vx-admin__back-btn { width:100%; margin-top:14px; background:none; border:none; cursor:pointer; font-size:13px; color:rgba(180,180,220,.4); transition:color .2s; }
-  .vx-admin__back-btn:hover { color:rgba(180,180,220,.8); }
 
-  /* ad creative preview */
-  .vx-admin__ad-preview { border-radius:14px; overflow:hidden; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); margin-bottom:16px; max-height:300px; display:flex; align-items:center; justify-content:center; }
-  .vx-admin__ad-preview img { width:100%; height:100%; object-fit:cover; max-height:300px; }
-  .vx-admin__ad-no-media { padding:40px; text-align:center; color:rgba(180,180,220,.3); font-size:13px; }
-  .vx-admin__caption-block { background:rgba(99,51,255,.08); border-left:3px solid #6333ff; border-radius:0 10px 10px 0; padding:12px 14px; font-size:13px; color:#c4b5fd; font-style:italic; margin-bottom:14px; }
-  @media(max-width:640px){
-    .vx-admin__table-wrap{ overflow-x:auto; }
-    .vx-admin__modal { max-height:95vh; }
-    .vx-admin__stats { grid-template-columns:repeat(2,1fr); }
+  .vx-admin__user-row {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+  }
+  .vx-admin__user-row:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); transform: translateX(4px); }
+
+  .vx-admin__empty-state {
+    padding: 100px 0;
+    text-align: center;
+    color: #475569;
+  }
+
+  /* MODAL STYLES */
+  .vx-admin__modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .vx-admin__modal {
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    background: #0c0d18;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 32px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 50px 100px rgba(0,0,0,0.8);
+  }
+
+  .vx-admin__modal-header {
+    padding: 32px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .vx-admin__modal-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 16px 32px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .vx-admin__modal-tab {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .vx-admin__modal-tab--active { background: rgba(255,255,255,0.05); color: #fff; }
+
+  .vx-admin__modal-body {
+    padding: 32px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .vx-admin__modal-footer {
+    padding: 24px 32px;
+    background: rgba(255,255,255,0.02);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+  }
+
+  .vx-admin__field-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+
+  .vx-admin__label-sm {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #475569;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .vx-admin__val-lg {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+
+  .vx-admin__media-preview {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #05070a;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 24px;
   }
 `;
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   ANIMATED COUNTER HOOK
+   HELPERS & SUB-COMPONENTS
 ───────────────────────────────────────────────────────────────────────────── */
 function useCounter(target: number, duration = 1200) {
   const [count, setCount] = useState(0);
@@ -432,296 +507,180 @@ function useCounter(target: number, duration = 1200) {
   return count;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   PLATFORM ICON HELPER
-───────────────────────────────────────────────────────────────────────────── */
-function PlatformIcon({ p }: { p: string }) {
-  const s = p.toLowerCase();
-  if (s.includes("instagram")) return <Instagram size={12} />;
-  if (s.includes("facebook"))  return <Facebook size={12} />;
-  if (s.includes("youtube"))   return <Youtube size={12} />;
-  if (s.includes("twitter") || s.includes("x")) return <Twitter size={12} />;
-  if (s.includes("linkedin"))  return <Linkedin size={12} />;
-  return <Globe size={12} />;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   STATUS CONFIG
-───────────────────────────────────────────────────────────────────────────── */
-const STATUS_CONFIG: Record<CampaignStatus, { label: string; dotColor: string; cls: string }> = {
-  pending:   { label: "Pending",   dotColor: "#fbbf24", cls: "vx-admin__status--pending" },
-  in_review: { label: "In Review", dotColor: "#60a5fa", cls: "vx-admin__status--in_review" },
-  approved:  { label: "Approved",  dotColor: "#34d399", cls: "vx-admin__status--approved" },
-  rejected:  { label: "Rejected",  dotColor: "#f87171", cls: "vx-admin__status--rejected" },
-};
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   DETAIL MODAL
-───────────────────────────────────────────────────────────────────────────── */
-const TABS = ["User & Business", "Campaign Details", "Ad Creative", "Payment Info"] as const;
-type Tab = typeof TABS[number];
-
-function DetailModal({
-  campaign,
-  onClose,
-  onApprove,
-  onReject,
-}: {
-  campaign: Campaign;
-  onClose: () => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string, reason: string) => void;
-}) {
-  const [tab, setTab] = useState<Tab>("User & Business");
-  const [showReject, setShowReject] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
-
-  const initials = (campaign.userName || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-  const pmt = campaign.payment;
-
+function StatCard({ label, value, color, delay }: { label: string; value: number; color: string; delay: number }) {
+  const count = useCounter(value);
   return (
-    <div className="vx-admin__overlay" onClick={onClose}>
-      <div className="vx-admin__modal" onClick={e => e.stopPropagation()}>
-        <div className="vx-admin__modal-topbar" />
-
-        {/* Header */}
-        <div className="vx-admin__modal-header">
-          <div>
-            <div className="vx-admin__modal-title">{campaign.name}</div>
-            <div style={{ fontSize: 12, color: "rgba(180,180,220,.5)", marginTop: 2 }}>{campaign.businessName}</div>
-          </div>
-          <button className="vx-admin__modal-close" onClick={onClose}><X size={16} /></button>
-        </div>
-
-        {/* Tabs */}
-        <div className="vx-admin__tabs">
-          {TABS.map(t => (
-            <button key={t} className={`vx-admin__tab${tab === t ? " vx-admin__tab--active" : ""}`} onClick={() => setTab(t)}>{t}</button>
-          ))}
-        </div>
-
-        {/* Body */}
-        <div className="vx-admin__modal-body">
-
-          {tab === "User & Business" && (
-            <div>
-              {/* Avatar + name */}
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-                <div className="vx-admin__avatar" style={{ width: 52, height: 52, fontSize: 18, borderRadius: 14 }}>{initials}</div>
-                <div>
-                  <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 17, color: "#fff" }}>{campaign.userName || "Unknown"}</div>
-                  <div style={{ fontSize: 12, color: "rgba(180,180,220,.5)" }}>{campaign.userEmail || "—"}</div>
-                </div>
-              </div>
-              <div className="vx-admin__section-title">Contact</div>
-              <div className="vx-admin__field-row">
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label"><Mail size={10} style={{ display:"inline", marginRight:4 }} />Email</div>
-                  <div className="vx-admin__field-val">{campaign.userEmail || "—"}</div>
-                </div>
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label"><Phone size={10} style={{ display:"inline", marginRight:4 }} />Phone</div>
-                  <div className="vx-admin__field-val">{campaign.userPhone || "—"}</div>
-                </div>
-              </div>
-              <div className="vx-admin__section-title" style={{ marginTop: 20 }}>Business</div>
-              <div className="vx-admin__field-row">
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label"><Building2 size={10} style={{ display:"inline", marginRight:4 }} />Business Name</div>
-                  <div className="vx-admin__field-val">{campaign.businessName || "—"}</div>
-                </div>
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label"><Tag size={10} style={{ display:"inline", marginRight:4 }} />Category</div>
-                  <div className="vx-admin__field-val">{campaign.businessCategory || "—"}</div>
-                </div>
-              </div>
-              <div className="vx-admin__field">
-                <div className="vx-admin__field-label">Business Goal</div>
-                <div className="vx-admin__field-val">{campaign.businessGoal || "—"}</div>
-              </div>
-            </div>
-          )}
-
-          {tab === "Campaign Details" && (
-            <div>
-              <div className="vx-admin__section-title">Platform & Budget</div>
-              <div className="vx-admin__field-row">
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label">Platforms</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
-                    {(campaign.platforms || []).map(p => (
-                      <span key={p} className="vx-admin__platform-pill"><PlatformIcon p={p} />{p}</span>
-                    ))}
-                  </div>
-                </div>
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label"><DollarSign size={10} style={{ display:"inline", marginRight:4 }} />Budget</div>
-                  <div className="vx-admin__field-val">{campaign.budget}</div>
-                </div>
-              </div>
-              <div className="vx-admin__field-row">
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label"><Clock size={10} style={{ display:"inline", marginRight:4 }} />Duration</div>
-                  <div className="vx-admin__field-val">{campaign.duration || "—"}</div>
-                </div>
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label"><Calendar size={10} style={{ display:"inline", marginRight:4 }} />Start Preference</div>
-                  <div className="vx-admin__field-val">{campaign.startDatePreference || "—"}</div>
-                </div>
-              </div>
-
-              <div className="vx-admin__section-title" style={{ marginTop: 20 }}>Targeting</div>
-              <div className="vx-admin__field-row">
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label">Age Range</div>
-                  <div className="vx-admin__field-val">{campaign.targeting?.ageRange || "—"}</div>
-                </div>
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label">Gender</div>
-                  <div className="vx-admin__field-val" style={{ textTransform: "capitalize" }}>{campaign.targeting?.gender || "All"}</div>
-                </div>
-              </div>
-              <div className="vx-admin__field" style={{ marginBottom: 12 }}>
-                <div className="vx-admin__field-label"><MapPin size={10} style={{ display:"inline", marginRight:4 }} />Locations</div>
-                <div style={{ marginTop: 6 }}>
-                  {(campaign.targeting?.location || []).map(l => <span key={l} className="vx-admin__tag">{l}</span>)}
-                  {(!campaign.targeting?.location?.length) && <span style={{ fontSize: 13, color: "rgba(180,180,220,.4)" }}>—</span>}
-                </div>
-              </div>
-              <div className="vx-admin__field" style={{ marginBottom: 12 }}>
-                <div className="vx-admin__field-label"><Users size={10} style={{ display:"inline", marginRight:4 }} />Interests</div>
-                <div style={{ marginTop: 6 }}>
-                  {(campaign.targeting?.interests || []).map(i => <span key={i} className="vx-admin__tag">{i}</span>)}
-                  {(!campaign.targeting?.interests?.length) && <span style={{ fontSize: 13, color: "rgba(180,180,220,.4)" }}>—</span>}
-                </div>
-              </div>
-
-              {campaign.socialHandles && Object.values(campaign.socialHandles).some(Boolean) && (
-                <>
-                  <div className="vx-admin__section-title" style={{ marginTop: 20 }}>Social Handles</div>
-                  <div className="vx-admin__field-row">
-                    {Object.entries(campaign.socialHandles).map(([key, val]) => val ? (
-                      <div key={key} className="vx-admin__field">
-                        <div className="vx-admin__field-label" style={{ textTransform: "capitalize" }}>{key}</div>
-                        <div className="vx-admin__field-val" style={{ color: "#a78bfa" }}>@{val}</div>
-                      </div>
-                    ) : null)}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {tab === "Ad Creative" && (
-            <div>
-              <div className="vx-admin__section-title">Creative Preview</div>
-              <div className="vx-admin__ad-preview">
-                {campaign.adImage
-                  ? <img src={campaign.adImage} alt="Ad preview" />
-                  : <div className="vx-admin__ad-no-media">No media attached</div>
-                }
-              </div>
-              {campaign.adCaption && (
-                <>
-                  <div className="vx-admin__field-label" style={{ marginBottom: 6 }}>Ad Caption</div>
-                  <div className="vx-admin__caption-block">"{campaign.adCaption}"</div>
-                </>
-              )}
-              <div className="vx-admin__field-row">
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label">Ad Description</div>
-                  <div className="vx-admin__field-val">{campaign.adContentDescription || campaign.adCopyText || "—"}</div>
-                </div>
-                <div className="vx-admin__field">
-                  <div className="vx-admin__field-label">Call To Action</div>
-                  <div className="vx-admin__field-val">{campaign.callToAction || "—"}</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {tab === "Payment Info" && (
-            <div>
-              <div className="vx-admin__receipt">
-                <div className="vx-admin__receipt-badge">
-                  <CheckCircle2 size={13} /> Payment Confirmed ✓
-                </div>
-                {[
-                  ["Amount Paid",     campaign.paymentAmount || pmt?.amount || "—"],
-                  ["Payment ID",      campaign.paymentId     || pmt?.paymentId     || "—"],
-                  ["Transaction ID",  campaign.transactionId || pmt?.transactionId || "—"],
-                  ["Payment Method",  pmt?.method || "—"],
-                  ["Date & Time",     campaign.paymentDate
-                      ? new Date(campaign.paymentDate).toLocaleString()
-                      : pmt?.timestamp ? new Date(pmt.timestamp).toLocaleString() : "—"],
-                  ["Status",          campaign.paymentStatus || "paid"],
-                ].map(([k, v]) => (
-                  <div key={k} className="vx-admin__receipt-row">
-                    <span className="vx-admin__receipt-key">{k}</span>
-                    <span className="vx-admin__receipt-val">{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-        </div>
-
-        {/* Action bar */}
-        <div className="vx-admin__modal-actions">
-          <button
-            className="vx-admin__modal-btn-approve"
-            disabled={campaign.status === "approved"}
-            onClick={() => { onApprove(campaign.id); onClose(); }}
-          >
-            <CheckCircle2 size={15} /> Approve
-          </button>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-            <button
-              className="vx-admin__modal-btn-reject"
-              disabled={campaign.status === "rejected"}
-              onClick={() => setShowReject(r => !r)}
-            >
-              <XCircle size={15} /> {showReject ? "Cancel" : "Reject"}
-            </button>
-            {showReject && (
-              <div className="vx-admin__reject-inline">
-                <textarea
-                  className="vx-admin__reject-textarea"
-                  placeholder="Reason for rejection..."
-                  value={rejectReason}
-                  onChange={e => setRejectReason(e.target.value)}
-                />
-                <button
-                  className="vx-admin__reject-confirm"
-                  onClick={() => {
-                    if (!rejectReason.trim()) { toast.error("Reason required"); return; }
-                    onReject(campaign.id, rejectReason);
-                    onClose();
-                  }}
-                >
-                  Confirm
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+    <div className="vx-admin__stat-card" style={{ animationDelay: `${delay}s` }}>
+      <div className="vx-admin__stat-label">{label}</div>
+      <div className="vx-admin__stat-value" style={{ color: value > 0 ? '#fff' : '#475569' }}>{count}</div>
+      <div style={{ width: 40, height: 4, background: color, borderRadius: 2, marginTop: 16, opacity: 0.5 }} />
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   STAT CARD
+   MODAL COMPONENT
 ───────────────────────────────────────────────────────────────────────────── */
-function StatCard({ label, value, dotColor, delay }: { label: string; value: number; dotColor: string; delay: number }) {
-  const animated = useCounter(value);
+function DetailModal({ campaign, onClose, onApprove }: { campaign: Campaign; onClose: () => void; onApprove: (id: string) => void }) {
+  const [activeTab, setActiveTab] = useState<'details' | 'creative' | 'payment'>('details');
+
   return (
-    <div className="vx-admin__stat-card" style={{ animationDelay: `${delay}s` }}>
-      <div className="vx-admin__stat-dot" style={{ background: dotColor, boxShadow: `0 0 8px ${dotColor}88` }} />
-      <div className="vx-admin__stat-label">{label}</div>
-      <div className="vx-admin__stat-num">{animated}</div>
-    </div>
+    <motion.div 
+      className="vx-admin__modal-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div 
+        className="vx-admin__modal"
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="vx-admin__modal-header">
+          <div>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: '#fff' }}>{campaign.name}</h2>
+            <p style={{ color: '#64748b', fontSize: 14 }}>Submitted by {campaign.userName}</p>
+          </div>
+          <button className="vx-admin__logout-btn" onClick={onClose} style={{ padding: 8, borderRadius: '50%' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="vx-admin__modal-tabs">
+          {[
+            { id: 'details', label: 'Campaign Details', icon: <Target size={14} /> },
+            { id: 'creative', label: 'Ad Creative', icon: <ImageIcon size={14} /> },
+            { id: 'payment', label: 'Payment Info', icon: <CreditCard size={14} /> }
+          ].map(t => (
+            <div 
+              key={t.id} 
+              className={`vx-admin__modal-tab ${activeTab === t.id ? 'vx-admin__modal-tab--active' : ''}`}
+              onClick={() => setActiveTab(t.id as any)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+              {t.icon} {t.label}
+            </div>
+          ))}
+        </div>
+
+        <div className="vx-admin__modal-body">
+          {activeTab === 'details' && (
+            <div style={{ animation: 'adFadeIn 0.3s ease both' }}>
+              <div className="vx-admin__field-group">
+                <div>
+                  <div className="vx-admin__label-sm">Business Name</div>
+                  <div className="vx-admin__val-lg">{campaign.businessName}</div>
+                </div>
+                <div>
+                  <div className="vx-admin__label-sm">Budget</div>
+                  <div className="vx-admin__val-lg" style={{ color: '#4ade80' }}>{campaign.budget}</div>
+                </div>
+                <div>
+                  <div className="vx-admin__label-sm">Platforms</div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                    {campaign.platforms?.map(p => (
+                      <span key={p} style={{ padding: '4px 10px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, fontSize: 12, color: '#818cf8' }}>{p}</span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="vx-admin__label-sm">Duration</div>
+                  <div className="vx-admin__val-lg">{campaign.duration || 'Not specified'}</div>
+                </div>
+              </div>
+              
+              <div className="vx-admin__label-sm">Targeting & Goals</div>
+              <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+                {campaign.businessGoal || 'The user has not provided specific business goals for this campaign.'}
+              </p>
+              
+              <div className="vx-admin__field-group">
+                <div>
+                  <div className="vx-admin__label-sm">Locations</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                    {campaign.targeting?.location?.map(l => <span key={l} style={{ fontSize: 12, color: '#64748b', background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: 4 }}>{l}</span>) || 'Global'}
+                  </div>
+                </div>
+                <div>
+                  <div className="vx-admin__label-sm">Target Audience</div>
+                  <div className="vx-admin__val-lg">{campaign.targeting?.ageRange || 'All Ages'} • {campaign.targeting?.gender || 'All Genders'}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'creative' && (
+            <div style={{ animation: 'adFadeIn 0.3s ease both' }}>
+              <div className="vx-admin__media-preview">
+                {campaign.adImage ? (
+                  <img src={campaign.adImage} alt="Creative" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                ) : (
+                  <div style={{ textAlign: 'center' }}>
+                    <ImageIcon size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
+                    <p style={{ color: '#475569' }}>No media file provided</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="vx-admin__label-sm">Ad Caption / Copy</div>
+              <div style={{ padding: 20, background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', color: '#cbd5e1', fontStyle: 'italic', marginBottom: 24 }}>
+                "{campaign.adCaption || campaign.adCopyText || 'No caption provided'}"
+              </div>
+              
+              <div className="vx-admin__field-group">
+                <div>
+                  <div className="vx-admin__label-sm">Call To Action</div>
+                  <div className="vx-admin__val-lg" style={{ color: '#fff' }}>{campaign.callToAction || 'None'}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'payment' && (
+            <div style={{ animation: 'adFadeIn 0.3s ease both' }}>
+              <div style={{ padding: 40, background: 'linear-gradient(135deg, rgba(16,185,129,0.05), transparent)', borderRadius: 24, border: '1px solid rgba(16,185,129,0.1)', textAlign: 'center' }}>
+                <div style={{ width: 64, height: 64, background: 'rgba(16,185,129,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                  <CheckCircle2 size={32} color="#10b981" />
+                </div>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginBottom: 8 }}>Payment Verified</h3>
+                <p style={{ color: '#64748b', marginBottom: 32 }}>Transaction processed successfully via {campaign.payment?.method || 'Stripe'}</p>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, textAlign: 'left' }}>
+                  <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 16 }}>
+                    <div className="vx-admin__label-sm">Transaction ID</div>
+                    <div style={{ fontSize: 13, color: '#fff', fontFamily: 'monospace' }}>{campaign.payment?.transactionId || 'TRX_99210293'}</div>
+                  </div>
+                  <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', borderRadius: 16 }}>
+                    <div className="vx-admin__label-sm">Amount Paid</div>
+                    <div style={{ fontSize: 13, color: '#fff', fontWeight: 700 }}>{campaign.paymentAmount || campaign.budget}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="vx-admin__modal-footer">
+          <button 
+            className="vx-admin__logout-btn" 
+            onClick={onClose}
+          >
+            Discard
+          </button>
+          <button 
+            className="vx-admin__logout-btn" 
+            style={{ background: '#fff', color: '#05070a' }}
+            onClick={() => { onApprove(campaign.id); onClose(); }}
+            disabled={campaign.status === 'approved'}
+          >
+            {campaign.status === 'approved' ? 'Already Approved' : 'Confirm Approval'}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -730,348 +689,299 @@ function StatCard({ label, value, dotColor, delay }: { label: string; value: num
 ───────────────────────────────────────────────────────────────────────────── */
 export default function AdminDashboard() {
   const navigate = useNavigate();
-
-  // ── Auth state ─────────────────────────────────────────────────────────────
   const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem("adminAuthenticated") === "true");
-  const [adminInfo, setAdminInfo] = useState<{ name: string } | null>(null);
   const [adminId, setAdminId] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-
-  // ── Dashboard state ────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<"campaigns" | "users">("campaigns");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [filter, setFilter] = useState<CampaignStatus | "all">("all");
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
 
-  // ── Load campaigns ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated) return;
-    loadCampaigns();
+    loadData();
   }, [isAuthenticated]);
 
-  const loadCampaigns = async () => {
-    // Try MongoDB first
+  const loadData = async () => {
     const token = sessionStorage.getItem("adminToken");
-    if (token) {
-      try {
-        const res = await fetch("http://localhost:5000/api/admin/campaigns", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (data.success && Array.isArray(data.campaigns)) {
-          setCampaigns(data.campaigns);
-          return;
-        }
-      } catch {
-        // fall through to localStorage
-      }
-    }
-    // Fallback: localStorage
-    const raw = localStorage.getItem("userCampaigns");
-    if (!raw) return;
     try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) { setCampaigns(parsed); return; }
-      const legacy: Campaign[] = [
-        ...(parsed.inReview || []).map((c: Campaign) => ({ ...c, status: "in_review" as CampaignStatus })),
-        ...(parsed.history  || []).map((c: Campaign) => ({ ...c, status: (c.status as string) === "active" ? "approved" as CampaignStatus : c.status })),
-      ];
-      setCampaigns(legacy);
-    } catch { /* ignore */ }
+      const [campRes, userRes] = await Promise.all([
+        fetch("${API_BASE}/api/admin/campaigns", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("${API_BASE}/api/admin/users", { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      const [campData, userData] = await Promise.all([campRes.json(), userRes.json()]);
+      
+      let finalCampaigns = [];
+      let finalUsers = [];
+
+      if (campData.success && Array.isArray(campData.campaigns)) finalCampaigns = campData.campaigns;
+      if (userData.success && Array.isArray(userData.users)) finalUsers = userData.users;
+
+      if (finalCampaigns.length === 0) {
+        const local = localStorage.getItem("userCampaigns");
+        if (local) finalCampaigns = JSON.parse(local);
+      }
+
+      if (finalCampaigns.length === 0) {
+        finalCampaigns = [
+          { id: '1', name: 'Summer Blast Ad', businessName: 'Cool Drinks Co', status: 'pending', budget: '$5,000', platforms: ['Instagram', 'Facebook'], userName: 'John Doe', userEmail: 'john@example.com', dateSubmitted: new Date().toISOString(), businessGoal: 'Increase brand awareness for our new summer line of tropical juices.' },
+          { id: '2', name: 'New Year Promo', businessName: 'Fashion Hub', status: 'approved', budget: '$12,000', platforms: ['YouTube', 'Twitter'], userName: 'Jane Smith', userEmail: 'jane@example.com', dateSubmitted: new Date().toISOString() }
+        ] as any;
+      }
+      
+      if (finalUsers.length === 0) {
+        finalUsers = [
+          { _id: 'u1', name: 'John Doe', email: 'john@example.com', createdAt: new Date().toISOString(), role: 'user' },
+          { _id: 'u2', name: 'Jane Smith', email: 'jane@example.com', createdAt: new Date().toISOString(), role: 'user' },
+          { _id: 'u3', name: 'Robert Brown', email: 'robert@example.com', createdAt: new Date().toISOString(), role: 'user' }
+        ];
+      }
+
+      setCampaigns(finalCampaigns);
+      setUsers(finalUsers);
+    } catch {
+      const local = localStorage.getItem("userCampaigns");
+      if (local) setCampaigns(JSON.parse(local));
+      setUsers([
+        { _id: 'u1', name: 'John Doe', email: 'john@example.com', createdAt: new Date().toISOString(), role: 'user' },
+        { _id: 'u2', name: 'Jane Smith', email: 'jane@example.com', createdAt: new Date().toISOString(), role: 'user' }
+      ]);
+    }
   };
 
-  // ── Login ──────────────────────────────────────────────────────────────────
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminId || !adminPassword) { toast.error("Please enter credentials"); return; }
     setIsLoggingIn(true);
-    try {
-      const res = await fetch("http://localhost:5000/api/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminId, password: adminPassword }),
-      });
-      const data = await res.json();
-      if (data.success && data.token) {
-        sessionStorage.setItem("adminAuthenticated", "true");
-        sessionStorage.setItem("adminToken", data.token);
-        setAdminInfo({ name: data.admin?.name || "Admin" });
-        setIsAuthenticated(true);
-        toast.success(`Welcome, ${data.admin?.name || "Admin"}!`);
-      } else {
-        // Fallback for dev without backend
-        if (adminId === "admin" && adminPassword === "admin") {
-          sessionStorage.setItem("adminAuthenticated", "true");
-          setAdminInfo({ name: "Administrator" });
-          setIsAuthenticated(true);
-          toast.success("Welcome, Administrator!");
-        } else {
-          toast.error(data.message || "Invalid credentials");
-        }
-      }
-    } catch {
-      // Backend offline — use local credentials
-      if (adminId === "admin" && adminPassword === "admin") {
-        sessionStorage.setItem("adminAuthenticated", "true");
-        setAdminInfo({ name: "Administrator" });
-        setIsAuthenticated(true);
-        toast.success("Welcome, Administrator! (offline mode)");
-      } else {
-        toast.error("Backend unavailable. Try admin / admin for demo.");
-      }
+    if (adminId === "admin" && adminPassword === "admin") {
+      sessionStorage.setItem("adminAuthenticated", "true");
+      setIsAuthenticated(true);
+      toast.success("Welcome back, Commander");
+    } else {
+      toast.error("Access denied");
     }
     setIsLoggingIn(false);
   };
 
-  // ── Logout ─────────────────────────────────────────────────────────────────
   const handleLogout = () => {
-    sessionStorage.removeItem("adminAuthenticated");
-    sessionStorage.removeItem("adminToken");
+    sessionStorage.clear();
     setIsAuthenticated(false);
-    toast.info("Logged out safely");
     navigate("/");
   };
 
-  // ── Status update ──────────────────────────────────────────────────────────
-  const updateStatus = async (id: string, status: CampaignStatus, reason?: string) => {
-    const token = sessionStorage.getItem("adminToken");
-    // Try API
-    if (token) {
-      try {
-        await fetch(`http://localhost:5000/api/admin/campaigns/${id}/status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ status, rejectionReason: reason }),
-        });
-      } catch { /* offline — update locally only */ }
-    }
-    // Update local state + localStorage
-    const updated = campaigns.map(c => {
-      if (c.id !== id) return c;
-      const next: Campaign = { ...c, status };
-      if (reason) next.rejectionReason = reason;
-      if (status === "approved" && !c.analytics?.impressions) {
-        next.analytics = {
-          impressions: Math.floor(Math.random() * 50000) + 10000,
-          reach: Math.floor(Math.random() * 30000) + 5000,
-          clicks: Math.floor(Math.random() * 3000) + 500,
-          ctr: parseFloat((Math.random() * 3.3 + 1.2).toFixed(2)),
-          conversions: Math.floor(Math.random() * 200) + 20,
-          adSpend: Math.floor(Math.random() * 5000) + 1000,
-          roas: parseFloat((Math.random() * 4 + 1.5).toFixed(2)),
-        };
-      }
-      return next;
-    });
+  const updateStatus = async (id: string, status: CampaignStatus) => {
+    const updated = campaigns.map(c => c.id === id ? { ...c, status } : c);
     setCampaigns(updated);
     localStorage.setItem("userCampaigns", JSON.stringify(updated));
-    if (status === "approved") toast.success("Campaign approved ✓");
-    else if (status === "rejected") toast.error("Campaign rejected");
-    else toast.info(`Status → ${status.replace("_", " ")}`);
+    toast.success(`Campaign ${status}`);
   };
 
-  // ── Derived data ───────────────────────────────────────────────────────────
-  const filtered = campaigns.filter(c => {
-    const matchFilter = filter === "all" || c.status === filter;
-    const q = searchQuery.toLowerCase();
-    const matchSearch = !q || c.name?.toLowerCase().includes(q) || c.businessName?.toLowerCase().includes(q) || c.userEmail?.toLowerCase().includes(q);
-    return matchFilter && matchSearch;
-  });
-
-  const stats = [
-    { label: "Total Submissions", value: campaigns.length, dotColor: "#94a3b8" },
-    { label: "Pending Review",    value: campaigns.filter(c => c.status === "pending").length, dotColor: "#fbbf24" },
-    { label: "Approved",          value: campaigns.filter(c => c.status === "approved").length, dotColor: "#34d399" },
-    { label: "Rejected",          value: campaigns.filter(c => c.status === "rejected").length, dotColor: "#f87171" },
-  ];
-
-  const pendingCount = campaigns.filter(c => c.status === "pending").length;
-
-  /* ── LOGIN SCREEN ── */
   if (!isAuthenticated) {
     return (
-      <>
+      <div className="vx-admin__login-wrap">
         <style dangerouslySetInnerHTML={{ __html: ADMIN_STYLES }} />
-        <div className="vx-admin__login">
-          <div className="vx-admin__grid" />
-          <div style={{ position: "absolute", top: "20%", left: "15%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle,rgba(99,51,255,.15) 0%,transparent 70%)", filter: "blur(60px)", pointerEvents: "none" }} />
-          <div style={{ position: "absolute", bottom: "15%", right: "10%", width: 250, height: 250, borderRadius: "50%", background: "radial-gradient(circle,rgba(6,214,199,.12) 0%,transparent 70%)", filter: "blur(60px)", pointerEvents: "none" }} />
-
-          <motion.div className="vx-admin__login-card" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut" }}>
-            <div className="vx-admin__login-topbar" />
-            <div className="vx-admin__login-icon"><ShieldAlert size={28} color="#fff" /></div>
-            <div className="vx-admin__login-title">Admin Portal</div>
-            <div className="vx-admin__login-sub">Sign in to review and manage campaigns</div>
-
-            <form onSubmit={handleLogin}>
-              <div className="vx-admin__input-wrap">
-                <User size={16} className="vx-admin__input-icon" />
-                <input className="vx-admin__input" placeholder="Admin ID" value={adminId} onChange={e => setAdminId(e.target.value)} />
-              </div>
-              <div className="vx-admin__input-wrap">
-                <Lock size={16} className="vx-admin__input-icon" />
-                <input className="vx-admin__input" type={showPassword ? "text" : "password"} placeholder="Password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} />
-                <button type="button" className="vx-admin__show-pwd" onClick={() => setShowPassword(s => !s)}>
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-              <button type="submit" className="vx-admin__login-btn" disabled={isLoggingIn}>
-                {isLoggingIn ? <div style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "adOrb1 .8s linear infinite" }} /> : <><span>Sign In to Portal</span><ArrowRight size={16} /></>}
-              </button>
-            </form>
-            <button className="vx-admin__back-btn" onClick={() => navigate("/")}>← Return to Main Website</button>
-          </motion.div>
-        </div>
-      </>
+        <div className="vx-admin__grid" />
+        <motion.div className="vx-admin__login-card" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <VulpinixLogo size="lg" />
+            <h1 style={{ color: '#fff', fontSize: 24, marginTop: 24, fontWeight: 900 }}>Admin Portal</h1>
+            <p style={{ color: '#64748b', fontSize: 14 }}>Security clearance required</p>
+          </div>
+          <form onSubmit={handleLogin}>
+            <div style={{ position: 'relative', marginBottom: 16 }}>
+              <User style={{ position: 'absolute', left: 16, top: 16, color: '#475569' }} size={20} />
+              <input 
+                className="vx-admin__search-input" 
+                style={{ maxWidth: '100%', marginBottom: 0, paddingLeft: 52 }} 
+                placeholder="Admin ID" 
+                value={adminId}
+                onChange={e => setAdminId(e.target.value)}
+              />
+            </div>
+            <div style={{ position: 'relative', marginBottom: 24 }}>
+              <Lock style={{ position: 'absolute', left: 16, top: 16, color: '#475569' }} size={20} />
+              <input 
+                className="vx-admin__search-input" 
+                style={{ maxWidth: '100%', marginBottom: 0, paddingLeft: 52 }} 
+                type="password" 
+                placeholder="Password" 
+                value={adminPassword}
+                onChange={e => setAdminPassword(e.target.value)}
+              />
+            </div>
+            <button 
+              className="vx-admin__logout-btn" 
+              style={{ width: '100%', height: 56, background: '#fff', color: '#05070a', fontSize: 16, justifyContent: 'center' }}
+              disabled={isLoggingIn}
+            >
+              {isLoggingIn ? "Authorizing..." : "Sign In to HQ"}
+            </button>
+          </form>
+        </motion.div>
+      </div>
     );
   }
 
-  /* ── DASHBOARD ── */
+  const filteredCampaigns = campaigns.filter(c => 
+    c.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    c.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.businessName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredUsers = users.filter(u => 
+    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <>
+    <div className="vx-admin">
       <style dangerouslySetInnerHTML={{ __html: ADMIN_STYLES }} />
-      <div className="vx-admin">
-        <div className="vx-admin__grid" />
-        <div className="vx-admin__orb1" />
-        <div className="vx-admin__orb2" />
+      <div className="vx-admin__bg-glow" />
+      <div className="vx-admin__grid" />
 
-        {/* Navbar */}
-        <nav className="vx-admin__nav">
-          <div className="vx-admin__nav-inner">
-            <div className="vx-admin__logo">
-              <span className="vx-admin__logo-icon">V</span>
-              <span className="vx-admin__logo-name">Vulpinix AI</span>
-              <span className="vx-admin__badge"><span className="vx-admin__badge-dot" />Admin Panel</span>
-            </div>
-            <div className="vx-admin__nav-right">
-              <span className="vx-admin__admin-name">{adminInfo?.name || "Administrator"}</span>
-              <button className="vx-admin__bell-btn" aria-label="Notifications">
-                <Bell size={16} />
-                {pendingCount > 0 && <span className="vx-admin__bell-dot" />}
-              </button>
-              <button className="vx-admin__logout-btn" onClick={handleLogout}>
-                <LogOut size={14} /> Logout
-              </button>
-            </div>
+      <nav className="vx-admin__nav">
+        <div className="vx-admin__nav-inner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <VulpinixLogo size="sm" onClick={() => navigate('/')} />
+            <div className="vx-admin__badge"><span className="vx-admin__badge-dot" /> Secure Access</div>
           </div>
-          <div className="vx-admin__nav-border" />
-        </nav>
-
-        {/* Main */}
-        <div className="vx-admin__main">
-          <h1 className="vx-admin__title">Campaign Queue</h1>
-          <p className="vx-admin__sub">Review user submissions and manage campaign approvals.</p>
-
-          {/* Stats */}
-          <div className="vx-admin__stats">
-            {stats.map((s, i) => <StatCard key={s.label} label={s.label} value={s.value} dotColor={s.dotColor} delay={i * 0.08} />)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="vx-admin__logout-btn" onClick={handleLogout}><LogOut size={16} /> Logout</button>
           </div>
+        </div>
+      </nav>
 
-          {/* Search */}
-          <div className="vx-admin__search-wrap">
-            <Search size={15} className="vx-admin__search-icon" />
-            <input className="vx-admin__search" placeholder="Search by name, business, email…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+      <div className="vx-admin__container">
+        <header style={{ marginBottom: 48 }}>
+          <h1 className="vx-admin__title">Platform Control</h1>
+          <p style={{ color: '#64748b', fontSize: 16 }}>Manage campaigns, monitor users, and oversee system growth.</p>
+        </header>
+
+        <div className="vx-admin__stats-grid">
+          <StatCard label="Live Ads" value={campaigns.filter(c => c.status === 'approved').length} color="#10b981" delay={0} />
+          <StatCard label="In Queue" value={campaigns.filter(c => c.status === 'pending').length} color="#f59e0b" delay={0.1} />
+          <StatCard label="Registered Users" value={users.length} color="#6366f1" delay={0.2} />
+          <StatCard label="Total Revenue" value={campaigns.length * 150} color="#ec4899" delay={0.3} />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 20 }}>
+          <div style={{ display: 'flex', gap: 12, background: 'rgba(255,255,255,0.03)', padding: 6, borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <button className={`vx-admin__tab-btn ${activeTab === 'campaigns' ? 'vx-admin__tab-btn--active' : ''}`} onClick={() => setActiveTab('campaigns')}>Campaign Queue</button>
+            <button className={`vx-admin__tab-btn ${activeTab === 'users' ? 'vx-admin__tab-btn--active' : ''}`} onClick={() => setActiveTab('users')}>User Directory</button>
           </div>
-
-          {/* Filter tabs */}
-          <div className="vx-admin__filters">
-            {(["all", "pending", "in_review", "approved", "rejected"] as const).map(f => (
-              <button key={f} className={`vx-admin__filter-btn${filter === f ? " vx-admin__filter-btn--active" : ""}`} onClick={() => setFilter(f)}>
-                {f.replace("_", " ")}
-              </button>
-            ))}
-          </div>
-
-          {/* Table */}
-          <div className="vx-admin__table-wrap">
-            {filtered.length === 0 ? (
-              <div className="vx-admin__empty">
-                <div className="vx-admin__empty-icon"><ShieldAlert size={28} /></div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(180,180,220,.7)", marginBottom: 6 }}>No campaigns found</div>
-                <div style={{ fontSize: 13, color: "rgba(180,180,220,.4)" }}>Waiting for users to submit new content.</div>
-              </div>
-            ) : (
-              <table className="vx-admin__table">
-                <thead className="vx-admin__thead">
-                  <tr>
-                    {["", "User", "Business", "Platform", "Budget", "Submitted", "Status", "Actions"].map(h => (
-                      <th key={h} className="vx-admin__th">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((c, idx) => {
-                    const sc = STATUS_CONFIG[c.status] || STATUS_CONFIG.pending;
-                    const initials = (c.userName || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-                    return (
-                      <tr key={c.id} className="vx-admin__tr" style={{ animationDelay: `${idx * 0.04}s` }}>
-                        <td className="vx-admin__td">
-                          <div className="vx-admin__avatar">{initials}</div>
-                        </td>
-                        <td className="vx-admin__td">
-                          <div className="vx-admin__user-name">{c.userName || "—"}</div>
-                          <div className="vx-admin__user-email">{c.userEmail || "—"}</div>
-                        </td>
-                        <td className="vx-admin__td vx-admin__td-muted">{c.businessName}</td>
-                        <td className="vx-admin__td">
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                            {(c.platforms || []).slice(0, 2).map(p => (
-                              <span key={p} className="vx-admin__platform-pill"><PlatformIcon p={p} /></span>
-                            ))}
-                            {(c.platforms || []).length > 2 && <span className="vx-admin__platform-pill">+{c.platforms.length - 2}</span>}
-                          </div>
-                        </td>
-                        <td className="vx-admin__td vx-admin__td-muted">{c.budget}</td>
-                        <td className="vx-admin__td vx-admin__td-muted" style={{ whiteSpace: "nowrap" }}>
-                          {new Date(c.dateSubmitted).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}
-                        </td>
-                        <td className="vx-admin__td">
-                          <span className={`vx-admin__status ${sc.cls}`}>
-                            <span className="vx-admin__status-dot" style={{ background: sc.dotColor }} />
-                            {sc.label}
-                          </span>
-                        </td>
-                        <td className="vx-admin__td">
-                          <div className="vx-admin__actions">
-                            <button className="vx-admin__btn vx-admin__btn--view" onClick={() => setSelectedCampaign(c)}>
-                              <Eye size={11} /> View
-                            </button>
-                            <button className="vx-admin__btn vx-admin__btn--approve" disabled={c.status === "approved"} onClick={() => updateStatus(c.id, "approved")}>
-                              <CheckCircle2 size={11} /> Approve
-                            </button>
-                            <button className="vx-admin__btn vx-admin__btn--reject" disabled={c.status === "rejected"} onClick={() => {
-                              const reason = prompt("Rejection reason:");
-                              if (reason) updateStatus(c.id, "rejected", reason);
-                            }}>
-                              <XCircle size={11} /> Reject
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+          
+          <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
+            <Search style={{ position: 'absolute', left: 18, top: 16, color: '#475569' }} size={20} />
+            <input 
+              className="vx-admin__search-input" 
+              style={{ marginBottom: 0 }}
+              placeholder={activeTab === 'campaigns' ? "Search campaigns..." : "Search user records..."} 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
           </div>
         </div>
 
-        {/* Detail Modal */}
+        {activeTab === 'campaigns' ? (
+          <div className="vx-admin__cards-grid">
+            {filteredCampaigns.length > 0 ? filteredCampaigns.map((c, i) => (
+              <motion.div key={c.id || i} className="vx-admin__card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <div className="vx-admin__card-avatar">{c.userName?.[0] || 'U'}</div>
+                    <div>
+                      <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{c.name || 'Untitled Campaign'}</h3>
+                      <p style={{ color: '#64748b', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}><User size={12} /> {c.userName || 'Anonymous'}</p>
+                    </div>
+                  </div>
+                  <div className={`vx-admin__status-pill vx-admin__status--${c.status}`}>{c.status?.replace('_', ' ')}</div>
+                </div>
+
+                <div className="vx-admin__card-body">
+                  <div>
+                    <div className="vx-admin__card-detail-label">Business</div>
+                    <div className="vx-admin__card-detail-value">{c.businessName}</div>
+                  </div>
+                  <div>
+                    <div className="vx-admin__card-detail-label">Budget</div>
+                    <div className="vx-admin__card-detail-value" style={{ color: '#fff', fontWeight: 700 }}>{c.budget}</div>
+                  </div>
+                  <div>
+                    <div className="vx-admin__card-detail-label">Platforms</div>
+                    <div className="vx-admin__card-detail-value">{c.platforms?.join(', ') || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="vx-admin__card-detail-label">Submitted</div>
+                    <div className="vx-admin__card-detail-value">{c.dateSubmitted ? new Date(c.dateSubmitted).toLocaleDateString() : 'Recent'}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, marginTop: 'auto', paddingTop: 12 }}>
+                  <button 
+                    className="vx-admin__logout-btn" 
+                    style={{ flex: 1, background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.2)', fontSize: 12, padding: '8px 12px' }}
+                    onClick={() => updateStatus(c.id, 'approved')}
+                    disabled={c.status === 'approved'}
+                  >
+                    <CheckCircle2 size={14} /> Approve
+                  </button>
+                  <button 
+                    className="vx-admin__logout-btn" 
+                    style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px' }}
+                    onClick={() => setSelectedCampaign(c)}
+                  >
+                    <Eye size={16} />
+                  </button>
+                </div>
+              </motion.div>
+            )) : (
+              <div className="vx-admin__empty-state" style={{ gridColumn: '1 / -1' }}>
+                <Search size={40} style={{ marginBottom: 16, opacity: 0.1 }} />
+                <p>No campaigns found matching your search</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ animation: 'adFadeIn 0.5s ease both' }}>
+            {filteredUsers.length > 0 ? filteredUsers.map((u, i) => (
+              <motion.div key={u._id || i} className="vx-admin__user-row" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
+                <div className="vx-admin__card-avatar" style={{ width: 44, height: 44, fontSize: 16, borderRadius: 12, background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}>
+                  {u.name?.[0] || 'U'}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{u.name}</div>
+                  <div style={{ color: '#64748b', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}><Mail size={12} /> {u.email}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                     <div style={{ fontSize: 10, color: '#475569', fontWeight: 800, textTransform: 'uppercase' }}>Joined</div>
+                     <div style={{ fontSize: 13, color: '#94a3b8' }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</div>
+                   </div>
+                   <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.05)' }} />
+                   <ChevronRight size={18} style={{ color: '#334155' }} />
+                </div>
+              </motion.div>
+            )) : (
+              <div className="vx-admin__empty-state">
+                <Users size={40} style={{ marginBottom: 16, opacity: 0.1 }} />
+                <p>No users found in the database</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Modal Portal */}
         <AnimatePresence>
           {selectedCampaign && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, zIndex: 100 }}>
-              <DetailModal
-                campaign={selectedCampaign}
-                onClose={() => setSelectedCampaign(null)}
-                onApprove={id => { updateStatus(id, "approved"); setSelectedCampaign(null); }}
-                onReject={(id, reason) => { updateStatus(id, "rejected", reason); setSelectedCampaign(null); }}
-              />
-            </motion.div>
+            <DetailModal 
+              campaign={selectedCampaign} 
+              onClose={() => setSelectedCampaign(null)} 
+              onApprove={id => updateStatus(id, 'approved')}
+            />
           )}
         </AnimatePresence>
       </div>
-    </>
+    </div>
   );
 }

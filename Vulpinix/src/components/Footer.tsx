@@ -1,6 +1,9 @@
-import { Instagram, Facebook, Linkedin, Twitter, Mail, MapPin, Send, ArrowRight } from "lucide-react";
+import { Mail, MapPin, Send, ArrowRight } from "lucide-react";
+import { SiInstagram, SiFacebook, SiX } from "react-icons/si";
+import { FaLinkedin } from "react-icons/fa";
 import { useNavigate } from "react-router";
 import { useState } from "react";
+import { VulpinixLogo } from "./VulpinixLogo";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    FOOTER — Animated Professional Footer for Vulpinix AI
@@ -8,7 +11,6 @@ import { useState } from "react";
 ───────────────────────────────────────────────────────────────────────────── */
 
 const FOOTER_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
 
   /* ── Keyframes ── */
   @keyframes footerFloat {
@@ -44,60 +46,18 @@ const FOOTER_STYLES = `
     position: relative;
     background: var(--vx-bg-primary);
     overflow: hidden;
-    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     margin-top: 0;
   }
 
-  /* ── Top gradient border with shimmer ── */
+  /* ── Top border (static) ── */
   .vx-footer__border {
     position: relative;
     height: 1px;
-    background: linear-gradient(90deg, transparent, #6333ff, #06d6c7, transparent);
-    background-size: 200% auto;
-    animation: footerShimmer 3.5s linear infinite;
+    background: var(--vx-border);
   }
 
-  /* ── Radial glow background ── */
-  .vx-footer__bg-glow {
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(99,51,255,0.12) 0%, transparent 60%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* ── Grid dot pattern ── */
-  .vx-footer__grid {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background-image:
-      linear-gradient(rgba(139,92,246,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(139,92,246,0.04) 1px, transparent 1px);
-    background-size: 60px 60px;
-  }
-
-  /* ── Floating orbs ── */
-  .vx-footer__orb {
-    position: absolute;
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 0;
-    filter: blur(80px);
-  }
-  .vx-footer__orb--a {
-    width: 340px; height: 340px;
-    top: -60px; left: 10%;
-    background: radial-gradient(circle, rgba(99,51,255,0.18) 0%, transparent 70%);
-    animation: footerFloat 9s ease-in-out infinite;
-  }
-  .vx-footer__orb--b {
-    width: 280px; height: 280px;
-    bottom: 20px; right: 8%;
-    background: radial-gradient(circle, rgba(6,214,199,0.14) 0%, transparent 70%);
-    animation: footerFloat2 10s ease-in-out infinite;
-  }
+  /* Background elements removed */
 
   /* ── Main container ── */
   .vx-footer__inner {
@@ -137,18 +97,13 @@ const FOOTER_STYLES = `
 
   /* ── Brand logo text ── */
   .vx-footer__logo-text {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-weight: 800;
-    font-size: 26px;
+    font-size: 22px;
     letter-spacing: -0.02em;
-    background: linear-gradient(270deg, #a78bfa, #06d6c7, #fff, #a78bfa);
-    background-size: 300% 300%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: footerLogoGradient 4s ease infinite;
+    color: var(--vx-text-primary);
     display: inline-block;
-    margin-bottom: 14px;
+    margin-bottom: 0;
   }
 
   /* ── Logo icon badge ── */
@@ -158,13 +113,13 @@ const FOOTER_STYLES = `
     justify-content: center;
     width: 36px; height: 36px;
     border-radius: 10px;
-    background: linear-gradient(135deg, #6333ff, #06d6c7);
-    box-shadow: 0 0 18px rgba(99,51,255,0.45);
+    background: var(--vx-text-primary);
+    box-shadow: none;
     margin-right: 10px;
     vertical-align: middle;
     font-weight: 900;
     font-size: 16px;
-    color: #fff;
+    color: var(--vx-bg-primary);
     flex-shrink: 0;
   }
 
@@ -187,7 +142,7 @@ const FOOTER_STYLES = `
     width: 38px; height: 38px;
     border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.1);
-    background: rgba(255,255,255,0.04);
+    background: transparent;
     backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
@@ -198,16 +153,15 @@ const FOOTER_STYLES = `
     text-decoration: none;
   }
   .vx-footer__social-btn:hover {
-    border-color: rgba(99,51,255,0.6);
-    box-shadow: 0 0 16px rgba(99,51,255,0.5);
-    color: #fff;
+    border-color: var(--vx-text-primary);
+    color: var(--vx-text-primary);
     transform: scale(1.1) translateY(-2px);
-    background: rgba(99,51,255,0.12);
+    background: var(--vx-bg-input);
   }
 
   /* ── Section headings ── */
   .vx-footer__heading {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-weight: 600;
     font-size: 14px;
     color: #fff;
@@ -221,8 +175,8 @@ const FOOTER_STYLES = `
   .vx-footer__heading-dot {
     width: 5px; height: 5px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #6333ff, #06d6c7);
-    box-shadow: 0 0 8px rgba(99,51,255,0.6);
+    background: var(--vx-text-primary);
+    box-shadow: none;
     flex-shrink: 0;
   }
 
@@ -239,7 +193,7 @@ const FOOTER_STYLES = `
     border: none;
     padding: 0;
     cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 14px;
     color: rgba(180,180,220,0.55);
     transition: color 0.2s ease;
@@ -254,7 +208,7 @@ const FOOTER_STYLES = `
     position: absolute;
     bottom: -2px; left: 0;
     width: 100%; height: 1px;
-    background: linear-gradient(90deg, #6333ff, #06d6c7);
+    background: var(--vx-text-primary);
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 0.25s ease;
@@ -270,7 +224,7 @@ const FOOTER_STYLES = `
     transform: translateX(-4px);
     transition: all 0.2s ease;
     font-size: 12px;
-    color: #06d6c7;
+    color: var(--vx-text-primary);
   }
   .vx-footer__link-btn:hover .vx-footer__link-arrow {
     opacity: 1;
@@ -295,7 +249,7 @@ const FOOTER_STYLES = `
     border: 1px solid rgba(99,51,255,0.25);
     border-radius: 10px;
     padding: 10px 14px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 13px;
     color: #e2e8f0;
     outline: none;
@@ -307,8 +261,8 @@ const FOOTER_STYLES = `
     color: rgba(180,180,220,0.35);
   }
   .vx-footer__newsletter-input:focus {
-    border-color: rgba(99,51,255,0.6);
-    box-shadow: 0 0 12px rgba(99,51,255,0.2);
+    border-color: var(--vx-border-focus);
+    box-shadow: none;
   }
   .vx-footer__newsletter-btn {
     flex-shrink: 0;
@@ -316,12 +270,11 @@ const FOOTER_STYLES = `
     align-items: center;
     gap: 6px;
     padding: 10px 16px;
-    background: linear-gradient(135deg, #6333ff, #06d6c7);
-    background-size: 200% 200%;
+    background: var(--vx-text-primary);
     border: none;
     border-radius: 10px;
-    color: #fff;
-    font-family: 'DM Sans', sans-serif;
+    color: var(--vx-bg-primary);
+    font-family: 'Inter', sans-serif;
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
@@ -329,9 +282,8 @@ const FOOTER_STYLES = `
     white-space: nowrap;
   }
   .vx-footer__newsletter-btn:hover {
-    background-position: right center;
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(99,51,255,0.4);
+    opacity: 0.9;
   }
 
   /* ── Contact info ── */
@@ -347,7 +299,7 @@ const FOOTER_STYLES = `
   }
   .vx-footer__contact-item:hover { color: rgba(180,180,220,0.9); }
   .vx-footer__contact-icon {
-    color: #6333ff;
+    color: var(--vx-text-primary);
     flex-shrink: 0;
   }
 
@@ -372,7 +324,7 @@ const FOOTER_STYLES = `
     flex-wrap: wrap;
   }
   .vx-footer__bottom-copy {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 13px;
     color: rgba(180,180,220,0.35);
   }
@@ -384,7 +336,7 @@ const FOOTER_STYLES = `
     justify-content: center;
   }
   .vx-footer__bottom-link {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 12px;
     color: rgba(180,180,220,0.35);
     background: none;
@@ -400,7 +352,7 @@ const FOOTER_STYLES = `
     font-size: 12px;
   }
   .vx-footer__bottom-location {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 13px;
     color: rgba(180,180,220,0.35);
     display: flex;
@@ -445,10 +397,10 @@ export function Footer() {
   ];
 
   const socialLinks = [
-    { icon: Instagram, aria: "Instagram", href: "#" },
-    { icon: Facebook, aria: "Facebook", href: "#" },
-    { icon: Twitter, aria: "Twitter/X", href: "#" },
-    { icon: Linkedin, aria: "LinkedIn", href: "#" },
+    { icon: SiInstagram, aria: "Instagram", href: "#" },
+    { icon: SiFacebook, aria: "Facebook", href: "#" },
+    { icon: SiX, aria: "X (Twitter)", href: "#" },
+    { icon: FaLinkedin, aria: "LinkedIn", href: "#" },
   ];
 
   return (
@@ -458,11 +410,7 @@ export function Footer() {
         {/* ── Top shimmer border ── */}
         <div className="vx-footer__border" />
 
-        {/* ── Background layers ── */}
-        <div className="vx-footer__bg-glow" />
-        <div className="vx-footer__grid" />
-        <div className="vx-footer__orb vx-footer__orb--a" />
-        <div className="vx-footer__orb vx-footer__orb--b" />
+        {/* Background layers removed */}
 
         {/* ── Main content ── */}
         <div className="vx-footer__inner">
@@ -470,11 +418,7 @@ export function Footer() {
 
             {/* ── Column 1: Brand ── */}
             <div className="vx-footer__col">
-              {/* Logo */}
-              <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
-                <span className="vx-footer__logo-icon">V</span>
-                <span className="vx-footer__logo-text">Vulpinix AI</span>
-              </div>
+              <VulpinixLogo size="md" style={{ marginBottom: 14 }} />
 
               {/* Tagline */}
               <p className="vx-footer__tagline">
@@ -605,7 +549,7 @@ export function Footer() {
                 Terms of Service
               </button>
               <span className="vx-footer__bottom-sep">·</span>
-              <button className="vx-footer__bottom-link" onClick={() => navigate("/contact")}>
+              <button className="vx-footer__bottom-link" onClick={() => navigate("/cookies")}>
                 Cookie Policy
               </button>
             </div>

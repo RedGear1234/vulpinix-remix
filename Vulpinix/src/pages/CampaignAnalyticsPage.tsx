@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import { motion } from "motion/react";
@@ -73,23 +74,56 @@ export default function CampaignAnalyticsPage() {
   const { id } = useParams<{ id: string }>();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    const raw = localStorage.getItem("userCampaigns");
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
+    const fetchCampaignDetails = async () => {
+      const authToken = localStorage.getItem("authToken");
+      if (!authToken) {
+        // Fallback to localStorage if no token
+        const raw = localStorage.getItem("userCampaigns");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const all = Array.isArray(parsed) ? parsed : [...(parsed.inReview || []), ...(parsed.history || [])];
+          setCampaign(all.find((c: Campaign) => c.id === id) || null);
+        }
+        setIsLoading(false);
+        return;
+      }
 
-    let found: Campaign | null = null;
+      try {
+        const response = await fetch(`${API_BASE}/api/campaign/${id}`, {
+          headers: { "Authorization": `Bearer ${authToken}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+          setCampaign(data.campaign);
+        } else {
+          // Try local fallback if API fails
+          const raw = localStorage.getItem("userCampaigns");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const all = Array.isArray(parsed) ? parsed : [...(parsed.inReview || []), ...(parsed.history || [])];
+            setCampaign(all.find((c: Campaign) => c.id === id) || null);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch campaign details", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    if (Array.isArray(parsed)) {
-      found = parsed.find((c: Campaign) => c.id === id) || null;
-    } else {
-      // Legacy format
-      const all = [...(parsed.inReview || []), ...(parsed.history || [])];
-      found = all.find((c: Campaign) => c.id === id) || null;
-    }
-
-    setCampaign(found);
+    fetchCampaignDetails();
   }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!campaign) {
     return (
@@ -257,24 +291,24 @@ export default function CampaignAnalyticsPage() {
 
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
                   Campaign Analytics
                 </h1>
-                <p className="text-gray-300 mt-1 text-lg font-medium">{campaign.businessName}</p>
-                <p className="text-gray-500 text-sm">{campaign.name}</p>
+                <p className="text-gray-300 mt-1 text-base sm:text-lg font-medium">{campaign.businessName}</p>
+                <p className="text-gray-500 text-xs sm:text-sm">{campaign.name}</p>
               </div>
 
               <div className="flex flex-col items-end gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/15 border border-green-400/40 text-green-400 text-xs font-semibold">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/15 border border-green-400/40 text-green-400 text-[10px] sm:text-xs font-semibold">
                   <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                   Live Campaign
                 </span>
                 {/* Platforms */}
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap justify-end gap-1.5">
                   {campaign.platforms.map((p) => (
                     <span
                       key={p}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[10px] sm:text-xs"
                     >
                       {getPlatformIcon(p)}
                       {p}
@@ -286,7 +320,7 @@ export default function CampaignAnalyticsPage() {
           </div>
 
           {/* Stats Grid — 7 metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 mb-10">
             {stats.map((stat, index) => {
               const pct = Math.min(100, stat.max > 0 ? (stat.rawValue / stat.max) * 100 : 0);
 
@@ -296,20 +330,20 @@ export default function CampaignAnalyticsPage() {
                   initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.08 * index, type: "spring", stiffness: 200, damping: 20 }}
-                  className={`relative rounded-2xl bg-gradient-to-br ${stat.bg} to-gray-900/60 border ${stat.border} backdrop-blur-sm shadow-xl ${stat.glow} p-6 overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}
+                  className={`relative rounded-2xl bg-gradient-to-br ${stat.bg} to-gray-900/60 border ${stat.border} backdrop-blur-sm shadow-xl ${stat.glow} p-5 sm:p-6 overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}
                 >
                   {/* Glow orb */}
                   <div className={`absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br ${stat.color} opacity-15 blur-2xl group-hover:opacity-25 transition-opacity`} />
 
                   {/* Icon */}
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shadow-lg ${stat.glow} mb-4`}>
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shadow-lg ${stat.glow} mb-4`}>
                     {stat.icon}
                   </div>
 
                   {/* Value */}
-                  <p className="text-3xl font-bold text-white mb-1">{stat.value}</p>
-                  <p className="text-sm font-semibold text-gray-300 mb-1">{stat.label}</p>
-                  <p className="text-xs text-gray-500 mb-4">{stat.description}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-white mb-1">{stat.value}</p>
+                  <p className="text-xs sm:text-sm font-semibold text-gray-300 mb-1">{stat.label}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500 mb-4">{stat.description}</p>
 
                   {/* Progress bar */}
                   <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -330,11 +364,11 @@ export default function CampaignAnalyticsPage() {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="rounded-2xl bg-gradient-to-br from-gray-900/90 via-purple-900/20 to-cyan-900/10 border border-purple-500/25 backdrop-blur-sm shadow-2xl p-6 mb-8"
+            className="rounded-2xl bg-gradient-to-br from-gray-900/90 via-purple-900/20 to-cyan-900/10 border border-purple-500/25 backdrop-blur-sm shadow-2xl p-4 sm:p-6 mb-8"
           >
             <div className="flex items-center gap-2 mb-6">
               <BarChart3 className="w-5 h-5 text-cyan-400" />
-              <h2 className="text-white font-semibold text-lg">Performance Breakdown</h2>
+              <h2 className="text-white font-semibold text-base sm:text-lg">Performance Breakdown</h2>
             </div>
 
             <div className="space-y-4">
@@ -346,16 +380,16 @@ export default function CampaignAnalyticsPage() {
               ].map((item, i) => {
                 const barPct = Math.min(100, item.max > 0 ? (item.value / item.max) * 100 : 0);
                 return (
-                  <div key={item.label} className="flex items-center gap-4">
-                    <p className="text-gray-400 text-sm w-28 flex-shrink-0">{item.label}</p>
-                    <div className="flex-1 h-7 rounded-lg bg-white/5 overflow-hidden">
+                  <div key={item.label} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                    <p className="text-gray-400 text-xs sm:text-sm w-full sm:w-28 flex-shrink-0">{item.label}</p>
+                    <div className="flex-1 h-6 sm:h-7 rounded-lg bg-white/5 overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${barPct}%` }}
                         transition={{ delay: 0.7 + i * 0.1, duration: 0.9, ease: "easeOut" }}
                         className={`h-full rounded-lg bg-gradient-to-r ${item.color} flex items-center justify-end pr-2`}
                       >
-                        <span className="text-white text-xs font-semibold whitespace-nowrap">
+                        <span className="text-white text-[10px] sm:text-xs font-semibold whitespace-nowrap">
                           {item.display}
                         </span>
                       </motion.div>
@@ -371,23 +405,23 @@ export default function CampaignAnalyticsPage() {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.75 }}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mb-8"
           >
             {/* Ad Spend vs Return */}
-            <div className="rounded-2xl bg-gradient-to-br from-orange-500/10 to-amber-500/5 border border-orange-500/25 p-6">
+            <div className="rounded-2xl bg-gradient-to-br from-orange-500/10 to-amber-500/5 border border-orange-500/25 p-5 sm:p-6">
               <div className="flex items-center gap-2 mb-3">
                 <DollarSign className="w-5 h-5 text-orange-400" />
-                <h3 className="text-white font-semibold">Budget Efficiency</h3>
+                <h3 className="text-white font-semibold text-sm sm:text-base">Budget Efficiency</h3>
               </div>
               <div className="flex items-end gap-4">
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Spent</p>
-                  <p className="text-2xl font-bold text-orange-400">₹{formatNumber(analytics.adSpend)}</p>
+                  <p className="text-[10px] text-gray-500 mb-0.5">Spent</p>
+                  <p className="text-xl sm:text-2xl font-bold text-orange-400">₹{formatNumber(analytics.adSpend)}</p>
                 </div>
-                <div className="pb-1 text-gray-600 text-xl">→</div>
+                <div className="pb-1 text-gray-600 text-lg sm:text-xl">→</div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Estimated Return</p>
-                  <p className="text-2xl font-bold text-emerald-400">
+                  <p className="text-[10px] text-gray-500 mb-0.5">Estimated Return</p>
+                  <p className="text-xl sm:text-2xl font-bold text-emerald-400">
                     ₹{formatNumber(Math.round(analytics.adSpend * analytics.roas))}
                   </p>
                 </div>
@@ -403,16 +437,16 @@ export default function CampaignAnalyticsPage() {
             </div>
 
             {/* ROAS highlight */}
-            <div className="rounded-2xl bg-gradient-to-br from-pink-500/10 to-rose-500/5 border border-pink-500/25 p-6 flex flex-col justify-between">
+            <div className="rounded-2xl bg-gradient-to-br from-pink-500/10 to-rose-500/5 border border-pink-500/25 p-5 sm:p-6 flex flex-col justify-between">
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="w-5 h-5 text-pink-400" />
-                <h3 className="text-white font-semibold">Return on Ad Spend</h3>
+                <h3 className="text-white font-semibold text-sm sm:text-base">Return on Ad Spend</h3>
               </div>
               <div className="text-center">
-                <p className="text-6xl font-black bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
+                <p className="text-5xl sm:text-6xl font-black bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
                   {analytics.roas.toFixed(2)}x
                 </p>
-                <p className="text-gray-400 text-sm mt-2">
+                <p className="text-gray-400 text-xs sm:text-sm mt-2">
                   For every ₹1 spent, you earned ₹{analytics.roas.toFixed(2)}
                 </p>
               </div>
@@ -429,7 +463,7 @@ export default function CampaignAnalyticsPage() {
             <Button
               onClick={() => navigate("/dashboard/campaigns")}
               variant="outline"
-              className="border-purple-500/40 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 rounded-xl px-8 py-3"
+              className="border-purple-500/40 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 rounded-xl px-6 sm:px-8 py-2.5 sm:py-3 text-sm"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to All Campaigns

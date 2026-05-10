@@ -1,8 +1,26 @@
+import { API_BASE } from "../config/api";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  ArrowLeft, 
+  CreditCard, 
+  Smartphone, 
+  Wallet, 
+  ShieldCheck, 
+  Clock, 
+  DollarSign, 
+  Target, 
+  Zap, 
+  ChevronRight, 
+  Sparkles,
+  Lock,
+  CheckCircle2,
+  AlertCircle
+} from "lucide-react";
 import { toast } from "sonner";
 import PaymentSuccessModal from "../components/PaymentSuccessModal";
-import './UploadPage.css';
+import { VulpinixLogo } from "../components/VulpinixLogo";
 
 type PaymentMethod = "upi" | "card" | "wallet" | null;
 
@@ -28,538 +46,386 @@ export default function PaymentPage() {
   // UPI state
   const [upiId, setUpiId] = useState("");
 
-  // Get user phone from localStorage
-  const savedUserInfo = localStorage.getItem("userInfo");
-  const userPhone = savedUserInfo ? JSON.parse(savedUserInfo).phone : "+91 98765 43210";
-
-  // Load Campaign data from localStorage
+  // Load Campaign data
   const [campaignData, setCampaignData] = useState({
     name: "Summer Sale Campaign",
+    objective: "Brand Awareness",
     platforms: ["Instagram", "Facebook", "YouTube"],
     budgetType: "Daily",
     budget: "₹5,000",
     totalAmount: "₹35,000",
-    locations: ["Mumbai", "Delhi"],
-    audience: ["Business", "Tech"],
-    languages: ["English", "Hindi"],
-    estimatedReach: "125,000 - 180,000",
-    duration: "7 Days"
+    duration: "7 Days",
+    estimatedReach: "180K+"
   });
 
   useEffect(() => {
     const savedCampaign = localStorage.getItem("campaignData");
     if (savedCampaign) {
-      setCampaignData(JSON.parse(savedCampaign));
+      try {
+        setCampaignData(JSON.parse(savedCampaign));
+      } catch {}
     }
   }, []);
-
-  // Validation functions
-  const validateCardNumber = (number: string): boolean => {
-    const cleaned = number.replace(/\s/g, "");
-    if (cleaned.length !== 16) {
-      toast.error("Card number must be 16 digits");
-      return false;
-    }
-    if (!/^\d+$/.test(cleaned)) {
-      toast.error("Card number must contain only digits");
-      return false;
-    }
-    return true;
-  };
-
-  const validateExpiryDate = (expiry: string): boolean => {
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) {
-      toast.error("Expiry date must be in MM/YY format");
-      return false;
-    }
-    const [month, year] = expiry.split("/").map(Number);
-    if (month < 1 || month > 12) {
-      toast.error("Invalid month in expiry date");
-      return false;
-    }
-    const currentYear = new Date().getFullYear() % 100;
-    const currentMonth = new Date().getMonth() + 1;
-    if (year < currentYear || (year === currentYear && month < currentMonth)) {
-      toast.error("Card has expired");
-      return false;
-    }
-    return true;
-  };
-
-  const validateCVV = (cvvValue: string): boolean => {
-    if (cvvValue.length < 3 || cvvValue.length > 4) {
-      toast.error("CVV must be 3 or 4 digits");
-      return false;
-    }
-    if (!/^\d+$/.test(cvvValue)) {
-      toast.error("CVV must contain only digits");
-      return false;
-    }
-    return true;
-  };
-
-  const validateCardName = (name: string): boolean => {
-    if (name.trim().length < 3) {
-      toast.error("Please enter valid cardholder name");
-      return false;
-    }
-    if (!/^[a-zA-Z\s]+$/.test(name)) {
-      toast.error("Cardholder name must contain only letters");
-      return false;
-    }
-    return true;
-  };
-
-  const validateUPI = (upi: string): boolean => {
-    const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/;
-    if (!upiRegex.test(upi)) {
-      toast.error("Please enter valid UPI ID (e.g., name@bank)");
-      return false;
-    }
-    return true;
-  };
 
   const handleSendOtp = () => {
     if (!selectedMethod) {
       toast.error("Please select a payment method");
       return;
     }
-
-    let isValid = false;
-    if (selectedMethod === "card") {
-      if (!cardNumber || !cardName || !expiryDate || !cvv) {
-        toast.error("Please fill all card details");
-        return;
-      }
-      isValid = validateCardNumber(cardNumber) && 
-                validateCardName(cardName) && 
-                validateExpiryDate(expiryDate) && 
-                validateCVV(cvv);
-    } else if (selectedMethod === "upi") {
-      if (!upiId) {
-        toast.error("Please enter UPI ID");
-        return;
-      }
-      isValid = validateUPI(upiId);
-    } else if (selectedMethod === "wallet") {
-      isValid = true;
-    }
-
-    if (!isValid) return;
-
     setIsSendingOtp(true);
     const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    
     setTimeout(() => {
       setGeneratedOtp(newOtp);
       setShowOtpInput(true);
       setIsSendingOtp(false);
-      toast.success("OTP Sent Successfully!", {
-        description: `OTP sent to ${userPhone}. For demo, use: ${newOtp}`,
-        duration: 10000,
+      toast.success("Security Code Sent", {
+        description: `For demo, use code: ${newOtp}`,
+        duration: 8000,
       });
     }, 1500);
   };
 
   const handleVerifyOtp = () => {
-    if (!otp) {
-      toast.error("Please enter OTP");
-      return;
+    if (otp === generatedOtp) {
+      setIsOtpVerified(true);
+      toast.success("Identity Verified");
+    } else {
+      toast.error("Invalid Code");
     }
-    if (otp.length !== 6) {
-      toast.error("OTP must be 6 digits");
-      return;
-    }
-    if (otp !== generatedOtp) {
-      toast.error("Invalid OTP. Please try again.");
-      return;
-    }
-
-    setIsOtpVerified(true);
-    toast.success("OTP Verified Successfully!", {
-      description: "You can now proceed with the payment.",
-    });
   };
 
   const handlePayment = async () => {
-    if (!isOtpVerified) {
-      toast.error("Please verify OTP first");
-      return;
-    }
-
     setIsProcessing(true);
-
-    setTimeout(async () => {
-      setIsProcessing(false);
-
-      const savedUserInfo = localStorage.getItem("userInfo");
-      const userInfo = savedUserInfo ? JSON.parse(savedUserInfo) : {};
+    
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const authToken = localStorage.getItem("authToken");
+      const adCreative = JSON.parse(localStorage.getItem("adCreativeData") || "{}");
       const savedAdImage = localStorage.getItem("adPreviewImage") || "";
 
-      const uploadData   = JSON.parse(localStorage.getItem("uploadData")   || "{}");
-      const createAdData = JSON.parse(localStorage.getItem("createAdData") || "{}");
-
-      const paymentId     = `PAY-${Date.now()}`;
-      const transactionId = `TXN-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-      const paymentDate   = new Date().toISOString();
-
-      const newCampaign = {
-        id: Date.now().toString(),
-        businessName:    userInfo.company || userInfo.name || "My Business",
-        userEmail:       userInfo.email || localStorage.getItem("userEmail") || "No email provided",
-        userName:        userInfo.name  || "Anonymous User",
-        userPhone:       userInfo.phone || "",
-        businessGoal:    uploadData.businessGoal     || "",
-        businessCategory:uploadData.businessCategory || "",
-        adImage:         savedAdImage,
-        name:            campaignData.name,
-        platforms:       campaignData.platforms,
-        platform:        campaignData.platforms?.[0] || "",
-        budget:          campaignData.budget,
-        budgetType:      campaignData.budgetType,
-        currency:        "INR",
-        duration:        campaignData.duration,
-        estimatedReach:  campaignData.estimatedReach,
-        startDatePreference: uploadData.startDatePreference || "",
-        adContentDescription: uploadData.adDescription || createAdData.adDescription || "",
-        adCaption:       createAdData.caption  || uploadData.caption  || "",
-        adCopyText:      createAdData.copyText || uploadData.copyText || "",
-        callToAction:    createAdData.callToAction || uploadData.callToAction || "",
-        creativeFiles:   uploadData.creativeFiles || [],
-        targeting: {
-          location:  campaignData.locations || [],
-          audience:  campaignData.audience  || [],
-          ageRange:  uploadData.ageRange    || "",
-          gender:    uploadData.gender      || "all",
-          interests: uploadData.interests   || [],
-          devices:   ["mobile", "desktop"],
-        },
-        language:    campaignData.languages || ["English"],
-        socialHandles: {
-          instagram: uploadData.instagram || "",
-          facebook:  uploadData.facebook  || "",
-          twitter:   uploadData.twitter   || "",
-          linkedin:  uploadData.linkedin  || "",
-        },
-        content: {
-          mediaUrl: savedAdImage,
-          caption:  createAdData.caption || uploadData.caption || "",
-          hashtags: uploadData.hashtags  || [],
-        },
-        links: {
-          website: userInfo.website || uploadData.website || "",
-          social:  "",
-        },
+      // Construct payload for backend
+      const payload = {
+        userId: userInfo.email,
+        userName: userInfo.name,
+        userEmail: userInfo.email,
+        businessName: userInfo.company || userInfo.name || "My Business",
+        campaignName: campaignData.name,
+        objective: campaignData.objective,
+        budget: campaignData.budget,
+        budgetType: campaignData.budgetType,
+        platforms: campaignData.platforms,
+        duration: campaignData.duration,
+        estimatedReach: campaignData.estimatedReach,
+        adCaption: adCreative.caption || "",
+        adImage: savedAdImage, // This is base64
         payment: {
-          paymentId,
-          transactionId,
-          amount:    campaignData.totalAmount || campaignData.budget,
-          method:    selectedMethod || "",
-          timestamp: new Date(),
-        },
-        paymentAmount:  campaignData.totalAmount || campaignData.budget,
-        paymentStatus:  "paid",
-        paymentId,
-        transactionId,
-        paymentDate,
-        status:          "pending" as "pending" | "in_review" | "approved" | "rejected",
-        dateSubmitted:   new Date().toISOString().split("T")[0],
-        rejectionReason: "",
-        adminMessage:    "",
-        analytics: {
-          impressions: 0, reach: 0, clicks: 0,
-          ctr: 0, conversions: 0, adSpend: 0, roas: 0,
-        },
+          amount: campaignData.totalAmount,
+          method: selectedMethod,
+          paymentId: `PAY-${Date.now()}`,
+          transactionId: `TXN-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+        }
       };
 
-      const existingRaw = localStorage.getItem("userCampaigns");
-      let campaigns: typeof newCampaign[] = [];
-      if (existingRaw) {
-        const parsed = JSON.parse(existingRaw);
-        if (Array.isArray(parsed)) {
-          campaigns = parsed;
-        } else {
-          const legacy = [...(parsed.inReview || []), ...(parsed.history || [])];
-          campaigns = legacy.map((c: Record<string, unknown>) => ({
-            ...newCampaign,
-            ...c,
-            status: (c.status === "review" ? "in_review" : c.status) as "pending" | "in_review" | "approved" | "rejected",
-          }));
-        }
-      }
-      campaigns.unshift(newCampaign);
-      localStorage.setItem("userCampaigns", JSON.stringify(campaigns));
-
-      try {
-        const response = await fetch("http://localhost:5000/api/campaign/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newCampaign),
-        });
-        const data = await response.json();
-        if (data.token) {
-          localStorage.setItem("userCampaignToken", data.token);
-        }
-      } catch {
-        console.warn("Backend not available — campaign saved locally only.");
-      }
-
-      const existingNotifs = localStorage.getItem("adminNotifications");
-      const notifs = existingNotifs ? JSON.parse(existingNotifs) : [];
-      const hasWelcomeNotif = notifs.some((n: { type: string }) => n.type === "submission_received");
-      if (!hasWelcomeNotif) {
-        notifs.unshift({
-          id: Date.now().toString(),
-          type: "submission_received",
-          message: "✅ We received your campaign submission! Our team will review it within 12 hours.",
-          timestamp: new Date().toISOString(),
-          dismissed: false,
-        });
-        localStorage.setItem("adminNotifications", JSON.stringify(notifs));
-      }
-
-      toast.success("Payment Successful! 🎉", {
-        description: "Your campaign is submitted for review.",
-        duration: 4000,
+      const response = await fetch("${API_BASE}/api/campaign/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`
+        },
+        body: JSON.stringify(payload)
       });
 
-      setShowSuccessModal(true);
-    }, 2000);
-  };
+      const data = await response.json();
 
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || "";
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    return parts.length ? parts.join(" ") : value;
-  };
+      if (data.success) {
+        setIsProcessing(false);
+        setShowSuccessModal(true);
+        
+        // Also keep a local copy for immediate feedback if needed, 
+        // though dashboard should now fetch from API
+        const newCampaign = {
+          id: data.campaign.id,
+          ...payload,
+          status: "pending",
+          dateSubmitted: new Date().toISOString().split("T")[0],
+          analytics: { impressions: 0, reach: 0, clicks: 0, ctr: 0, conversions: 0, adSpend: 0, roas: 0 }
+        };
 
-  const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
-    if (v.length >= 2) return v.slice(0, 2) + "/" + v.slice(2, 4);
-    return v;
-  };
-
-  // Scroll progress bar
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollBar = document.getElementById('scrollBarPayment');
-      if (scrollBar) {
-        const s = document.documentElement;
-        if (s.scrollHeight - s.clientHeight > 0) {
-          const p = (s.scrollTop / (s.scrollHeight - s.clientHeight)) * 100;
-          scrollBar.style.width = p + '%';
-        }
+        const existingRaw = localStorage.getItem("userCampaigns");
+        let campaigns = existingRaw ? JSON.parse(existingRaw) : [];
+        if (!Array.isArray(campaigns)) campaigns = [];
+        campaigns.unshift(newCampaign);
+        localStorage.setItem("userCampaigns", JSON.stringify(campaigns));
+        
+        // Clear draft state
+        localStorage.removeItem("campaignData");
+        localStorage.removeItem("adCreativeData");
+        localStorage.removeItem("uploadData");
+        localStorage.removeItem("adPreviewImage");
+      } else {
+        toast.error(data.message || "Failed to create campaign on server.");
+        setIsProcessing(false);
       }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Server connection failed. Please try again.");
+      setIsProcessing(false);
+    }
+  };
+
+  const paymentMethods = [
+    { 
+      id: "upi", 
+      name: "UPI / Apps", 
+      icon: Smartphone, 
+      brands: [
+        { name: "GPay", src: "https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg", w: 32 },
+        { name: "PhonePe", src: "https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg", w: 20 },
+        { name: "Paytm", src: "https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg", w: 34 },
+        { name: "UPI", src: "https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg", w: 28 }
+      ]
+    },
+    { 
+      id: "card", 
+      name: "Credit / Debit", 
+      icon: CreditCard, 
+      brands: [
+        { name: "Visa", src: "https://cdn.simpleicons.org/visa/1A1F71", w: 28 },
+        { name: "Mastercard", src: "https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg", w: 22 },
+        { name: "RuPay", src: "https://upload.wikimedia.org/wikipedia/commons/c/cb/Rupay-Logo.png", w: 32 }
+      ]
+    },
+    { 
+      id: "wallet", 
+      name: "Wallets", 
+      icon: Wallet, 
+      soon: true,
+      brands: [
+        { name: "Paytm", src: "https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg", w: 34 },
+        { name: "PayPal", src: "https://cdn.simpleicons.org/paypal/00457C", w: 22 }
+      ]
+    },
+  ];
 
   return (
-    <>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      style={{
+        background: "var(--vx-bg-primary)",
+        minHeight: "100vh",
+        padding: "100px 24px 120px",
+        color: "var(--vx-text-primary)"
+      }}
+    >
       <PaymentSuccessModal
         isOpen={showSuccessModal}
         onConfirm={() => navigate("/dashboard/campaigns")}
       />
-      <div className="upload-page-wrapper">
-        <div className="scroll-bar" id="scrollBarPayment"></div>
-        <div className="cosmos">
-          <div className="orb orb1"></div>
-          <div className="orb orb2"></div>
-          <div className="orb orb3"></div>
+
+      <div style={{ maxWidth: 820, margin: "0 auto" }}>
+        
+        {/* Header */}
+        <div style={{ marginBottom: 60 }}>
+          <button 
+            onClick={() => navigate("/ad-preview")}
+            style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--vx-text-muted)", cursor: "pointer", fontSize: 14, fontWeight: 600, marginBottom: 20, padding: 0 }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--vx-text-primary)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--vx-text-muted)"}
+          >
+            <ArrowLeft size={16} /> Back to Preview
+          </button>
+          
+          <h1 style={{ fontSize: "clamp(2rem, 5vw, 2.8rem)", fontWeight: 800, letterSpacing: "-0.04em", margin: 0 }}>
+            Secure <span style={{ background: "linear-gradient(135deg, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Checkout</span>
+          </h1>
+          <p style={{ color: "var(--vx-text-secondary)", fontSize: 16, marginTop: 12 }}>Finalize your investment and launch your AI campaign.</p>
         </div>
-        <div className="grid-bg"></div>
-        <div className="depth-ring"></div>
-        <div className="depth-ring"></div>
-        <div className="depth-ring"></div>
 
-        <div className="page" style={{maxWidth:'860px'}}>
-          <button className="back" onClick={() => navigate("/ad-preview")}>← Back to Campaign Preview</button>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 32 }}>
+          
+          {/* Order Summary */}
+          <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: "32px" }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 24 }}>Campaign Summary</h3>
+            
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 32 }}>
+              <div style={{ flex: 1, minWidth: 150, background: "var(--vx-bg-input)", padding: "16px", borderRadius: 16, border: "1px solid var(--vx-border)" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "var(--vx-text-muted)", textTransform: "uppercase", marginBottom: 4 }}>Budget</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{campaignData.budget}</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 150, background: "var(--vx-bg-input)", padding: "16px", borderRadius: 16, border: "1px solid var(--vx-border)" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "var(--vx-text-muted)", textTransform: "uppercase", marginBottom: 4 }}>Duration</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{campaignData.duration}</div>
+              </div>
+            </div>
 
-          <div className="page-header">
-            <div className="page-eyebrow"><span className="eyebrow-dot"></span>SECURE CHECKOUT</div>
-            <div className="page-title">Complete Your<br/>Payment</div>
-            <div className="page-sub">Secure payment to activate your AI-powered ad campaign</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px", background: "rgba(167, 139, 250, 0.05)", borderRadius: 20, border: "1px solid rgba(167, 139, 250, 0.2)" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--vx-text-secondary)" }}>Total Investment</div>
+                <div style={{ fontSize: 11, color: "var(--vx-text-muted)", marginTop: 2 }}>All inclusive platform & ad spend</div>
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 800, color: "var(--vx-text-primary)", letterSpacing: "-0.04em" }}>{campaignData.totalAmount}</div>
+            </div>
           </div>
 
-          <div style={{display:'grid', gap:'20px', gridTemplateColumns:'1fr', width:'100%'}}>
+          {/* Payment Methods */}
+          <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: "32px" }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 24 }}>Payment Method</h3>
             
-            {/* SECTION 1 — Campaign Summary */}
-            <div className="section-card delay-0" style={{width:'100%'}}>
-              <div className="card-glow"></div>
-              <div className="section-label"><span className="section-label-dot"></span>01 — Campaign Summary</div>
-
-              <div className="stat-grid" style={{gridTemplateColumns:'repeat(2,1fr)', marginBottom:'20px'}}>
-                <div className="stat-card">
-                  <div className="stat-label">Budget</div>
-                  <div className="stat-val" style={{fontSize:'18px'}}>{campaignData.budget}</div>
-                  <div className="stat-sub">{campaignData.budgetType}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">Duration</div>
-                  <div className="stat-val" style={{fontSize:'18px', color:'var(--teal)'}}>{campaignData.duration}</div>
-                  <div className="stat-sub">run time</div>
-                </div>
-                <div className="stat-card" style={{gridColumn:'1 / -1', background:'rgba(99,51,255,0.06)', borderColor:'rgba(99,51,255,0.2)'}}>
-                  <div className="stat-label" style={{color:'#a78bfa'}}>Total Amount</div>
-                  <div className="stat-val" style={{fontSize:'26px', color:'#fff'}}>{campaignData.totalAmount}</div>
-                </div>
-              </div>
-
-              {[
-                { label: '🎯 Campaign Name', value: campaignData.name },
-                { label: '📈 Estimated Reach', value: campaignData.estimatedReach },
-              ].map(row => (
-                <div key={row.label} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 0', borderBottom:'1px solid var(--border)'}}>
-                  <span style={{fontSize:'12px', color:'var(--muted)'}}>{row.label}</span>
-                  <span style={{fontSize:'14px', color:'#fff', fontFamily:"'Syne',sans-serif", fontWeight:600}}>{row.value}</span>
-                </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 32 }}>
+              {paymentMethods.map(method => (
+                <button
+                  key={method.id}
+                  disabled={method.soon}
+                  onClick={() => setSelectedMethod(method.id as PaymentMethod)}
+                  style={{ 
+                    position: "relative", padding: "20px", borderRadius: 20, border: "1px solid", 
+                    borderColor: selectedMethod === method.id ? "var(--vx-text-primary)" : "var(--vx-border)",
+                    background: selectedMethod === method.id ? "rgba(255,255,255,0.05)" : "var(--vx-bg-input)",
+                    textAlign: "left", cursor: method.soon ? "not-allowed" : "pointer", transition: "0.2s",
+                    opacity: method.soon ? 0.5 : 1,
+                    display: "flex", flexDirection: "column", justifyContent: "space-between"
+                  }}
+                >
+                  {method.soon && <span style={{ position: "absolute", top: 12, right: 12, fontSize: 8, fontWeight: 900, background: "var(--vx-border)", padding: "2px 6px", borderRadius: 4, textTransform: "uppercase" }}>Soon</span>}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--vx-bg-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: selectedMethod === method.id ? "var(--vx-text-primary)" : "var(--vx-text-muted)" }}>
+                      <method.icon size={20} />
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--vx-text-primary)" }}>{method.name}</div>
+                  </div>
+                  
+                  {/* Brand Icons Row */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    {method.brands.map(brand => (
+                      <div 
+                        key={brand.name} 
+                        title={brand.name}
+                        style={{ 
+                          display: "flex", alignItems: "center", justifyContent: "center", 
+                          width: 44, height: 26, background: "#fff", border: "1px solid var(--vx-border)", 
+                          borderRadius: 6, overflow: "hidden" 
+                        }}
+                      >
+                        <img src={brand.src} alt={brand.name} style={{ width: brand.w, objectFit: "contain" }} />
+                      </div>
+                    ))}
+                  </div>
+                </button>
               ))}
             </div>
 
-            {/* SECTION 2 — Payment Method */}
-            <div className="section-card delay-1" style={{width:'100%'}}>
-              <div className="card-glow"></div>
-              <div className="section-label"><span className="section-label-dot"></span>02 — Payment Method</div>
-
-              <div className="platform-grid" style={{gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', marginBottom:'24px'}}>
-                <div className={`plat-card ${selectedMethod === 'upi' ? 'active' : ''}`} onClick={() => setSelectedMethod('upi')} style={{textAlign:'center'}}>
-                  <div style={{fontSize:'28px', marginBottom:'8px'}}>📱</div>
-                  <div className="plat-name">UPI</div>
-                  <div className="plat-time">GPay, PhonePe, etc.</div>
-                </div>
-                <div className={`plat-card ${selectedMethod === 'card' ? 'active' : ''}`} onClick={() => setSelectedMethod('card')} style={{textAlign:'center'}}>
-                  <div style={{fontSize:'28px', marginBottom:'8px'}}>💳</div>
-                  <div className="plat-name">Card</div>
-                  <div className="plat-time">Credit or Debit</div>
-                </div>
-                <div className={`plat-card ${selectedMethod === 'wallet' ? 'active' : ''}`} onClick={() => setSelectedMethod('wallet')} style={{textAlign:'center', position:'relative'}}>
-                  <div style={{position:'absolute', top:'6px', right:'6px', background:'rgba(234,179,8,0.2)', color:'#facc15', fontSize:'9px', padding:'2px 6px', borderRadius:'10px'}}>Soon</div>
-                  <div style={{fontSize:'28px', marginBottom:'8px', opacity:0.5}}>👜</div>
-                  <div className="plat-name" style={{opacity:0.5}}>Wallet</div>
-                  <div className="plat-time" style={{opacity:0.5}}>Paytm, etc.</div>
-                </div>
-              </div>
-
-              {selectedMethod === 'upi' && (
-                <div className="input-group">
-                  <label className="input-label">Enter UPI ID</label>
-                  <input className="input-field" placeholder="yourname@upi" value={upiId} onChange={e => setUpiId(e.target.value)} />
-                </div>
+            {/* Conditional Inputs */}
+            <AnimatePresence mode="wait">
+              {selectedMethod === "upi" && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", color: "var(--vx-text-muted)" }}>UPI Address</label>
+                  <input 
+                    type="text" value={upiId} onChange={e => setUpiId(e.target.value)}
+                    placeholder="username@okbank"
+                    style={{ background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 12, padding: "14px 18px", color: "var(--vx-text-primary)", fontWeight: 600, outline: "none" }}
+                  />
+                </motion.div>
               )}
-
-              {selectedMethod === 'card' && (
-                <div style={{display:'flex', flexDirection:'column', gap:'12px'}}>
-                  <div className="input-group">
-                    <label className="input-label">Card Number</label>
-                    <input className="input-field" placeholder="0000 0000 0000 0000" value={cardNumber} onChange={e => setCardNumber(formatCardNumber(e.target.value))} maxLength={19} />
+              {selectedMethod === "card" && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <label style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", color: "var(--vx-text-muted)" }}>Card Details</label>
+                    <input 
+                      type="text" placeholder="0000 0000 0000 0000"
+                      style={{ background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 12, padding: "14px 18px", color: "var(--vx-text-primary)", fontWeight: 600, outline: "none" }}
+                    />
                   </div>
-                  <div className="input-group">
-                    <label className="input-label">Cardholder Name</label>
-                    <input className="input-field" placeholder="John Doe" value={cardName} onChange={e => setCardName(e.target.value.toUpperCase())} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <input type="text" placeholder="MM / YY" style={{ background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 12, padding: "14px 18px", color: "var(--vx-text-primary)", fontWeight: 600, outline: "none" }} />
+                    <input type="password" placeholder="CVV" style={{ background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 12, padding: "14px 18px", color: "var(--vx-text-primary)", fontWeight: 600, outline: "none" }} />
                   </div>
-                  <div style={{display:'flex', gap:'12px'}}>
-                    <div className="input-group" style={{flex:1}}>
-                      <label className="input-label">Expiry</label>
-                      <input className="input-field" placeholder="MM/YY" value={expiryDate} onChange={e => setExpiryDate(formatExpiryDate(e.target.value))} maxLength={5} />
-                    </div>
-                    <div className="input-group" style={{flex:1}}>
-                      <label className="input-label">CVV</label>
-                      <input type="password" className="input-field" placeholder="123" value={cvv} onChange={e => setCvv(e.target.value.replace(/\D/g, ""))} maxLength={3} />
-                    </div>
-                  </div>
-                </div>
+                </motion.div>
               )}
-
-              {selectedMethod === 'wallet' && (
-                <div style={{textAlign:'center', padding:'20px', color:'var(--muted)'}}>
-                  Wallet payments coming soon!
-                </div>
-              )}
-            </div>
-
-            {/* SECTION 3 — OTP Verification */}
-            {selectedMethod && selectedMethod !== "wallet" && (
-              <div className="section-card delay-2" style={{width:'100%', borderColor: isOtpVerified ? 'rgba(52,211,153,0.3)' : 'var(--border)'}}>
-                <div className="card-glow"></div>
-                <div className="section-label" style={{color: isOtpVerified ? '#34d399' : 'var(--muted)'}}>
-                  <span className="section-label-dot" style={{background: isOtpVerified ? '#34d399' : 'linear-gradient(135deg, var(--purple), var(--teal))'}}></span>
-                  03 — Verification
-                </div>
-
-                {!showOtpInput ? (
-                  <div style={{textAlign:'center'}}>
-                    <p style={{fontSize:'13px', color:'var(--muted)', marginBottom:'16px'}}>
-                      For security, we'll send an OTP to verify your payment.
-                    </p>
-                    <button className="btn-ai btn-ai-yes" onClick={handleSendOtp} disabled={isSendingOtp} style={{width:'100%'}}>
-                      {isSendingOtp ? 'Sending OTP...' : `Send OTP`}
-                    </button>
-                  </div>
-                ) : !isOtpVerified ? (
-                  <div style={{textAlign:'center'}}>
-                    <div className="input-group" style={{marginBottom:'16px'}}>
-                      <label className="input-label" style={{justifyContent:'center'}}>Enter 6-Digit OTP</label>
-                      <input className="input-field" style={{textAlign:'center', fontSize:'24px', letterSpacing:'8px', padding:'12px'}} placeholder="000000" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ""))} maxLength={6} />
-                    </div>
-                    <div style={{display:'flex', gap:'10px'}}>
-                      <button className="btn-ai btn-ai-no" onClick={handleSendOtp} style={{flex:1}}>Resend</button>
-                      <button className="btn-ai btn-ai-yes" onClick={handleVerifyOtp} style={{flex:2}}>Verify</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{textAlign:'center', color:'#34d399', fontSize:'14px', fontWeight:600}}>
-                    ✓ OTP Verified Successfully!
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {/* Trust Banner */}
-            <div className="section-card delay-3" style={{width:'100%', background:'linear-gradient(135deg, rgba(6,214,199,0.08), rgba(99,51,255,0.08))', borderColor:'rgba(6,214,199,0.3)'}}>
-              <div className="card-glow"></div>
-              <div className="section-label" style={{color:'#06d6c7'}}>
-                <span className="section-label-dot" style={{background:'#06d6c7'}}></span>
-                04 — Your Savings with AI
-              </div>
-
-              <div className="stat-grid" style={{gridTemplateColumns:'repeat(2,1fr)'}}>
-                <div className="stat-card" style={{border:'1px solid rgba(6,214,199,0.2)'}}>
-                  <div className="stat-label">💰 Money Saved</div>
-                  <div className="stat-val" style={{fontSize:'22px', color:'#06d6c7'}}>~₹45,000</div>
-                  <div className="stat-sub">on agency & creative fees</div>
-                </div>
-                <div className="stat-card" style={{border:'1px solid rgba(167,139,250,0.2)'}}>
-                  <div className="stat-label">⏳ Time Saved</div>
-                  <div className="stat-val" style={{fontSize:'22px', color:'#a78bfa'}}>~14 Days</div>
-                  <div className="stat-sub">on editing & campaign setup</div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{background:'rgba(52,211,153,0.05)', border:'1px solid rgba(52,211,153,0.2)', borderRadius:'12px', padding:'12px 16px', fontSize:'12px', color:'var(--muted)', display:'flex', gap:'8px', alignItems:'center', justifyContent:'center'}}>
-              <span style={{color:'#34d399'}}>🔒</span>
-              <span>100% Secure & Encrypted Payments powered by trusted gateways.</span>
-            </div>
-
+            </AnimatePresence>
           </div>
 
-          <div style={{height:'120px'}}></div>
+          {/* Verification Step */}
+          {selectedMethod && !isOtpVerified && (
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: "32px", textAlign: "center" }}>
+              {!showOtpInput ? (
+                <div>
+                  <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>Verification Required</h3>
+                  <p style={{ color: "var(--vx-text-muted)", fontSize: 14, marginBottom: 24 }}>We'll send a 6-digit code to your registered mobile for security.</p>
+                  <button 
+                    onClick={handleSendOtp} disabled={isSendingOtp}
+                    style={{ padding: "14px 32px", borderRadius: 12, background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", border: "none", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    {isSendingOtp ? "Sending..." : "Send Verification Code"}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>Enter Verification Code</h3>
+                  <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 24 }}>
+                    <input 
+                      type="text" maxLength={6} value={otp} onChange={e => setOtp(e.target.value)}
+                      placeholder="000000"
+                      style={{ width: "100%", maxWidth: 200, textAlign: "center", fontSize: 24, fontWeight: 800, letterSpacing: 8, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 12, padding: "12px", color: "#38bdf8", outline: "none" }}
+                    />
+                  </div>
+                  <button 
+                    onClick={handleVerifyOtp}
+                    style={{ padding: "14px 32px", borderRadius: 12, background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", border: "none", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Verify & Continue
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
 
-          <div className="float-submit">
-            <button className="submit-btn" onClick={handlePayment} disabled={!selectedMethod || selectedMethod === "wallet" || isProcessing}>
-              <span className="submit-icon">🚀</span>
-              {isProcessing ? 'Processing...' : 'Pay & Launch Campaign'}
+          {/* Opaque Verified Message */}
+          {isOtpVerified && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 20, padding: "20px", display: "flex", alignItems: "center", gap: 16 }}>
+              <CheckCircle2 size={24} style={{ color: "#10b981" }} />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#10b981" }}>Identity Verified</div>
+                <div style={{ fontSize: 12, color: "rgba(16, 185, 129, 0.8)" }}>You are now ready to launch your campaign.</div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Value Banner */}
+          <div style={{ background: "linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(56, 189, 248, 0.1))", borderRadius: 24, padding: "32px", border: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 32 }}>
+            <div style={{ width: 64, height: 64, borderRadius: 20, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", color: "#38bdf8", flexShrink: 0 }}>
+              <Sparkles size={32} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Vulpinix AI Edge</h4>
+              <p style={{ fontSize: 13, color: "var(--vx-text-secondary)", lineHeight: 1.5, margin: 0 }}>By launching today, you're saving estimated <b>₹45,000</b> in traditional agency fees and <b>14 days</b> of manual work.</p>
+            </div>
+          </div>
+
+          {/* Action Footer */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 20, textAlign: "center" }}>
+            <button 
+              onClick={handlePayment}
+              disabled={!isOtpVerified || isProcessing}
+              style={{ width: "100%", padding: "20px", borderRadius: 20, background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", border: "none", fontWeight: 800, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, opacity: (!isOtpVerified || isProcessing) ? 0.5 : 1, transition: "0.2s" }}
+            >
+              {isProcessing ? "Launching Campaign..." : "Pay & Launch Now"} <Zap size={20} fill="currentColor" />
             </button>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--vx-text-muted)", fontSize: 12, fontWeight: 600 }}>
+              <Lock size={14} /> 256-bit SSL Encrypted Payment Gateway
+            </div>
           </div>
 
         </div>
+
+        <footer style={{ marginTop: 80, textAlign: "center", borderTop: "1px solid var(--vx-border)", paddingTop: 40, opacity: 0.5 }}>
+          <VulpinixLogo size="sm" />
+          <p style={{ color: "var(--vx-text-muted)", fontSize: 11, marginTop: 16, letterSpacing: "0.05em", fontWeight: 700 }}>
+            SECURE CHECKOUT — PLATFORM v1.0.4
+          </p>
+        </footer>
       </div>
-    </>
+    </motion.div>
   );
 }

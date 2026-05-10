@@ -1,8 +1,12 @@
-import { Button } from "./ui/button";
-import { Play, Instagram, Facebook, Linkedin, Twitter, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star } from "lucide-react";
+
+import { Play, Linkedin, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload, User, Volume2, Maximize2, RotateCcw, RotateCw, Pause } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../hooks/useTheme";
+import { VulpinixLogo } from "./VulpinixLogo";
+import { motion, AnimatePresence } from "framer-motion";
+
+const demoVideo = "/watch_demo/demo.mp4";
 
 export function HeroSection() {
   const navigate = useNavigate();
@@ -10,8 +14,77 @@ export function HeroSection() {
   const [userInfo, setUserInfo]   = useState<any>(null);
   const [scrolled, setScrolled]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [barsReady, setBarsReady] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showDemo, setShowDemo] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const cardRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (showDemo && videoRef.current) {
+      videoRef.current.play();
+      setIsPlaying(true);
+    }
+  }, [showDemo]);
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
+    }
+  };
+
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (videoRef.current) {
+      if (!document.fullscreenElement) {
+        videoRef.current.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  const skip = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime += seconds;
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+  };
 
   useEffect(() => {
     const savedUserInfo = localStorage.getItem("userInfo");
@@ -20,19 +93,38 @@ export function HeroSection() {
     }
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
-    // progress bars animate on mount
-    setTimeout(() => setBarsReady(true), 500);
-    return () => window.removeEventListener("scroll", onScroll);
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const handleGetStarted = () => {
     const isAuthenticated = !!localStorage.getItem("userInfo") || localStorage.getItem("isAuthenticated") === "true";
     if (isAuthenticated) {
-      navigate("/upload");
+      setDropdownOpen(!dropdownOpen);
     } else {
       const isReturning = !!localStorage.getItem("userEmail") || !!localStorage.getItem("returningUser");
       navigate(isReturning ? "/login" : "/signup");
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("userInfo");
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("userToken");
+    setUserInfo(null);
+    setDropdownOpen(false);
+    navigate("/");
   };
 
   const getUserInitials = () => {
@@ -57,167 +149,418 @@ export function HeroSection() {
     { value: "98",  suffix: "%", label: "Satisfaction" },
   ];
 
-  const platforms = [
-    { name: "Instagram", pct: 78, color: "#a78bfa" },
-    { name: "Facebook",  pct: 54, color: "#38bdf8" },
-    { name: "LinkedIn",  pct: 42, color: "#4ade80" },
-  ];
 
-  // Word-by-word heading words
-  const line1 = ["Automate", "Your"];
-  const line3 = ["with", "AI", "Power"];
 
   return (
     <section
       className="relative min-h-screen flex flex-col overflow-hidden"
-      style={{ background: "var(--vx-bg-primary)" }}
+      style={{ background: "transparent" }}
     >
+      <style>{`
+        @keyframes float-main {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        @keyframes float-badge-1 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-12px) rotate(3deg); }
+        }
+        @keyframes float-badge-2 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-15px) rotate(-3deg); }
+        }
+        @keyframes float-badge-3 {
+          0%, 100% { transform: translateY(0px) scale(1); }
+          50% { transform: translateY(-18px) scale(1.05); }
+        }
+        @keyframes pulse-subtle {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+        .anim-float-main { animation: float-main 7s ease-in-out infinite; }
+        .anim-badge-1 { animation: float-badge-1 5s ease-in-out infinite 0.5s; }
+        .anim-badge-2 { animation: float-badge-2 6.5s ease-in-out infinite 1.2s; }
+        .anim-badge-3 { animation: float-badge-3 6s ease-in-out infinite 2s; }
+        .anim-pulse { animation: pulse-subtle 3s ease-in-out infinite; }
+        
+        .vx-video-container video::-webkit-media-controls {
+          display: none !important;
+        }
+
+        .vx-progress-slider {
+          -webkit-appearance: none;
+          width: 100%;
+          height: 3px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 5px;
+          outline: none;
+          cursor: pointer;
+        }
+        .vx-progress-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 12px;
+          height: 12px;
+          background: #fff;
+          border-radius: 50%;
+          cursor: pointer;
+          border: 2px solid #a78bfa;
+        }
+
+        /* ── NAVBAR CLASSES ── */
+        .vx-navbar {
+          position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+          transition: background 0.3s cubic-bezier(0.4,0,0.2,1),
+                      border-color 0.3s, box-shadow 0.3s;
+        }
+        .vx-navbar--scrolled {
+          background: rgba(3,5,9,0.88);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-bottom: 1px solid var(--vx-border);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+        .vx-nav-container {
+          max-width: 1280px; margin: 0 auto;
+          padding: 14px 32px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+        /* Center links wrapper */
+        .vx-nav-links-desktop {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex: 1;
+          justify-content: center;
+        }
+        /* Hamburger — hidden on desktop */
+        .vx-hamburger {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          width: 40px; height: 40px;
+          background: transparent;
+          border: 1px solid var(--vx-border);
+          border-radius: 10px;
+          cursor: pointer;
+          color: var(--vx-text-primary);
+          flex-shrink: 0;
+          transition: background 0.2s, border-color 0.2s;
+        }
+        .vx-hamburger:hover {
+          background: var(--vx-bg-input);
+          border-color: var(--vx-border-hover);
+        }
+        /* Mobile menu — hidden by default */
+        .vx-mobile-menu {
+          position: fixed;
+          top: 65px; left: 0; right: 0;
+          background: rgba(3,5,9,0.96);
+          border-bottom: 1px solid var(--vx-border);
+          padding: 16px 20px 28px;
+          display: flex; flex-direction: column; gap: 4px;
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+          z-index: 49;
+        }
+        .vx-mobile-nav-link {
+          display: block; padding: 14px 18px;
+          font-size: 16px; font-weight: 600;
+          color: var(--vx-text-secondary); text-decoration: none;
+          border-radius: 12px; transition: all 0.2s;
+          border: 1px solid transparent;
+        }
+        .vx-mobile-nav-link:hover {
+          color: var(--vx-text-primary);
+          background: var(--vx-bg-input);
+          border-color: var(--vx-border);
+        }
+        .vx-mobile-nav-divider {
+          height: 1px;
+          background: var(--vx-border);
+          margin: 8px 0;
+        }
+
+        /* ── TABLET + MOBILE: show hamburger, hide desktop nav ── */
+        @media (max-width: 767px) {
+          .vx-nav-container { padding: 10px 16px; }
+          .vx-nav-links-desktop { display: none !important; }
+          .vx-hamburger { display: flex; }
+          .vx-get-started-btn span { display: none !important; }
+          .vx-get-started-btn { padding: 8px 12px !important; min-width: 0; }
+        }
+        @media (min-width: 768px) {
+          .vx-hamburger { display: none !important; }
+          .vx-mobile-menu { display: none !important; }
+        }
+
+        /* ── HERO CONTENT CLASSES ── */
+        .vx-hero-grid {
+          position: relative; z-index: 10; flex: 1;
+          display: flex; align-items: center;
+          padding: 140px 32px 80px; max-width: 1280px; margin: 0 auto;
+          width: 100%; gap: 60px;
+        }
+        @media (max-width: 1024px) {
+          .vx-hero-grid {
+            flex-direction: column;
+            padding-top: 110px;
+            padding-bottom: 48px;
+            text-align: center;
+            gap: 40px;
+          }
+          .vx-hero-left {
+            display: flex; flex-direction: column; align-items: center;
+            max-width: 600px; margin: 0 auto;
+          }
+          .vx-hero-btns { justify-content: center; }
+        }
+        @media (max-width: 767px) {
+          .vx-hero-grid {
+            padding-top: 96px;
+            padding-inline: 20px;
+          }
+        }
+        @media (max-width: 480px) {
+          .vx-hero-grid {
+            padding-top: 88px;
+            padding-inline: 16px;
+          }
+          .vx-hero-btns {
+            flex-direction: column;
+            width: 100%;
+          }
+          .vx-hero-btns button {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+      `}</style>
       {/* ══════════ NAVBAR ══════════ */}
-      <nav style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
-        transition: "all 0.35s ease",
-        background: scrolled ? "var(--vx-bg-nav)" : "transparent",
-        backdropFilter: scrolled ? "blur(20px)" : "none",
-        WebkitBackdropFilter: scrolled ? "blur(20px)" : "none",
-        boxShadow: scrolled ? (isDark ? "0 8px 32px rgba(0,0,0,0.4)" : "0 8px 32px rgba(99,51,255,0.1)") : "none",
-      }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64, position: "relative" }}>
+      <nav className={`vx-navbar ${scrolled ? "vx-navbar--scrolled" : ""}`}>
+        <div className="vx-nav-container">
+          
+          {/* Left: Logo */}
+          <div style={{ display: "flex", justifyContent: "flex-start" }}>
+            <VulpinixLogo size="md" onClick={() => navigate("/")} />
+          </div>
 
-          {/* Logo */}
-          <button
-            onClick={() => navigate("/")}
-            style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", transition: "filter 0.2s" }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.filter = "drop-shadow(0 0 8px rgba(99,51,255,0.6))"}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.filter = "none"}
-          >
-            <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg, #6333ff, #06d6c7)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 20px rgba(99,51,255,0.5)" }}>
-              <span style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>V</span>
-            </div>
-            <span style={{ fontSize: 17, fontWeight: 700, background: "linear-gradient(90deg, #c4b5fd, #67e8f9)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "0.02em" }}>
-              Vulpinix AI
-            </span>
-          </button>
-
-          {/* Desktop Nav Links */}
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }} className="md:flex hidden">
+          {/* Middle: Desktop Nav Links */}
+          <div className="vx-nav-links-desktop">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 className="vx-nav-link"
-                style={{ padding: "8px 16px", fontSize: 14, fontWeight: 500, color: isDark ? "rgba(209,213,219,0.9)" : "#1e2140", textDecoration: "none", borderRadius: 8, transition: "color 0.2s, background 0.2s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = isDark ? "#fff" : "#5b21b6"; (e.currentTarget as HTMLElement).style.background = "rgba(99,51,255,0.08)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = isDark ? "rgba(209,213,219,0.9)" : "#1e2140"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                style={{ padding: "8px 16px", fontSize: 14, fontWeight: 500, color: "var(--vx-text-secondary)", textDecoration: "none", borderRadius: 8, transition: "all 0.2s" }}
+                onMouseEnter={e => { 
+                  (e.currentTarget as HTMLElement).style.color = "var(--vx-text-primary)"; 
+                  (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; 
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={e => { 
+                  (e.currentTarget as HTMLElement).style.color = "var(--vx-text-secondary)"; 
+                  (e.currentTarget as HTMLElement).style.background = "transparent"; 
+                  (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                }}
               >
                 {link.label}
               </a>
             ))}
           </div>
 
-          {/* Right */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {userInfo && (
-              <button onClick={() => navigate("/profile")} style={{ background: "none", border: "none", cursor: "pointer" }}>
-                <div style={{ width: 34, height: 34, borderRadius: "50%", overflow: "hidden", border: "2px solid rgba(99,51,255,0.6)", background: "linear-gradient(135deg, #6333ff, #06d6c7)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 13 }}>
-                  {userInfo?.picture
-                    ? <img src={userInfo.picture} alt={userInfo.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : getUserInitials()
-                  }
-                </div>
-              </button>
-            )}
-
+          {/* Right Action Area */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
             {/* Theme Toggle */}
             <button
               className="vx-theme-toggle"
               onClick={toggleTheme}
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              id="theme-toggle-btn"
+              style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", color: "var(--vx-text-secondary)", fontSize: 18 }}
             >
               {isDark ? "☀️" : "🌙"}
             </button>
 
-            <button
-              onClick={handleGetStarted}
-              style={{ padding: "8px 20px", borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: "pointer", border: "none", color: "#fff", background: "linear-gradient(135deg, #6333ff, #06d6c7)", boxShadow: "0 0 20px rgba(99,51,255,0.4)", transition: "all 0.25s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 0 32px rgba(99,51,255,0.7)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 0 20px rgba(99,51,255,0.4)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
-            >
-              Get Started
-            </button>
+            <div style={{ position: "relative" }} ref={dropdownRef}>
+              <button
+                className="vx-get-started-btn"
+                onClick={handleGetStarted}
+                style={{
+                  padding: "8px 20px",
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  border: "1px solid var(--vx-border)",
+                  color: userInfo ? "var(--vx-text-primary)" : "var(--vx-bg-primary)",
+                  background: userInfo ? "var(--vx-bg-input)" : "var(--vx-text-primary)",
+                  transition: "all 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8
+                }}
+              >
+                {userInfo ? (
+                  <>
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", overflow: "hidden", background: "var(--vx-bg-card)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>
+                      {userInfo.picture ? <img src={userInfo.picture} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : getUserInitials()}
+                    </div>
+                    <span>Account</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ transform: dropdownOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}><path d="m6 9 6 6 6-6"/></svg>
+                  </>
+                ) : (
+                  <>
+                    <Zap size={14} className="sm:block hidden" />
+                    <span>Get Started</span>
+                  </>
+                )}
+              </button>
 
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ display: "none", background: "none", border: "none", cursor: "pointer", color: isDark ? "#9ca3af" : "#374151", padding: 6 }} className="md:hidden block">
+              {dropdownOpen && (
+                <div style={{
+                  position: "absolute", top: "calc(100% + 8px)", right: 0, width: 230,
+                  background: "#0d1017",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 14, padding: 8,
+                  boxShadow: "0 16px 48px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.5)",
+                  zIndex: 200, display: "flex", flexDirection: "column", gap: 4,
+                }}>
+                  <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--vx-border)", marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--vx-text-primary)" }}>{userInfo?.name || "User"}</div>
+                    <div style={{ fontSize: 11, color: "var(--vx-text-muted)", overflow: "hidden", textOverflow: "ellipsis" }}>{userInfo?.email}</div>
+                  </div>
+                  
+                  <button
+                    onClick={() => { navigate("/upload"); setDropdownOpen(false); }}
+                    style={{ padding: "10px 12px", borderRadius: 8, background: "none", border: "none", color: "var(--vx-text-primary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left", transition: "background 0.2s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--vx-bg-input)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <Upload size={16} color="#a78bfa" /> Upload Campaign
+                  </button>
+
+                  <button
+                    onClick={() => { navigate("/profile"); setDropdownOpen(false); }}
+                    style={{ padding: "10px 12px", borderRadius: 8, background: "none", border: "none", color: "var(--vx-text-primary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left", transition: "background 0.2s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--vx-bg-input)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <User size={16} color="#38bdf8" /> My Profile
+                  </button>
+
+                  <button
+                    onClick={() => { navigate("/dashboard/campaigns"); setDropdownOpen(false); }}
+                    style={{ padding: "10px 12px", borderRadius: 8, background: "none", border: "none", color: "var(--vx-text-primary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left", transition: "background 0.2s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--vx-bg-input)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <BarChart2 size={16} color="#4ade80" /> My Analytics
+                  </button>
+
+                  <div style={{ height: 1, background: "var(--vx-border)", margin: "4px 0" }} />
+
+                  <button
+                    onClick={handleLogout}
+                    style={{ padding: "10px 12px", borderRadius: 8, background: "none", border: "none", color: "#f43f5e", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left", transition: "background 0.2s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(244,63,94,0.1)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <X size={16} /> Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Menu Toggle — only shown on mobile via CSS */}
+            <button 
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)} 
+              className="vx-hamburger"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileMenuOpen}
+            >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
-
-          {/* Shimmer border */}
-          <div className={`vx-nav-shimmer${scrolled ? " vx-nav-scrolled" : ""}`} />
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(99,51,255,0.1)"}`, background: isDark ? "rgba(8,11,20,0.98)" : "rgba(240,242,255,0.98)", backdropFilter: "blur(20px)", padding: "12px 24px 16px" }}>
-            {navLinks.map((link) => (
-              <a key={link.label} href={link.href} onClick={() => setMobileMenuOpen(false)} style={{ display: "block", padding: "10px 12px", fontSize: 14, color: isDark ? "#d1d5db" : "#1e2140", textDecoration: "none", borderRadius: 8, marginBottom: 2 }}>
-                {link.label}
-              </a>
-            ))}
-            <div style={{ paddingTop: 8, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(99,51,255,0.08)"}`, marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-              <button className="vx-theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
-                {isDark ? "☀️" : "🌙"}
-              </button>
-              <span style={{ fontSize: 13, color: isDark ? "rgba(180,180,220,0.6)" : "#6b7280" }}>
-                {isDark ? "Light mode" : "Dark mode"}
-              </span>
-            </div>
-          </div>
-        )}
+        {/* Mobile Menu Overlay */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="vx-mobile-menu"
+            >
+              {navLinks.map((link) => (
+                <a 
+                  key={link.label} 
+                  href={link.href} 
+                  onClick={() => setMobileMenuOpen(false)} 
+                  className="vx-mobile-nav-link"
+                >
+                  {link.label}
+                </a>
+              ))}
+              <div className="vx-mobile-nav-divider" />
+              <div style={{ padding: "8px 0", display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); handleGetStarted(); }}
+                  style={{
+                    flex: 1, padding: "14px 20px", borderRadius: 14,
+                    background: "linear-gradient(135deg,#8b5cf6,#38bdf8)",
+                    color: "#fff", fontWeight: 700, fontSize: 15,
+                    border: "none", cursor: "pointer", letterSpacing: "0.01em"
+                  }}
+                >
+                  Get Started Free
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* ══════════ HERO CONTENT ══════════ */}
-      <div style={{ position: "relative", zIndex: 10, flex: 1, display: "flex", alignItems: "center", padding: "100px 24px 60px", maxWidth: 1280, margin: "0 auto", width: "100%", gap: 60 }}>
+      <div className="vx-hero-grid">
 
         {/* ── LEFT ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="vx-hero-left" style={{ flex: 1, minWidth: 0 }}>
 
           {/* Badge */}
           <div
-            className="vx-badge-animated"
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 999, border: "1px solid rgba(99,51,255,0.4)", background: "rgba(99,51,255,0.08)", backdropFilter: "blur(8px)", marginBottom: 28 }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "6px 16px", borderRadius: 10, border: "1px solid rgba(167, 139, 250, 0.3)", background: "linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(56, 189, 248, 0.1))", marginBottom: 32, backdropFilter: "blur(10px)" }}
           >
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 6px #4ade80", animation: "pulse 2s infinite" }} />
-            <Sparkles size={13} style={{ color: "#a78bfa" }} />
-            <span style={{ color: "#c4b5fd", fontSize: 13, fontWeight: 500 }}>Introducing Vulpinix AI 1.0</span>
+            <span style={{ background: "var(--vx-text-primary)", color: "var(--vx-bg-primary)", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>NEW</span>
+            <span style={{ color: "var(--vx-text-secondary)", fontSize: 12, fontWeight: 500 }}>Smart Automation Engine</span>
           </div>
 
           {/* Headline — word by word */}
-          <h1 style={{ fontSize: "clamp(2rem,5vw,3.8rem)", fontWeight: 800, color: "#fff", lineHeight: 1.1, marginBottom: 24, letterSpacing: "-0.02em" }}>
-            {line1.map((w, i) => (
-              <span key={w} className="vx-word" style={{ animationDelay: `${i * 0.1}s`, marginRight: "0.25em" }}>{w}</span>
-            ))}
+          <h1 className="vx-gradient-text-anim" style={{ fontSize: "clamp(2rem,5vw,3.8rem)", fontWeight: 800, lineHeight: 1.1, marginBottom: 24, letterSpacing: "-0.02em" }}>
+            Automate Your
             <br />
-            <span className="vx-gradient-text-anim" style={{ display: "inline-block", animationDelay: "0.25s" }}>
-              Digital Marketing
-            </span>
+            Digital Marketing
             <br />
-            {line3.map((w, i) => (
-              <span key={w} className="vx-word" style={{ animationDelay: `${(i + 3) * 0.1}s`, marginRight: "0.25em" }}>{w}</span>
-            ))}
+            with AI Power
           </h1>
 
           {/* Subheadline */}
-          <p style={{ fontSize: "clamp(1rem,2vw,1.15rem)", color: isDark ? "rgba(156,163,175,0.9)" : "#374151", lineHeight: 1.7, marginBottom: 36, maxWidth: 480, opacity: 0, animation: "wordFadeUp 0.6s 0.6s both" }}>
+          <p style={{ fontSize: "clamp(1rem,2vw,1.15rem)", color: "var(--vx-text-secondary)", lineHeight: 1.7, marginBottom: 36, maxWidth: 480 }}>
             Upload your content, let our AI craft captions, schedule posts, and deliver deep analytics — all from one seamless platform.
           </p>
 
           {/* CTA Buttons */}
-          <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
+          <div className="vx-hero-btns" style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
             <button
               onClick={handleGetStarted}
-              style={{ padding: "14px 28px", background: "linear-gradient(135deg, #6333ff, #06d6c7)", border: "none", borderRadius: 12, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 0 30px rgba(99,51,255,0.5), 0 4px 20px rgba(0,0,0,0.3)", transition: "all 0.25s", opacity: 0, animation: "wordFadeUp 0.6s 0.7s both" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 44px rgba(99,51,255,0.75), 0 8px 24px rgba(0,0,0,0.3)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 30px rgba(99,51,255,0.5), 0 4px 20px rgba(0,0,0,0.3)"; }}
+              style={{ padding: "14px 28px", background: "var(--vx-text-primary)", border: "1px solid transparent", borderRadius: 8, color: "var(--vx-bg-primary)", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "all 0.25s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.opacity = "1"; }}
             >
               <Zap size={16} />
               Get Started Free
@@ -225,12 +568,13 @@ export function HeroSection() {
             </button>
 
             <button
-              style={{ padding: "14px 24px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, color: "#e5e7eb", fontWeight: 600, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, backdropFilter: "blur(8px)", transition: "all 0.25s", opacity: 0, animation: "wordFadeUp 0.6s 0.8s both" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(99,51,255,0.5)"; (e.currentTarget as HTMLElement).style.background = "rgba(99,51,255,0.08)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.12)"; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+              onClick={() => setShowDemo(true)}
+              style={{ padding: "14px 24px", background: "transparent", border: "1px solid var(--vx-border)", borderRadius: 8, color: "var(--vx-text-primary)", fontWeight: 600, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "all 0.25s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--vx-border-hover)"; (e.currentTarget as HTMLElement).style.background = "var(--vx-bg-card)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--vx-border)"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
             >
-              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #6333ff, #06d6c7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Play size={11} style={{ color: "#fff", marginLeft: 2 }} fill="#fff" />
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--vx-text-primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Play size={11} style={{ color: "var(--vx-bg-primary)", marginLeft: 2 }} fill="var(--vx-bg-primary)" />
               </div>
               Watch Demo
             </button>
@@ -238,14 +582,10 @@ export function HeroSection() {
 
           {/* Stats row with counters */}
           <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
-            {stats.map((s, i) => (
-              <div key={s.label} style={{ textAlign: "center", opacity: 0, animation: `wordFadeUp 0.5s ${0.9 + i * 0.1}s both` }}>
-                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", lineHeight: 1, display: "flex", alignItems: "baseline", gap: 1, justifyContent: "center" }}>
-                  <span
-                    data-count-target={s.value}
-                    data-count-suffix={s.suffix}
-                    style={{ color: "#a78bfa" }}
-                  >
+            {stats.map((s) => (
+              <div key={s.label} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--vx-text-primary)", lineHeight: 1, display: "flex", alignItems: "baseline", gap: 1, justifyContent: "center" }}>
+                  <span style={{ color: "var(--vx-text-primary)" }}>
                     {s.value}{s.suffix}
                   </span>
                 </div>
@@ -255,109 +595,229 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* ── RIGHT: Floating dashboard card ── */}
-        <div ref={cardRef} className="hidden md:flex" style={{ flex: "0 0 420px", position: "relative", height: 480, alignItems: "center", justifyContent: "center" }}>
+        {/* ── RIGHT: Floating App Graphic ── */}
+        <div ref={cardRef} className="hidden md:flex" style={{ flex: "0 0 500px", position: "relative", height: 540, alignItems: "center", justifyContent: "center" }}>
 
-          {/* Glow */}
-          <div style={{ position: "absolute", inset: "-20px", background: "radial-gradient(ellipse at center, rgba(99,51,255,0.25) 0%, rgba(6,214,199,0.15) 50%, transparent 70%)", filter: "blur(30px)" }} />
-
-          {/* Main floating card */}
+          {/* Main floating card - Mobile App Graphic */}
           <div
-            className="vx-card-float"
-            style={{ position: "relative", zIndex: 2, width: "100%", background: "rgba(13,15,46,0.85)", border: "1px solid rgba(99,51,255,0.3)", borderRadius: 24, padding: 24, backdropFilter: "blur(24px)", boxShadow: "0 40px 80px rgba(99,51,255,0.2), 0 32px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)" }}
+            className="anim-float-main"
+            style={{ position: "relative", zIndex: 2, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
-            {/* Card header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-              <div>
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>Performance Dashboard</div>
-                <div style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>Last 7 days</div>
+            {/* The Mobile Frame */}
+            <div style={{ position: "relative", width: 280, height: 480, background: "var(--vx-bg-primary)", border: "8px solid var(--vx-bg-input)", borderRadius: 40, boxShadow: "0 24px 48px rgba(0,0,0,0.2)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              {/* Dynamic Island / Top Notch */}
+              <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", width: 90, height: 22, background: "var(--vx-bg-input)", borderRadius: 12, zIndex: 10 }} />
+              
+              {/* Mock App Header */}
+              <div style={{ padding: "40px 20px 16px", borderBottom: "1px solid var(--vx-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 800, fontSize: 18, color: "var(--vx-text-primary)" }}>Vulpinix App</span>
+                <Menu size={20} style={{ color: "var(--vx-text-primary)" }} />
               </div>
-              <div style={{ padding: "4px 10px", background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)", borderRadius: 999, color: "#4ade80", fontSize: 12, fontWeight: 600 }}>↑ 32% this week</div>
-            </div>
 
-            {/* Mini metric cards with count-up */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-              {[
-                { label: "Total Reach",     rawVal: 124000, display: "124K",  suffix: "",  color: "#a78bfa", icon: "📊" },
-                { label: "Engagement",      rawVal: 8.4,    display: "8.4%",  suffix: "%", color: "#38bdf8", icon: "⚡", decimals: 1 },
-                { label: "Posts Scheduled", rawVal: 12,     display: "12",    suffix: "",  color: "#4ade80", icon: "📅" },
-                { label: "New Followers",   rawVal: 890,    display: "+890",  suffix: "",  prefix: "+", color: "#fb923c", icon: "👥" },
-              ].map((m) => (
-                <div key={m.label} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 18, marginBottom: 4 }}>{m.icon}</div>
-                  <div
-                    data-count-target={String(m.rawVal)}
-                    data-count-suffix={m.suffix || ""}
-                    data-count-prefix={m.prefix || ""}
-                    data-count-decimals={String(m.decimals || 0)}
-                    style={{ color: m.color, fontWeight: 700, fontSize: 18 }}
-                  >
-                    {m.display}
+              {/* Mock Social Feed inside Mobile */}
+              <div style={{ flex: 1, padding: 16, background: "var(--vx-bg-card)", overflow: "hidden" }}>
+                {/* Post Header */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(45deg, #f09433, #dc2743)", padding: 2 }}>
+                     <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "var(--vx-bg-primary)" }} />
                   </div>
-                  <div style={{ color: "#6b7280", fontSize: 11, marginTop: 2 }}>{m.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Platform bars — animated width */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>Platform Performance</div>
-              {platforms.map((p) => (
-                <div key={p.name} style={{ marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ color: "#d1d5db", fontSize: 12 }}>{p.name}</span>
-                    <span style={{ color: p.color, fontSize: 12, fontWeight: 600 }}>{p.pct}%</span>
-                  </div>
-                  <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 999 }}>
-                    <div
-                      className="vx-bar-animated"
-                      style={{ "--bar-target": `${p.pct}%`, height: "100%", background: `linear-gradient(90deg, ${p.color}, rgba(6,182,212,0.7))`, borderRadius: 999 } as React.CSSProperties}
-                    />
+                  <div className="anim-pulse">
+                    <div style={{ width: 90, height: 10, background: "var(--vx-text-primary)", borderRadius: 4, marginBottom: 6 }} />
+                    <div style={{ width: 50, height: 8, background: "var(--vx-text-secondary)", borderRadius: 4 }} />
                   </div>
                 </div>
-              ))}
-            </div>
 
-            {/* AI badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "rgba(99,51,255,0.12)", border: "1px solid rgba(99,51,255,0.25)", borderRadius: 12 }}>
-              <Sparkles size={14} style={{ color: "#a78bfa" }} />
-              <span style={{ color: "#c4b5fd", fontSize: 12, fontWeight: 500 }}>AI generated 3 captions ready to publish</span>
-            </div>
-          </div>
+                {/* Post Image */}
+                <div style={{ width: "100%", height: 200, background: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(56,189,248,0.15))", borderRadius: 14, marginBottom: 16, border: "1px solid var(--vx-border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                   <Play size={28} style={{ color: "#a78bfa", opacity: 0.8 }} fill="#a78bfa" />
+                </div>
 
-          {/* Floating mini badges */}
-          <div style={{ position: "absolute", top: 20, left: -30, zIndex: 5, background: "rgba(13,15,46,0.9)", border: "1px solid rgba(74,222,128,0.4)", borderRadius: 12, padding: "8px 14px", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", gap: 6, animation: "float 4s ease-in-out infinite", animationDelay: "1s", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
-            <Star size={12} style={{ color: "#fbbf24" }} fill="#fbbf24" />
-            <span style={{ color: "#e5e7eb", fontSize: 12, fontWeight: 600 }}>4.9 / 5.0 Rating</span>
-          </div>
+                {/* Post Actions */}
+                <div style={{ display: "flex", gap: 14, marginBottom: 14 }}>
+                  <Star size={18} style={{ color: "#f43f5e" }} fill="#f43f5e" />
+                  <Menu size={18} style={{ color: "var(--vx-text-primary)" }} />
+                  <ArrowRight size={18} style={{ color: "var(--vx-text-primary)", marginLeft: "auto" }} />
+                </div>
 
-          <div style={{ position: "absolute", bottom: 30, right: -25, zIndex: 5, background: "rgba(13,15,46,0.9)", border: "1px solid rgba(99,51,255,0.4)", borderRadius: 12, padding: "8px 14px", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", gap: 6, animation: "float 5s ease-in-out infinite", animationDelay: "0.5s", boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
-            <BarChart2 size={12} style={{ color: "#38bdf8" }} />
-            <span style={{ color: "#e5e7eb", fontSize: 12, fontWeight: 600 }}>Live Analytics</span>
-          </div>
-
-          {/* Floating social icons */}
-          <div style={{ position: "absolute", left: -64, top: "35%", display: "flex", flexDirection: "column", gap: 12, zIndex: 5 }} className="hidden xl:flex">
-            {[
-              { Icon: Instagram, color: "rgba(168,85,247,0.8)",  bg: "rgba(168,85,247,0.1)", delay: "0s" },
-              { Icon: Facebook,  color: "rgba(59,130,246,0.8)",   bg: "rgba(59,130,246,0.1)", delay: "0.8s" },
-              { Icon: Linkedin,  color: "rgba(6,182,212,0.8)",    bg: "rgba(6,182,212,0.1)",  delay: "1.6s" },
-              { Icon: Twitter,   color: "rgba(168,85,247,0.8)",   bg: "rgba(168,85,247,0.1)", delay: "2.4s" },
-            ].map(({ Icon, color, bg, delay }, i) => (
-              <div
-                key={i}
-                className="vx-social-icon"
-                style={{ width: 40, height: 40, borderRadius: 12, border: `1.5px solid ${color}`, background: bg, backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", animation: `float 3.5s ease-in-out infinite`, animationDelay: delay }}
-              >
-                <Icon size={18} style={{ color }} />
+                {/* Post Text Placeholder */}
+                <div className="anim-pulse" style={{ animationDelay: "0.5s" }}>
+                  <div style={{ width: "95%", height: 10, background: "var(--vx-text-primary)", borderRadius: 4, marginBottom: 8 }} />
+                  <div style={{ width: "80%", height: 10, background: "var(--vx-text-secondary)", borderRadius: 4, marginBottom: 8 }} />
+                  <div style={{ width: "50%", height: 10, background: "var(--vx-text-secondary)", borderRadius: 4 }} />
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* Floating Badges outside the phone */}
+            <div className="anim-badge-1" style={{ position: "absolute", top: 80, left: -10, background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", padding: "12px 18px", borderRadius: 16, display: "flex", alignItems: "center", gap: 10, boxShadow: "var(--vx-shadow-card)", zIndex: 5 }}>
+              <div style={{ background: "rgba(56,189,248,0.1)", padding: 8, borderRadius: 10 }}>
+                <Linkedin size={20} color="#0A66C2" fill="#0A66C2" />
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 700, color: "var(--vx-text-primary)" }}>Auto-Sync</span>
+            </div>
+
+            <div className="anim-badge-2" style={{ position: "absolute", bottom: 100, right: -30, background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", padding: "12px 18px", borderRadius: 16, display: "flex", alignItems: "center", gap: 10, boxShadow: "var(--vx-shadow-card)", zIndex: 5 }}>
+              <div style={{ background: "rgba(244,63,94,0.1)", padding: 8, borderRadius: 10 }}>
+                <Star size={20} color="#f43f5e" fill="#f43f5e" />
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 700, color: "var(--vx-text-primary)" }}>+2.4k Likes</span>
+            </div>
+
+            <div className="anim-badge-3" style={{ position: "absolute", top: 160, right: -10, background: "linear-gradient(135deg, #8b5cf6, #38bdf8)", color: "#fff", padding: "10px 20px", borderRadius: 999, fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 12px 24px rgba(56,189,248,0.3)", zIndex: 5 }}>
+              <Sparkles size={16} color="#fff" /> AI Generated
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom gradient fade */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 120, background: "linear-gradient(to bottom, transparent, rgba(8,11,20,0.8))", pointerEvents: "none", zIndex: 5 }} />
+      {/* ══════════ DEMO MODAL ══════════ */}
+      <AnimatePresence>
+        {showDemo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowDemo(false)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 1000,
+              background: "rgba(0,0,0,0.92)", // Darker, cleaner background without blur
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "40px"
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: "100%", maxWidth: 1100,
+                background: "#000", borderRadius: 24,
+                border: "1px solid rgba(255,255,255,0.1)", overflow: "hidden",
+                boxShadow: "0 50px 100px rgba(0,0,0,0.8)",
+                position: "relative",
+                display: "flex", flexDirection: "column"
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{
+                padding: "20px 32px",
+                background: "#0a0c14",
+                borderBottom: "1px solid rgba(255,255,255,0.05)",
+                display: "flex", justifyContent: "space-between", alignItems: "center"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <VulpinixLogo size="sm" />
+                </div>
+                
+                <button
+                  onClick={() => setShowDemo(false)}
+                  style={{
+                    width: 40, height: 40, borderRadius: "50%",
+                    background: "rgba(255,255,255,0.05)", border: "none",
+                    color: "#fff", cursor: "pointer", display: "flex",
+                    alignItems: "center", justifyContent: "center", transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Video Player */}
+              <div style={{ width: "100%", background: "#000", flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                <video
+                  ref={videoRef}
+                  src={demoVideo}
+                  autoPlay
+                  playsInline
+                  onTimeUpdate={handleTimeUpdate}
+                  onLoadedMetadata={handleLoadedMetadata}
+                  onClick={togglePlay}
+                  style={{
+                    width: "100%",
+                    maxHeight: "75vh",
+                    display: "block",
+                    objectFit: "contain",
+                    cursor: "pointer"
+                  }}
+                />
+
+                {/* Custom Controls Overlay */}
+                <div style={{
+                  position: "absolute", bottom: 0, left: 0, right: 0,
+                  background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
+                  padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "center"
+                }}>
+                  {/* Bottom Center Controls */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+                    <button 
+                      onClick={() => skip(-10)} 
+                      style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.8, transition: "opacity 0.2s" }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+                      onMouseLeave={e => e.currentTarget.style.opacity = "0.8"}
+                    >
+                      <RotateCcw size={18} />
+                    </button>
+
+                    <button 
+                      onClick={togglePlay} 
+                      style={{ background: "#fff", border: "none", color: "#000", cursor: "pointer", width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", transition: "transform 0.2s" }}
+                      onMouseEnter={e => e.currentTarget.style.transform = "scale(1.1)"}
+                      onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                    >
+                      {isPlaying ? <Pause size={18} fill="#000" /> : <Play size={18} fill="#000" style={{ marginLeft: 2 }} />}
+                    </button>
+
+                    <button 
+                      onClick={() => skip(10)} 
+                      style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.8, transition: "opacity 0.2s" }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+                      onMouseLeave={e => e.currentTarget.style.opacity = "0.8"}
+                    >
+                      <RotateCw size={18} />
+                    </button>
+                  </div>
+
+                  {/* Bottom Right Controls */}
+                  <div style={{
+                    position: "absolute", bottom: 16, right: 32,
+                    display: "flex", alignItems: "center", gap: 16
+                  }}>
+                    <button onClick={toggleMute} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", opacity: 0.8 }}>
+                      {isMuted ? <span style={{fontSize: 16}}>🔇</span> : <Volume2 size={18} />}
+                    </button>
+                    
+                    <button onClick={toggleFullscreen} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", opacity: 0.8 }}>
+                      <Maximize2 size={18} />
+                    </button>
+                  </div>
+
+                  {/* Time info tucked in corner */}
+                  <div style={{ position: "absolute", bottom: 26, left: 32, fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
+                    {formatTime(currentTime)} / {formatTime(duration)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Info */}
+              <div style={{ padding: "20px 32px", display: "flex", justifyContent: "flex-end", alignItems: "center", background: "#0a0c14", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                <button
+                   onClick={() => { setShowDemo(false); navigate("/upload"); }}
+                   style={{ padding: "12px 28px", borderRadius: 12, background: "#fff", color: "#000", border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "transform 0.2s" }}
+                   onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                   onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                >
+                  Get Started for Free
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom gradient fade removed */}
     </section>
   );
 }

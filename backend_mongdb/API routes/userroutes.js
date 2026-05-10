@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const { registerUser, loginUser, googleAuth } = require("../controllers/usercontrollers");
 
-// Placeholder — user auth routes not yet implemented
-router.get("/", (req, res) => res.json({ message: "User routes OK" }));
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+router.post("/google", googleAuth);
 
 module.exports = router;

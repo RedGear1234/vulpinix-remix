@@ -1,5 +1,6 @@
 const Campaign = require("../models/campaign");
 const Admin = require("../models/admin");
+const User = require("../models/user");
 const jwt = require("jsonwebtoken");
 
 /**
@@ -210,4 +211,29 @@ const updateCampaignStatus = async (req, res) => {
   }
 };
 
-module.exports = { adminLogin, getAllCampaigns, updateCampaignStatus };
+/**
+ * GET /api/admin/users
+ * Returns all registered users (excluding password hashes).
+ */
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}, { password: 0 }).sort({ createdAt: -1 }).lean();
+    const normalized = users.map((u) => ({
+      id: u._id.toString(),
+      name: u.name || "—",
+      email: u.email || "—",
+      phone: u.phone || "",
+      company: u.company || "",
+      role: u.role || "user",
+      authProvider: u.googleId ? "google" : "email",
+      googleId: u.googleId || "",
+      joinedAt: u.createdAt,
+    }));
+    return res.json({ success: true, users: normalized, total: normalized.length });
+  } catch (err) {
+    console.error("getAllUsers error:", err);
+    return res.status(500).json({ success: false, message: "Server error fetching users." });
+  }
+};
+
+module.exports = { adminLogin, getAllCampaigns, updateCampaignStatus, getAllUsers };

@@ -121,7 +121,9 @@ const getUserCampaigns = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized." });
     }
 
-    const campaigns = await Campaign.find({ userId }).sort({ createdAt: -1 }).lean();
+    const campaigns = await Campaign.find({ 
+      userId: { $regex: new RegExp(`^${userId}$`, "i") } 
+    }).sort({ createdAt: -1 }).lean();
 
     // Normalize fields for frontend compatibility
     const normalized = campaigns.map((c) => ({
@@ -149,4 +151,51 @@ const getUserCampaigns = async (req, res) => {
   }
 };
 
-module.exports = { createCampaign, getUserCampaigns };
+/**
+ * GET /api/campaign/:id
+ * Returns a single campaign by ID.
+ */
+const getCampaignById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.email || req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized." });
+    }
+
+    const campaign = await Campaign.findOne({ 
+      _id: id, 
+      userId: { $regex: new RegExp(`^${userId}$`, "i") } 
+    }).lean();
+
+    if (!campaign) {
+      return res.status(404).json({ success: false, message: "Campaign not found." });
+    }
+
+    const normalized = {
+      id: campaign._id.toString(),
+      businessName: campaign.businessName || campaign.userName || "My Business",
+      userName: campaign.userName,
+      userEmail: campaign.userEmail,
+      name: campaign.campaignName,
+      platforms: campaign.platforms,
+      budget: campaign.budget,
+      budgetType: campaign.budgetType,
+      duration: campaign.duration,
+      estimatedReach: campaign.estimatedReach,
+      dateSubmitted: campaign.createdAt,
+      status: campaign.status,
+      rejectionReason: campaign.rejectionReason || "",
+      analytics: campaign.analytics,
+      adImage: campaign.adImage,
+    };
+
+    return res.json({ success: true, campaign: normalized });
+  } catch (err) {
+    console.error("getCampaignById error:", err);
+    return res.status(500).json({ success: false, message: "Server error fetching campaign details." });
+  }
+};
+
+module.exports = { createCampaign, getUserCampaigns, getCampaignById };
