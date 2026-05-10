@@ -70,8 +70,7 @@ export default function UploadPage() {
   const navigate = useNavigate();
   const [dragActive, setDragActive]     = useState(false);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
-  const [analyzing, setAnalyzing]       = useState(false);
-  const [analysisComplete, setAnalysisComplete] = useState(false);
+
   const [progress, setProgress]         = useState(0);
   const [generatingCaption, setGeneratingCaption] = useState(false);
   const [scheduleDate, setScheduleDate] = useState("");
@@ -157,18 +156,18 @@ export default function UploadPage() {
   };
 
   const startAnalysis = () => {
-    setAnalyzing(true); setProgress(0);
+    setProgress(0);
     const interval = setInterval(() => {
       setProgress(prev => {
-        if (prev >= 100) { clearInterval(interval); setAnalyzing(false); setAnalysisComplete(true); return 100; }
+        if (prev >= 100) { clearInterval(interval); return 100; }
         return prev + 10;
       });
     }, 200);
   };
 
   const removeFile = () => {
-    setUploadedFile(null); setAnalyzing(false);
-    setAnalysisComplete(false); setProgress(0);
+    setUploadedFile(null);
+    setProgress(0);
   };
 
   // ── AI Caption ────────────────────────────────────────────────────────────
@@ -202,11 +201,6 @@ export default function UploadPage() {
     navigate("/create-ad");
   };
 
-  // Step states
-  const stepUpload    = !!uploadedFile;
-  const stepCaption   = aiAnalysis.caption.trim().length > 0;
-  const stepPlatforms = platforms.some(p => p.enabled);
-  const stepSchedule  = scheduleDate !== "" || stepPlatforms;
 
   const isImage = uploadedFile?.file.type.startsWith("image/");
 

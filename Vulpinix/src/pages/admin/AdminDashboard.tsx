@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -707,8 +708,8 @@ export default function AdminDashboard() {
     const token = sessionStorage.getItem("adminToken");
     try {
       const [campRes, userRes] = await Promise.all([
-        fetch("http://localhost:5000/api/admin/campaigns", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("http://localhost:5000/api/admin/users", { headers: { Authorization: `Bearer ${token}` } })
+        fetch("${API_BASE}/api/admin/campaigns", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("${API_BASE}/api/admin/users", { headers: { Authorization: `Bearer ${token}` } })
       ]);
       const [campData, userData] = await Promise.all([campRes.json(), userRes.json()]);
       

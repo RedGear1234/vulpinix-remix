@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
@@ -125,7 +126,7 @@ export default function PaymentPage() {
         }
       };
 
-      const response = await fetch("http://localhost:5000/api/campaign/create", {
+      const response = await fetch("${API_BASE}/api/campaign/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

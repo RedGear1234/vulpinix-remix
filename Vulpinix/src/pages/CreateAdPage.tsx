@@ -10,8 +10,6 @@ import {
   MapPin, 
   Users, 
   Languages, 
-  Zap, 
-  TrendingUp, 
   ChevronRight, 
   Sparkles,
   Globe,
@@ -41,7 +39,7 @@ export default function CreateAdPage() {
   // Budget Configuration
   const [budgetType, setBudgetType] = useState<"daily" | "campaign">("daily");
   const [budget, setBudget] = useState(5000);
-  const [currency, setCurrency] = useState("₹");
+  const [currency] = useState("₹");
   const [campaignDuration, setCampaignDuration] = useState(7);
   
   // Location Targeting

@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
@@ -112,7 +113,7 @@ export default function ProfilePage() {
 
     setIsLoadingCampaigns(true);
     try {
-      const response = await fetch("http://localhost:5000/api/campaign/my-campaigns", {
+      const response = await fetch("${API_BASE}/api/campaign/my-campaigns", {
         headers: { "Authorization": `Bearer ${authToken}` }
       });
       const data = await response.json();

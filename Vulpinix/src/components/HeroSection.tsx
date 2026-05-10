@@ -1,5 +1,5 @@
-import { Button } from "./ui/button";
-import { Play, Instagram, Facebook, Linkedin, Twitter, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload, User, Volume2, Maximize2, RotateCcw, RotateCw, Pause } from "lucide-react";
+
+import { Play, Linkedin, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload, User, Volume2, Maximize2, RotateCcw, RotateCw, Pause } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../hooks/useTheme";
@@ -19,10 +19,9 @@ export function HeroSection() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [barsReady, setBarsReady] = useState(false);
+
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -57,13 +56,6 @@ export function HeroSection() {
     }
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = Number(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.currentTime = time;
-      setCurrentTime(time);
-    }
-  };
 
   const toggleMute = () => {
     if (videoRef.current) {
@@ -109,8 +101,7 @@ export function HeroSection() {
     };
     document.addEventListener("mousedown", handleClickOutside);
 
-    // progress bars animate on mount
-    setTimeout(() => setBarsReady(true), 500);
+
     return () => {
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("mousedown", handleClickOutside);
@@ -158,15 +149,7 @@ export function HeroSection() {
     { value: "98",  suffix: "%", label: "Satisfaction" },
   ];
 
-  const platforms = [
-    { name: "Instagram", pct: 78, color: "#a78bfa" },
-    { name: "Facebook",  pct: 54, color: "#38bdf8" },
-    { name: "LinkedIn",  pct: 42, color: "#4ade80" },
-  ];
 
-  // Word-by-word heading words
-  const line1 = ["Automate", "Your"];
-  const line3 = ["with", "AI", "Power"];
 
   return (
     <section
@@ -599,7 +582,7 @@ export function HeroSection() {
 
           {/* Stats row with counters */}
           <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
-            {stats.map((s, i) => (
+            {stats.map((s) => (
               <div key={s.label} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--vx-text-primary)", lineHeight: 1, display: "flex", alignItems: "baseline", gap: 1, justifyContent: "center" }}>
                   <span style={{ color: "var(--vx-text-primary)" }}>

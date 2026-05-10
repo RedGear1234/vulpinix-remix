@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { ArrowLeft, Home, Compass } from "lucide-react";
+import { ArrowLeft, Home } from "lucide-react";
 import { VulpinixLogo } from "../components/VulpinixLogo";
 
 export default function NotFoundPage() {

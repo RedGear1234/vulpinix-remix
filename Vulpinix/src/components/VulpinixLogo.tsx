@@ -23,7 +23,6 @@ export function VulpinixLogo({
   const navigate = useNavigate();
   const iconSize = size === "sm" ? 28 : size === "lg" ? 44 : 36;
   const fontSize = size === "sm" ? 15 : size === "lg" ? 21 : 17;
-  const radius = size === "sm" ? 8 : size === "lg" ? 13 : 10;
 
   const handleClick = () => {
     if (onClick) onClick();

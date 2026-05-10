@@ -1,5 +1,5 @@
-import { Sparkles, Share2, BarChart3, Zap, Globe, Target, Layers, MoreHorizontal, Image, Heart, MessageCircle, Send } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Sparkles, Share2, BarChart3, Zap, Globe, Target, Image } from "lucide-react";
+import { useState, useRef } from "react";
 
 export function AboutSection() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -27,13 +27,6 @@ export function AboutSection() {
       color: "#818cf8",
       glow: "rgba(129,140,248,0.3)"
     }
-  ];
-
-  const highlights = [
-    { icon: Zap,    text: "Instant Generation" },
-    { icon: Globe,  text: "Global Reach" },
-    { icon: Target, text: "Targeted Insights" },
-    { icon: Layers, text: "Unified Workflow" },
   ];
 
   return (

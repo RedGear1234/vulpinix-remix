@@ -1,11 +1,10 @@
 import { motion } from "framer-motion";
-import { useParams, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { ArrowLeft, Calendar, Clock, Share2, Twitter, Linkedin, Facebook } from "lucide-react";
 import { Footer } from "../components/Footer";
 import { useEffect } from "react";
 
 export default function ArticlePage() {
-  const { id } = useParams();
   const navigate = useNavigate();
 
   // Scroll to top on mount

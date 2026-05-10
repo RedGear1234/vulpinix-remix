@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { TrendingUp, Heart, MessageCircle, BarChart2, Eye } from "lucide-react";
-import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
+import { TrendingUp, Heart, MessageCircle, BarChart2 } from "lucide-react";
+import { SiInstagram, SiFacebook, SiYoutube } from "react-icons/si";
 import { FaLinkedin } from "react-icons/fa";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { PlatformFlipSlider } from "./PlatformFlipSlider";

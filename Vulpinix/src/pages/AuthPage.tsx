@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE } from "../config/api";
 import { useNavigate, useLocation } from "react-router";
 import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
@@ -43,7 +44,7 @@ export default function AuthPage() {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/users/google", {
+      const res = await fetch(`${API_BASE}/api/users/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ credential: credentialResponse.credential }),
@@ -91,7 +92,7 @@ export default function AuthPage() {
     if (!loginEmail || !loginPassword) { toast.error("Please fill all fields"); return; }
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/users/login", {
+      const res = await fetch("${API_BASE}/api/users/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: loginEmail, password: loginPassword }),
@@ -117,7 +118,7 @@ export default function AuthPage() {
     if (!termsChecked) { toast.error("Please accept the Terms of Service"); return; }
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/users/register", {
+      const res = await fetch("${API_BASE}/api/users/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(signupData),

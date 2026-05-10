@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import { motion } from "motion/react";
@@ -91,7 +92,7 @@ export default function CampaignAnalyticsPage() {
       }
 
       try {
-        const response = await fetch(`http://localhost:5000/api/campaign/${id}`, {
+        const response = await fetch(`${API_BASE}/api/campaign/${id}`, {
           headers: { "Authorization": `Bearer ${authToken}` }
         });
         const data = await response.json();
