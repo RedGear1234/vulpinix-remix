@@ -332,13 +332,51 @@
 .vxup__tip-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
 
 /* ── RESPONSIVE ── */
-@media (max-width: 640px) {
-  .vxup__topbar { padding: 10px 16px; gap: 12px; }
-  .vxup__steps { display: none; }
-  .vxup__main { padding: 16px 16px 80px; }
+
+/* ── Shared Mobile + Tablet (≤ 767px) ── */
+@media (max-width: 767px) {
+  .vxup__topbar      { padding: 10px 16px; gap: 10px; }
+  .vxup__main        { padding: 20px 16px 80px; gap: 16px; }
+  .vxup__studio      { position: static; }          /* un-sticky on mobile */
   .vxup__schedule-row { grid-template-columns: 1fr; }
-  .vxup__action-row { flex-direction: column; }
+  .vxup__action-row   { flex-direction: column; }
+  .vxup__stat-val     { font-size: 18px; }
+  .vxup__platform-pills { gap: 6px; }
+  .vxup__plat-pill   { font-size: 11px; padding: 6px 10px; }
 }
 
-/* ── LIGHT MODE OVERRIDES ── */
-/* Inherits from global CSS variables */
+/* ── XS — Small phones (≤ 480px) ── */
+@media (max-width: 480px) {
+  .vxup__topbar  { padding: 8px 12px; gap: 8px; }
+  .vxup__steps   { display: none; }                 /* hide step tracker */
+  .vxup__brand   { display: none; }                 /* hide brand label */
+  .vxup__main    { padding: 14px 12px 80px; gap: 12px; }
+  .vxup__card    { padding: 16px; border-radius: 16px; }
+  .vxup__stats-strip { padding: 12px 14px; gap: 8px; }
+  .vxup__stat-val     { font-size: 16px; }
+  .vxup__dropzone     { padding: 36px 20px; min-height: 240px; }
+  .vxup__drop-icon    { width: 56px; height: 56px; }
+  .vxup__studio-title { font-size: 17px; }
+}
+
+/* ── SM — Phablets (481–640px) ── */
+@media (min-width: 481px) and (max-width: 640px) {
+  .vxup__steps   { display: none; }
+  .vxup__main    { padding: 20px 16px 80px; }
+  .vxup__card    { padding: 18px; }
+}
+
+/* ── MD — Tablet portrait (641–767px) ── */
+@media (min-width: 641px) and (max-width: 767px) {
+  .vxup__steps   { gap: 0; }
+  .vxup__step-label { font-size: 8px; }
+  .vxup__step-line  { width: 24px; }
+}
+
+/* ── LG — Landscape tablet (768–1024px) ── */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .vxup__main { grid-template-columns: 360px 1fr; }
+  .vxup__card { padding: 18px; }
+  .vxup__studio-title { font-size: 18px; }
+}
+

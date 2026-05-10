@@ -9,6 +9,38 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+const PROFILE_STYLES = `
+  .vxp-page    { background: var(--vx-bg-primary); min-height: 100vh; position: relative; z-index: 1; font-family: var(--inter,'Inter',sans-serif); }
+  .vxp-inner   { position: relative; z-index: 10; max-width: 1280px; margin: 0 auto; padding: 60px 24px 100px; }
+  .vxp-header  { display: flex; align-items: center; gap: 24px; margin-bottom: 40px; flex-wrap: wrap; }
+  .vxp-grid    { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 32px; align-items: start; }
+  .vxp-card    { background: var(--vx-bg-card); border: 1px solid var(--vx-border); border-radius: 24px; padding: 32px; box-shadow: var(--vx-shadow-card); }
+  .vxp-stats4  { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: var(--vx-bg-card); border: 1px solid var(--vx-border); border-radius: 12px; padding: 16px; }
+
+  /* ── Tablet (768–1024px) ── */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .vxp-grid  { grid-template-columns: 1fr; }
+    .vxp-inner { padding: 60px 20px 80px; }
+  }
+
+  /* ── Mobile + Tablet (≤ 767px) ── */
+  @media (max-width: 767px) {
+    .vxp-inner  { padding: 72px 16px 80px; }
+    .vxp-grid   { grid-template-columns: 1fr !important; gap: 20px; }
+    .vxp-header { gap: 16px; margin-bottom: 28px; }
+    .vxp-card   { padding: 22px 18px; border-radius: 20px; }
+    .vxp-stats4 { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+  }
+
+  /* ── XS — Small phones (≤ 480px) ── */
+  @media (max-width: 480px) {
+    .vxp-inner  { padding: 80px 12px 72px; }
+    .vxp-header { flex-direction: row; align-items: center; gap: 12px; }
+    .vxp-card   { padding: 18px 14px; border-radius: 16px; }
+    .vxp-stats4 { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; padding: 12px; }
+  }
+`;
+
 interface UserInfo {
   name: string;
   email: string;
@@ -230,9 +262,10 @@ export default function ProfilePage() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      style={{ background: "var(--vx-bg-primary)", minHeight: "100vh", position: "relative", zIndex: 1, fontFamily: "var(--inter, 'Inter', sans-serif)" }}
+      className="vxp-page"
     >
-      <div style={{ position: "relative", zIndex: 10, maxWidth: 1280, margin: "0 auto", padding: "60px 24px 100px" }}>
+      <style dangerouslySetInnerHTML={{ __html: PROFILE_STYLES }} />
+      <div className="vxp-inner">
         
         {/* Back Button */}
         <button
@@ -246,7 +279,7 @@ export default function ProfilePage() {
         </button>
 
         {/* Profile Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 24, marginBottom: 40 }}>
+        <div className="vxp-header">
           <div style={{ position: "relative" }}>
             <div style={{ width: 100, height: 100, borderRadius: "50%", background: "var(--vx-bg-card)", border: "2px solid var(--vx-border)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {profilePicture ? (
@@ -267,13 +300,13 @@ export default function ProfilePage() {
         </div>
 
         {/* Grid Layout */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))", gap: 32, alignItems: "start" }}>
+        <div className="vxp-grid">
           
           {/* LEFT COLUMN */}
           <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
             
             {/* Personal Info */}
-            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+            <div className="vxp-card">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(167, 139, 250, 0.15)", border: "1px solid rgba(167, 139, 250, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#a78bfa" }}>
@@ -325,7 +358,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Social Links */}
-            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+            <div className="vxp-card">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#38bdf8" }}>
@@ -389,7 +422,7 @@ export default function ProfilePage() {
             </button>
 
             {/* Ads in Review */}
-            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+            <div className="vxp-card">
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(234, 179, 8, 0.15)", border: "1px solid rgba(234, 179, 8, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#eab308" }}>
                   <Clock size={18} />
@@ -450,7 +483,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Campaign History */}
-            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+            <div className="vxp-card">
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#38bdf8" }}>
                   <History size={18} />
@@ -502,7 +535,7 @@ export default function ProfilePage() {
                       </div>
                       
                       {/* Stats Grid */}
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 12, padding: 16 }}>
+                      <div className="vxp-stats4">
                         <div>
                           <div style={{ fontSize: 10, fontWeight: 700, color: "var(--vx-text-muted)", textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}><Eye size={10} color="#a78bfa"/> Reach</div>
                           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--vx-text-primary)" }}>{ad.reach}</div>

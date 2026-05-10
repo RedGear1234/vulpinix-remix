@@ -227,64 +227,106 @@ export function HeroSection() {
         /* ── NAVBAR CLASSES ── */
         .vx-navbar {
           position: fixed; top: 0; left: 0; right: 0; z-index: 50;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: background 0.3s cubic-bezier(0.4,0,0.2,1),
+                      border-color 0.3s, box-shadow 0.3s;
         }
         .vx-navbar--scrolled {
-          background: var(--vx-bg-card);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          background: rgba(3,5,9,0.88);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
           border-bottom: 1px solid var(--vx-border);
-          padding-block: 4px;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.3);
         }
         .vx-nav-container {
-          max-width: 1280px; margin: 0 auto; padding: 16px 24px;
-          display: grid; grid-template-columns: auto 1fr auto;
-          align-items: center; position: relative; gap: 20px;
+          max-width: 1280px; margin: 0 auto;
+          padding: 14px 32px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
         }
-        @media (max-width: 767px) {
-          .vx-nav-container { 
-            grid-template-columns: 1fr auto;
-            padding: 10px 16px;
-            gap: 8px;
-          }
-          .vx-nav-links-desktop { display: none !important; }
-          .vx-get-started-btn span { display: none; }
-          .vx-get-started-btn { padding: 8px 10px !important; }
+        /* Center links wrapper */
+        .vx-nav-links-desktop {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex: 1;
+          justify-content: center;
         }
+        /* Hamburger — hidden on desktop */
+        .vx-hamburger {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          width: 40px; height: 40px;
+          background: transparent;
+          border: 1px solid var(--vx-border);
+          border-radius: 10px;
+          cursor: pointer;
+          color: var(--vx-text-primary);
+          flex-shrink: 0;
+          transition: background 0.2s, border-color 0.2s;
+        }
+        .vx-hamburger:hover {
+          background: var(--vx-bg-input);
+          border-color: var(--vx-border-hover);
+        }
+        /* Mobile menu — hidden by default */
         .vx-mobile-menu {
-          position: absolute; top: 100%; left: 0; right: 0;
-          background: var(--vx-bg-card);
+          position: fixed;
+          top: 65px; left: 0; right: 0;
+          background: rgba(3,5,9,0.96);
           border-bottom: 1px solid var(--vx-border);
-          padding: 12px 24px 24px;
+          padding: 16px 20px 28px;
           display: flex; flex-direction: column; gap: 4px;
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-          z-index: 100;
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+          z-index: 49;
         }
         .vx-mobile-nav-link {
-          display: block; padding: 14px 16px;
+          display: block; padding: 14px 18px;
           font-size: 16px; font-weight: 600;
-          color: var(--vx-text-primary); text-decoration: none;
+          color: var(--vx-text-secondary); text-decoration: none;
           border-radius: 12px; transition: all 0.2s;
+          border: 1px solid transparent;
         }
-        .vx-mobile-nav-link:active {
+        .vx-mobile-nav-link:hover {
+          color: var(--vx-text-primary);
           background: var(--vx-bg-input);
-          transform: scale(0.98);
+          border-color: var(--vx-border);
+        }
+        .vx-mobile-nav-divider {
+          height: 1px;
+          background: var(--vx-border);
+          margin: 8px 0;
+        }
+
+        /* ── TABLET + MOBILE: show hamburger, hide desktop nav ── */
+        @media (max-width: 767px) {
+          .vx-nav-container { padding: 10px 16px; }
+          .vx-nav-links-desktop { display: none !important; }
+          .vx-hamburger { display: flex; }
+          .vx-get-started-btn span { display: none !important; }
+          .vx-get-started-btn { padding: 8px 12px !important; min-width: 0; }
+        }
+        @media (min-width: 768px) {
+          .vx-hamburger { display: none !important; }
+          .vx-mobile-menu { display: none !important; }
         }
 
         /* ── HERO CONTENT CLASSES ── */
         .vx-hero-grid {
           position: relative; z-index: 10; flex: 1;
           display: flex; align-items: center;
-          padding: 140px 24px 80px; max-width: 1280px; margin: 0 auto;
+          padding: 140px 32px 80px; max-width: 1280px; margin: 0 auto;
           width: 100%; gap: 60px;
         }
         @media (max-width: 1024px) {
           .vx-hero-grid {
             flex-direction: column;
-            padding-top: 100px;
-            padding-bottom: 40px;
+            padding-top: 110px;
+            padding-bottom: 48px;
             text-align: center;
             gap: 40px;
           }
@@ -292,14 +334,18 @@ export function HeroSection() {
             display: flex; flex-direction: column; align-items: center;
             max-width: 600px; margin: 0 auto;
           }
-          .vx-hero-btns {
-            justify-content: center;
+          .vx-hero-btns { justify-content: center; }
+        }
+        @media (max-width: 767px) {
+          .vx-hero-grid {
+            padding-top: 96px;
+            padding-inline: 20px;
           }
         }
         @media (max-width: 480px) {
           .vx-hero-grid {
-            padding-top: 90px;
-            padding-inline: 20px;
+            padding-top: 88px;
+            padding-inline: 16px;
           }
           .vx-hero-btns {
             flex-direction: column;
@@ -321,7 +367,7 @@ export function HeroSection() {
           </div>
 
           {/* Middle: Desktop Nav Links */}
-          <div className="vx-nav-links-desktop" style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+          <div className="vx-nav-links-desktop">
             {navLinks.map((link) => (
               <a
                 key={link.label}
@@ -393,11 +439,12 @@ export function HeroSection() {
 
               {dropdownOpen && (
                 <div style={{
-                  position: "absolute", top: "calc(100% + 8px)", right: 0, width: 220,
-                  background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)",
-                  borderRadius: 12, padding: 8, boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-                  zIndex: 100, display: "flex", flexDirection: "column", gap: 4,
-                  backdropFilter: "blur(10px)"
+                  position: "absolute", top: "calc(100% + 8px)", right: 0, width: 230,
+                  background: "#0d1017",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 14, padding: 8,
+                  boxShadow: "0 16px 48px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.5)",
+                  zIndex: 200, display: "flex", flexDirection: "column", gap: 4,
                 }}>
                   <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--vx-border)", marginBottom: 4 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "var(--vx-text-primary)" }}>{userInfo?.name || "User"}</div>
@@ -445,12 +492,14 @@ export function HeroSection() {
               )}
             </div>
 
-            {/* Mobile Menu Toggle */}
+            {/* Mobile Menu Toggle — only shown on mobile via CSS */}
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)} 
-              className="md:hidden flex items-center justify-center p-2 text-[var(--vx-text-primary)] bg-transparent border-none cursor-pointer"
+              className="vx-hamburger"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileMenuOpen}
             >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
@@ -459,10 +508,11 @@ export function HeroSection() {
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div 
-              initial={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="vx-mobile-menu md:hidden"
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="vx-mobile-menu"
             >
               {navLinks.map((link) => (
                 <a 
@@ -470,20 +520,23 @@ export function HeroSection() {
                   href={link.href} 
                   onClick={() => setMobileMenuOpen(false)} 
                   className="vx-mobile-nav-link"
-                  style={{ color: "var(--vx-text-secondary)" }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--vx-text-primary)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--vx-text-secondary)"}
                 >
                   {link.label}
                 </a>
               ))}
-              <div style={{ padding: "12px 16px", marginTop: 8 }}>
-                <Button 
-                   onClick={() => { setMobileMenuOpen(false); handleGetStarted(); }}
-                   className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 text-white rounded-xl py-6 font-bold text-lg"
+              <div className="vx-mobile-nav-divider" />
+              <div style={{ padding: "8px 0", display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); handleGetStarted(); }}
+                  style={{
+                    flex: 1, padding: "14px 20px", borderRadius: 14,
+                    background: "linear-gradient(135deg,#8b5cf6,#38bdf8)",
+                    color: "#fff", fontWeight: 700, fontSize: 15,
+                    border: "none", cursor: "pointer", letterSpacing: "0.01em"
+                  }}
                 >
-                  Get Started
-                </Button>
+                  Get Started Free
+                </button>
               </div>
             </motion.div>
           )}

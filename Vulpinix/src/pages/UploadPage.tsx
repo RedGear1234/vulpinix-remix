@@ -3,6 +3,44 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
+const UPLOAD_STYLES = `
+  .vxup-page  { background: var(--vx-bg-primary); min-height: 100vh; position: relative; z-index: 1; font-family: var(--inter,'Inter',sans-serif); }
+  .vxup-inner { position: relative; z-index: 10; max-width: 1280px; margin: 0 auto; padding: 60px 24px 100px; }
+  .vxup-heading { margin-bottom: 60px; }
+  .vxup-cols  { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 40px; }
+  .vxup-col   { display: flex; flex-direction: column; gap: 24px; }
+  .vxup-card  { background: var(--vx-bg-card); border: 1px solid var(--vx-border); border-radius: 24px; padding: 32px; box-shadow: var(--vx-shadow-card); }
+  .vxup-sched { display: flex; gap: 16px; margin-bottom: 24px; align-items: center; }
+  .vxup-acts  { display: flex; gap: 16px; }
+  .vxup-stats { display: flex; align-items: center; justify-content: space-around; background: var(--vx-bg-input); border: 1px solid var(--vx-border); border-radius: 20px; padding: 20px; }
+
+  /* ── Tablet (768–1024px) ── */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .vxup-cols { grid-template-columns: 1fr; gap: 28px; }
+    .vxup-card { padding: 24px; }
+  }
+
+  /* ── Mobile + Tablet (≤ 767px) ── */
+  @media (max-width: 767px) {
+    .vxup-inner   { padding: 72px 16px 80px; }
+    .vxup-heading { margin-bottom: 36px; }
+    .vxup-cols    { grid-template-columns: 1fr !important; gap: 20px; }
+    .vxup-card    { padding: 20px 16px; border-radius: 20px; }
+    .vxup-sched   { flex-wrap: wrap; gap: 12px; }
+    .vxup-acts    { flex-direction: column; }
+    .vxup-stats   { padding: 14px; gap: 8px; }
+  }
+
+  /* ── XS — Small phones (≤ 480px) ── */
+  @media (max-width: 480px) {
+    .vxup-inner   { padding: 80px 12px 72px; }
+    .vxup-heading { margin-bottom: 24px; }
+    .vxup-card    { padding: 16px 14px; border-radius: 16px; }
+    .vxup-sched   { flex-direction: column; }
+    .vxup-stats   { padding: 12px 10px; }
+  }
+`;
+
 interface UploadedFile {
   file: File;
   preview?: string;
@@ -178,9 +216,10 @@ export default function UploadPage() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      style={{ background: "var(--vx-bg-primary)", minHeight: "100vh", position: "relative", zIndex: 1, fontFamily: "var(--inter, 'Inter', sans-serif)" }}
+      className="vxup-page"
     >
-      <div style={{ position: "relative", zIndex: 10, maxWidth: 1280, margin: "0 auto", padding: "60px 24px 100px" }}>
+      <style dangerouslySetInnerHTML={{ __html: UPLOAD_STYLES }} />
+      <div className="vxup-inner">
         
         {/* Back Button */}
         <button
@@ -197,7 +236,7 @@ export default function UploadPage() {
           Back to Dashboard
         </button>
 
-        <div className="vx-reveal" style={{ textAlign: "left", marginBottom: 60 }}>
+        <div className="vx-reveal vxup-heading" style={{ textAlign: "left" }}>
           <h1 style={{ fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 800, color: "var(--vx-text-primary)", marginBottom: 12, letterSpacing: "-0.02em" }}>
             Upload & Publish Content
           </h1>
@@ -207,11 +246,11 @@ export default function UploadPage() {
         </div>
 
         {/* Two Column Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: 40 }}>
+        <div className="vxup-cols">
           
           {/* LEFT: MEDIA STUDIO */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+          <div className="vxup-col">
+            <div className="vxup-card">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: "var(--vx-text-primary)" }}>Media</h3>
                 <span style={{ padding: "4px 12px", borderRadius: 20, background: "rgba(6, 214, 199, 0.1)", border: "1px solid rgba(6, 214, 199, 0.2)", color: "#06d6c7", fontSize: 11, fontWeight: 700 }}>AI Ready</span>
@@ -253,7 +292,7 @@ export default function UploadPage() {
             </div>
 
             {/* Stats Strip */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-around", background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", borderRadius: 20, padding: "20px" }}>
+            <div className="vxup-stats">
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 24, fontWeight: 800, color: "#06d6c7", lineHeight: 1 }}>{reachNum.toLocaleString()}</div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "var(--vx-text-muted)", marginTop: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Est. Reach</div>
@@ -267,10 +306,10 @@ export default function UploadPage() {
           </div>
 
           {/* RIGHT: WORKFLOW CARDS */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div className="vxup-col">
             
             {/* AI Caption */}
-            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+            <div className="vxup-card">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(167, 139, 250, 0.15)", border: "1px solid rgba(167, 139, 250, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#a78bfa" }}>
@@ -308,7 +347,7 @@ export default function UploadPage() {
             </div>
 
             {/* Distribution */}
-            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
+            <div className="vxup-card">
               <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#38bdf8" }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -333,8 +372,8 @@ export default function UploadPage() {
             </div>
 
             {/* Schedule & Launch */}
-            <div style={{ background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24, padding: 32, boxShadow: "var(--vx-shadow-card)" }}>
-              <div style={{ display: "flex", gap: 16, marginBottom: 24, alignItems: "center" }}>
+            <div className="vxup-card">
+              <div className="vxup-sched">
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(244, 114, 182, 0.15)", border: "1px solid rgba(244, 114, 182, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#f472b6", flexShrink: 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 </div>
@@ -347,7 +386,7 @@ export default function UploadPage() {
                   <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} style={{ width: "100%", padding: "12px 16px", borderRadius: 12, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", fontSize: 14 }} />
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 16 }}>
+              <div className="vxup-acts">
                 <button style={{ flex: 1, padding: "14px", borderRadius: 16, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", fontSize: 14, fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "var(--vx-bg-card-hover)"} onMouseLeave={e => e.currentTarget.style.background = "var(--vx-bg-input)"}>Schedule</button>
                 <button onClick={handleLaunch} style={{ flex: 2, padding: "14px", borderRadius: 16, background: "linear-gradient(135deg, #a78bfa, #38bdf8)", color: "#fff", fontSize: 14, fontWeight: 700, border: "none", cursor: "pointer", transition: "transform 0.2s" }} onMouseEnter={e => e.currentTarget.style.transform = "translateY(-1px)"} onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}>Publish Now</button>
               </div>
