@@ -215,7 +215,7 @@ export default function BlogsPage() {
             <h2 style={{ fontSize: 24, fontWeight: 800, color: "var(--vx-text-primary)" }}>Latest Articles</h2>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
-            {regularPosts.map((post, i) => (
+            {regularPosts.map((post) => (
               <div
                 key={post.id}
                 onClick={() => navigate(`/blogs/${post.id}`)}

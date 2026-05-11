@@ -1,12 +1,12 @@
 import { API_BASE } from "../config/api";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Clock,
   CheckCircle2,
-  AlertCircle,
+
   XCircle,
   BarChart3,
   Bell,
@@ -15,16 +15,16 @@ import {
   ChevronUp,
   RefreshCw,
   Calendar,
-  DollarSign,
+
   Instagram,
   Facebook,
   Youtube,
   Linkedin,
   Twitter,
   Globe,
-  Sparkles,
+
   TrendingUp,
-  Building2,
+
   Plus
 } from "lucide-react";
 import { toast } from "sonner";
@@ -88,7 +88,7 @@ export default function CampaignsDashboardPage() {
     }
 
     try {
-      const response = await fetch("${API_BASE}/api/campaign/my-campaigns", {
+      const response = await fetch(`${API_BASE}/api/campaign/my-campaigns`, {
         headers: { "Authorization": `Bearer ${authToken}` }
       });
       const data = await response.json();
@@ -138,7 +138,7 @@ export default function CampaignsDashboardPage() {
     });
   };
 
-  const handleResubmit = (campaign: Campaign) => {
+  const handleResubmit = () => {
     toast.info("Resubmit flow starting...", {
       description: "Redirecting you to upload your content again.",
     });
@@ -355,7 +355,7 @@ export default function CampaignsDashboardPage() {
                       
                       {campaign.status === "rejected" && (
                         <button
-                          onClick={() => handleResubmit(campaign)}
+                          onClick={() => handleResubmit()}
                           style={{ padding: "8px 16px", borderRadius: 10, background: "#f43f5e15", color: "#f43f5e", border: "1px solid #f43f5e30", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}
                           onMouseEnter={e => e.currentTarget.style.background = "#f43f5e25"}
                           onMouseLeave={e => e.currentTarget.style.background = "#f43f5e15"}

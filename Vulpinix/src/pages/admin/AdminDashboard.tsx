@@ -4,33 +4,33 @@ import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
-  ShieldAlert, 
+ 
   Search, 
   CheckCircle2, 
-  XCircle, 
+ 
   Eye, 
   LogOut, 
-  Bell, 
+ 
   User, 
   Lock, 
-  EyeOff, 
-  ArrowRight,
+ 
+
   Mail,
-  Phone,
-  Building2,
-  Tag,
-  DollarSign,
-  Clock,
-  Calendar,
-  MapPin,
+
+
+
+
+
+
+
   X,
-  Instagram,
-  Facebook,
-  Youtube,
-  Twitter,
-  Linkedin,
-  Globe,
-  ExternalLink,
+
+
+
+
+
+
+
   ChevronRight,
   CreditCard,
   Target,
@@ -708,8 +708,8 @@ export default function AdminDashboard() {
     const token = sessionStorage.getItem("adminToken");
     try {
       const [campRes, userRes] = await Promise.all([
-        fetch("${API_BASE}/api/admin/campaigns", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("${API_BASE}/api/admin/users", { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${API_BASE}/api/admin/campaigns`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/admin/users`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       const [campData, userData] = await Promise.all([campRes.json(), userRes.json()]);
       

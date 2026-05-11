@@ -5,7 +5,6 @@ import { PieChart as RechartsPie, Pie, Cell, Tooltip, ResponsiveContainer } from
 import { 
   ArrowLeft, 
   Smartphone, 
-  TrendingUp, 
   Target, 
   CreditCard, 
   Save, 

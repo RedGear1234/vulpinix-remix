@@ -82,7 +82,7 @@ export default function ProfilePage() {
   // Load saved user data from localStorage
   const savedUserInfo = localStorage.getItem("userInfo");
   const savedSocialLinks = localStorage.getItem("socialLinks");
-  const savedCampaigns = localStorage.getItem("userCampaigns");
+
 
   // User Info State
   const [userInfo, setUserInfo] = useState<UserInfo>(() => {
@@ -113,7 +113,7 @@ export default function ProfilePage() {
 
     setIsLoadingCampaigns(true);
     try {
-      const response = await fetch("${API_BASE}/api/campaign/my-campaigns", {
+      const response = await fetch(`${API_BASE}/api/campaign/my-campaigns`, {
         headers: { "Authorization": `Bearer ${authToken}` }
       });
       const data = await response.json();

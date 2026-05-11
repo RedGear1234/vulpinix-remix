@@ -1,4 +1,4 @@
-import { Sparkles, Share2, BarChart3, Zap, Globe, Target, Image } from "lucide-react";
+import { Sparkles, Share2, BarChart3, Zap, Globe, Target, Image, MoreHorizontal, Heart, MessageCircle, Send } from "lucide-react";
 import { useState, useRef } from "react";
 
 export function AboutSection() {

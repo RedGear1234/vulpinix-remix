@@ -12,7 +12,7 @@ import {
   DollarSign,
   TrendingUp,
   BarChart3,
-  Sparkles,
+
   Instagram,
   Facebook,
   Youtube,
