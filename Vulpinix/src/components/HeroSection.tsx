@@ -1,5 +1,5 @@
 
-import { Play, Linkedin, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload, User, Volume2, Maximize2, RotateCcw, RotateCw, Pause } from "lucide-react";
+import { Play, Linkedin, Menu, X, Sparkles, Zap, BarChart2, ArrowRight, Star, Upload, User, Volume2, Maximize2, RotateCcw, RotateCw, Pause, LayoutDashboard } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../hooks/useTheme";
@@ -435,12 +435,21 @@ export function HeroSection() {
                   </div>
                   
                   <button
+                    onClick={() => { navigate("/dashboard"); setDropdownOpen(false); }}
+                    style={{ padding: "10px 12px", borderRadius: 8, background: "none", border: "none", color: "var(--vx-text-primary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left", transition: "background 0.2s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--vx-bg-input)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <LayoutDashboard size={16} color="#a78bfa" /> Dashboard
+                  </button>
+
+                  <button
                     onClick={() => { navigate("/upload"); setDropdownOpen(false); }}
                     style={{ padding: "10px 12px", borderRadius: 8, background: "none", border: "none", color: "var(--vx-text-primary)", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, textAlign: "left", transition: "background 0.2s" }}
                     onMouseEnter={e => e.currentTarget.style.background = "var(--vx-bg-input)"}
                     onMouseLeave={e => e.currentTarget.style.background = "none"}
                   >
-                    <Upload size={16} color="#a78bfa" /> Upload Campaign
+                    <Upload size={16} color="#38bdf8" /> Upload Campaign
                   </button>
 
                   <button
@@ -449,7 +458,7 @@ export function HeroSection() {
                     onMouseEnter={e => e.currentTarget.style.background = "var(--vx-bg-input)"}
                     onMouseLeave={e => e.currentTarget.style.background = "none"}
                   >
-                    <User size={16} color="#38bdf8" /> My Profile
+                    <User size={16} color="#fbbf24" /> My Profile
                   </button>
 
                   <button

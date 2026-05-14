@@ -276,7 +276,7 @@ export default function ProfilePage() {
             <p style={{ color: "var(--vx-text-muted)", fontSize: 15 }}>{userInfo.email || "email@example.com"}</p>
           </div>
           <div style={{ display: "flex", gap: 12 }}>
-            <button onClick={() => navigate("/")} style={{ background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", padding: "12px 24px", borderRadius: 16, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Dashboard</button>
+            <button onClick={() => navigate("/dashboard")} style={{ background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", color: "var(--vx-text-primary)", padding: "12px 24px", borderRadius: 16, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Dashboard</button>
             <button onClick={() => { localStorage.clear(); navigate("/auth"); }} style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", color: "#ef4444", padding: "12px 24px", borderRadius: 16, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Sign Out</button>
           </div>
         </div>
