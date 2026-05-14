@@ -227,9 +227,9 @@ html { scroll-behavior: smooth; }
   position: absolute;
   bottom: -1px; left: 0; right: 0;
   height: 1px;
-  background: var(--vx-border);
+  background: transparent;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.2s;
 }
 .vx-nav-shimmer.vx-nav-scrolled { opacity: 1; }
 

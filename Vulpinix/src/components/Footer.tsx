@@ -48,13 +48,15 @@ const FOOTER_STYLES = `
     overflow: hidden;
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     margin-top: 0;
+    border: none !important;
+    outline: none !important;
   }
 
   /* ── Top border (static) ── */
   .vx-footer__border {
     position: relative;
     height: 1px;
-    background: var(--vx-border);
+    background: rgba(255,255,255,0.03);
   }
 
   /* Background elements removed */
@@ -315,6 +317,7 @@ const FOOTER_STYLES = `
     padding: 20px 32px;
     max-width: 1280px;
     margin: 0 auto;
+    border: none !important;
   }
   .vx-footer__bottom-inner {
     display: flex;

@@ -473,7 +473,7 @@ export default function CampaignAnalyticsPage() {
       </div>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-purple-500/20 bg-gray-900/50 backdrop-blur-sm py-8 px-4 mt-16">
+      <footer className="relative z-10 bg-gray-900/50 backdrop-blur-sm py-8 px-4 mt-16">
         <div className="max-w-6xl mx-auto text-center">
           <p className="text-gray-400">
             <span className="bg-gradient-to-r from-purple-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent font-semibold">
