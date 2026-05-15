@@ -16,6 +16,12 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String, default: "" },
     picture: { type: String, default: "" },
     onboardingCompleted: { type: Boolean, default: false },
+    socialAccounts: {
+      facebook: { accessToken: String, pageId: String, pageAccessToken: String },
+      instagram: { accessToken: String, igAccountId: String },
+      twitter: { accessToken: String, tokenSecret: String },
+      linkedin: { accessToken: String }
+    }
   },
   { timestamps: true }
 );

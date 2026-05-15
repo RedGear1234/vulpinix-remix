@@ -22,7 +22,7 @@ import {
 import { toast } from "sonner";
 import { VulpinixLogo } from "../components/VulpinixLogo";
 
-type CampaignStatus = "pending" | "in_review" | "approved" | "rejected" | "running" | "completed";
+type CampaignStatus = "pending" | "in_review" | "approved" | "rejected" | "running" | "completed" | "published";
 
 interface Campaign {
   id: string;
@@ -156,7 +156,8 @@ export default function CampaignsDashboardPage() {
       case "pending":
       case "in_review": return "#eab308";
       case "approved":
-      case "running": return "#22c55e";
+      case "running":
+      case "published": return "#22c55e";
       case "completed": return "#38bdf8";
       case "rejected": return "#ef4444";
       default: return "#94a3b8";
@@ -204,7 +205,7 @@ export default function CampaignsDashboardPage() {
         {/* Stats Summary */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 24, marginBottom: 48 }}>
           {[
-            { label: "Active Campaigns", val: campaigns.filter(c => c.status === "running").length, icon: <TrendingUp size={20} />, color: "#22c55e" },
+            { label: "Active Campaigns", val: campaigns.filter(c => c.status === "running" || c.status === "published").length, icon: <TrendingUp size={20} />, color: "#22c55e" },
             { label: "In Review", val: campaigns.filter(c => c.status === "pending" || c.status === "in_review").length, icon: <Clock size={20} />, color: "#eab308" },
             { label: "Total Spent", val: `₹${campaigns.reduce((acc, c) => acc + (c.analytics?.adSpend || 0), 0).toLocaleString()}`, icon: <BarChart3 size={20} />, color: "#38bdf8" },
           ].map((stat, i) => (

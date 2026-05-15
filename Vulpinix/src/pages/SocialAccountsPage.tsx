@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import {
   Instagram, Facebook, Twitter, Linkedin, Youtube,
   CheckCircle2, Link2, Unlink, ArrowLeft, ExternalLink,
-  AlertCircle, Sparkles, Users, TrendingUp
+  AlertCircle, Sparkles, Users, TrendingUp, Lock, X
 } from "lucide-react";
 import { DashboardSidebar } from "../components/DashboardSidebar";
 
@@ -120,6 +120,19 @@ const S = `
 
   .vxsa-connected-badge { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#22c55e; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); padding:4px 10px; border-radius:20px; margin-bottom:10px; }
 
+  .vxsa-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .vxsa-oauth-modal { background:#fff; border-radius:24px; width:100%; max-width:440px; overflow:hidden; color:#000; font-family:'Inter',sans-serif; position:relative; box-shadow:0 24px 48px rgba(0,0,0,0.5); }
+  .vxsa-oauth-header { background:var(--oauth-bg); color:#fff; padding:24px 32px; text-align:center; position:relative; }
+  .vxsa-oauth-close { position:absolute; top:20px; right:20px; width:32px; height:32px; background:rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.2s; color:#fff; border:none; }
+  .vxsa-oauth-close:hover { background:rgba(255,255,255,0.3); }
+  .vxsa-oauth-body { padding:40px 32px; }
+  .vxsa-oauth-input { width:100%; padding:14px 16px; border:1px solid #e5e7eb; border-radius:12px; font-size:15px; margin-bottom:16px; outline:none; transition:border-color 0.2s; font-family:inherit; }
+  .vxsa-oauth-input:focus { border-color:var(--oauth-color); box-shadow:0 0 0 4px var(--oauth-shadow); }
+  .vxsa-oauth-btn { width:100%; padding:16px; border:none; border-radius:12px; background:var(--oauth-bg); color:#fff; font-size:16px; font-weight:700; cursor:pointer; transition:opacity 0.2s,transform 0.1s; display:flex; justify-content:center; align-items:center; }
+  .vxsa-oauth-btn:hover:not(:disabled) { opacity:0.9; transform:translateY(-1px); }
+  .vxsa-oauth-btn:disabled { opacity:0.6; cursor:not-allowed; }
+  .vxsa-oauth-disclaimer { font-size:12px; color:#6b7280; text-align:center; margin-top:24px; line-height:1.5; }
+
   @media (max-width:768px) { .vxsa-grid { grid-template-columns:1fr; } .vxsa-stats { grid-template-columns:repeat(2,1fr); } }
 `;
 
@@ -134,34 +147,63 @@ export default function SocialAccountsPage() {
   const navigate = useNavigate();
   const [userName, setUserName] = useState("there");
   const [linked, setLinked] = useState<string[]>([]);
-  const [connecting, setConnecting] = useState<string | null>(null);
   const [handles, setHandles] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (localStorage.getItem("isAuthenticated") !== "true") { navigate("/auth", { replace: true }); return; }
     try { const u = JSON.parse(localStorage.getItem("userInfo") || "{}"); if (u.name) setUserName(u.name.split(" ")[0]); } catch {}
-    setLinked(getLinkedAccounts());
-    try { setHandles(JSON.parse(localStorage.getItem("socialHandles") || "{}")); } catch {}
+    
+    // Check for OAuth callback params
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get("success");
+    const platform = params.get("platform");
+    const error = params.get("error");
+    
+    const currentLinked = getLinkedAccounts();
+    const currentHandles = JSON.parse(localStorage.getItem("socialHandles") || "{}");
+    
+    if (success === "true" && platform) {
+      if (!currentLinked.includes(platform)) {
+        const nextLinked = [...currentLinked, platform];
+        setLinked(nextLinked);
+        setLinkedAccounts(nextLinked);
+        
+        currentHandles[platform] = "Connected User"; // In a real app, this comes from the DB
+        setHandles(currentHandles);
+        localStorage.setItem("socialHandles", JSON.stringify(currentHandles));
+      }
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (error) {
+      alert(`Connection failed: ${error}`);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setLinked(currentLinked);
+      setHandles(currentHandles);
+    } else {
+      setLinked(currentLinked);
+      setHandles(currentHandles);
+    }
   }, [navigate]);
 
-  const handleToggle = async (platformId: string) => {
+  const handleToggle = (platformId: string) => {
     if (linked.includes(platformId)) {
+      // Disconnect
       const next = linked.filter(id => id !== platformId);
       setLinked(next); setLinkedAccounts(next);
+      const nextHandles = { ...handles };
+      delete nextHandles[platformId];
+      setHandles(nextHandles);
+      localStorage.setItem("socialHandles", JSON.stringify(nextHandles));
     } else {
-      setConnecting(platformId);
-      await new Promise(r => setTimeout(r, 1400));
-      const next = [...linked, platformId];
-      setLinked(next); setLinkedAccounts(next);
-      setConnecting(null);
+      // Connect - Redirect to the backend which will redirect to the platform's OAuth page
+      const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const userId = u.id || u._id || "";
+      window.location.href = `http://localhost:5000/api/social/auth/${platformId}?userId=${userId}`;
     }
   };
 
-  const saveHandle = (id: string, val: string) => {
-    const next = { ...handles, [id]: val };
-    setHandles(next);
-    localStorage.setItem("socialHandles", JSON.stringify(next));
-  };
+
 
   return (
     <>
@@ -213,7 +255,6 @@ export default function SocialAccountsPage() {
             <div className="vxsa-grid">
               {SOCIAL_PLATFORMS.map((p, i) => {
                 const isLinked = linked.includes(p.id);
-                const isConnecting = connecting === p.id;
                 return (
                   <motion.div
                     key={p.id}
@@ -243,21 +284,16 @@ export default function SocialAccountsPage() {
                     )}
 
                     {!isLinked && (
-                      <input
-                        className="vxsa-handle-input"
-                        placeholder={p.handle}
-                        value={handles[p.id] || ""}
-                        onChange={e => saveHandle(p.id, e.target.value)}
-                      />
+                      <div className="vxsa-platform-desc" style={{ marginBottom: 12, marginTop: -4 }}>
+                        Not connected
+                      </div>
                     )}
 
                     <button
-                      className={`vxsa-connect-btn ${isLinked ? "connected" : "unconnected"} ${isConnecting ? "connecting" : ""}`}
-                      onClick={() => !isConnecting && handleToggle(p.id)}
+                      className={`vxsa-connect-btn ${isLinked ? "connected" : "unconnected"}`}
+                      onClick={() => handleToggle(p.id)}
                     >
-                      {isConnecting ? (
-                        <><span style={{ width: 14, height: 14, border: "2px solid rgba(167,139,250,0.4)", borderTopColor: "#a78bfa", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} /> Connecting…</>
-                      ) : isLinked ? (
+                      {isLinked ? (
                         <><Unlink size={14} /> Disconnect</>
                       ) : (
                         <><ExternalLink size={14} /> Connect {p.name}</>

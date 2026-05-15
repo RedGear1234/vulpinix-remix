@@ -93,7 +93,7 @@ const campaignSchema = new mongoose.Schema(
     // ── Status Lifecycle ──────────────────────────────────────────────────────
     status: {
       type: String,
-      enum: ["pending", "in_review", "approved", "running", "completed", "rejected"],
+      enum: ["pending", "in_review", "approved", "running", "completed", "rejected", "published"],
       default: "pending",
     },
 

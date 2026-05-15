@@ -74,7 +74,7 @@ function getPlatformIcon(p: string) {
 
 function getStatusStyle(status: string): { bg: string; color: string } {
   switch (status) {
-    case "running": case "approved": case "active": return { bg: "rgba(34,197,94,0.1)", color: "#22c55e" };
+    case "running": case "approved": case "active": case "published": return { bg: "rgba(34,197,94,0.1)", color: "#22c55e" };
     case "pending": case "in_review": case "review": return { bg: "rgba(234,179,8,0.1)", color: "#eab308" };
     case "completed": return { bg: "rgba(56,189,248,0.1)", color: "#38bdf8" };
     case "rejected": return { bg: "rgba(239,68,68,0.1)", color: "#ef4444" };
@@ -126,7 +126,7 @@ export default function UserDashboard() {
     if (!Array.isArray(list)) list = [];
     let active = 0, impressions = 0, clicks = 0, spent = 0;
     list.forEach(c => {
-      if (["running", "approved", "active"].includes(c.status)) active++;
+      if (["running", "approved", "active", "published"].includes(c.status)) active++;
       impressions += c.analytics?.impressions || 0;
       clicks += c.analytics?.clicks || 0;
       spent += c.analytics?.adSpend || 0;
@@ -293,7 +293,7 @@ export default function UserDashboard() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 20 }}>
               {[
-                { label: "Running", count: campaigns.filter(c => ["running", "approved", "active"].includes(c.status)).length, color: "#22c55e" },
+                { label: "Running", count: campaigns.filter(c => ["running", "approved", "active", "published"].includes(c.status)).length, color: "#22c55e" },
                 { label: "In Review", count: campaigns.filter(c => ["pending", "in_review", "review"].includes(c.status)).length, color: "#eab308" },
                 { label: "Completed", count: campaigns.filter(c => c.status === "completed").length, color: "#38bdf8" },
                 { label: "Rejected", count: campaigns.filter(c => c.status === "rejected").length, color: "#ef4444" },

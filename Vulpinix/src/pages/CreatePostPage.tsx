@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
+import { API_BASE } from "../config/api";
 import { motion } from "framer-motion";
 import {
   Instagram, Facebook, Twitter, Linkedin, Youtube,
   Image as ImageIcon, Video, Smile, Hash, AtSign,
   Globe, Lock, Users, ChevronDown, Send, ArrowLeft,
-  X, Sparkles, Clock, CheckCircle2, AlertCircle, Share2
+  X, Sparkles, Clock, CheckCircle2, Share2
 } from "lucide-react";
 import { DashboardSidebar } from "../components/DashboardSidebar";
 import { getLinkedAccounts } from "./SocialAccountsPage";
@@ -138,7 +139,50 @@ export default function CreatePostPage() {
   const handlePost = async () => {
     if (!caption.trim() || selectedPlatforms.length === 0) return;
     setPosting(true);
-    await new Promise(r => setTimeout(r, 1800));
+    
+    try {
+      let userEmail = "";
+      let userNameFull = "";
+      try {
+        const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+        if (u.email) userEmail = u.email;
+        if (u.name) userNameFull = u.name;
+      } catch {}
+
+      const authToken = localStorage.getItem("authToken");
+
+      // Call the exact same endpoint that Upload Campaign uses
+      const response = await fetch(`${API_BASE}/api/campaign/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { "Authorization": `Bearer ${authToken}` } : {})
+        },
+        body: JSON.stringify({
+          userId: userEmail,                                // Match dashboard query key
+          userName: userNameFull,
+          userEmail: userEmail,
+          campaignName: caption.substring(0, 40) || "Post", // Required by backend
+          budget: "0",                                      // Required by backend
+          platforms: selectedPlatforms,
+          adCaption: caption,
+          adImage: mediaFiles.length > 0 ? mediaFiles[0] : "", // Pass base64 image
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Store the auth token so the dashboard can fetch this campaign
+        if (data.token && !authToken) {
+          localStorage.setItem("authToken", data.token);
+        }
+      } else {
+        console.error("Failed to post:", data.message);
+      }
+    } catch (err) {
+      console.error("Error creating post:", err);
+    }
+
     setPosting(false);
     setPosted(true);
   };

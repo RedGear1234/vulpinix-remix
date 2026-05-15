@@ -80,7 +80,7 @@ const getAllCampaigns = async (req, res) => {
       ];
     }
 
-    const campaigns = await Campaign.find(query).sort({ createdAt: -1 }).lean();
+    const campaigns = await Campaign.find(query, { adImage: 0 }).sort({ createdAt: -1 }).allowDiskUse(true).lean();
 
     // Normalize for frontend compatibility (matching existing AdminDashboard Campaign type)
     const normalized = campaigns.map((c) => ({
@@ -141,6 +141,7 @@ const getAllCampaigns = async (req, res) => {
       in_review: await Campaign.countDocuments({ status: "in_review" }),
       approved: await Campaign.countDocuments({ status: "approved" }),
       running: await Campaign.countDocuments({ status: "running" }),
+      published: await Campaign.countDocuments({ status: "published" }),
       completed: await Campaign.countDocuments({ status: "completed" }),
       rejected: await Campaign.countDocuments({ status: "rejected" }),
     };
@@ -162,7 +163,7 @@ const updateCampaignStatus = async (req, res) => {
     const { id } = req.params;
     const { status, rejectionReason } = req.body;
 
-    const VALID_STATUSES = ["pending", "in_review", "approved", "running", "completed", "rejected"];
+    const VALID_STATUSES = ["pending", "in_review", "approved", "running", "completed", "rejected", "published"];
     if (!VALID_STATUSES.includes(status)) {
       return res.status(400).json({ success: false, message: `Invalid status: ${status}` });
     }
@@ -244,4 +245,64 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-module.exports = { adminLogin, getAllCampaigns, updateCampaignStatus, getAllUsers };
+/**
+ * GET /api/admin/campaigns/:id
+ * Returns a single campaign WITH full adImage for the detail modal.
+ */
+const getCampaignDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const campaign = await Campaign.findById(id).lean();
+    if (!campaign) {
+      return res.status(404).json({ success: false, message: "Campaign not found." });
+    }
+
+    const normalized = {
+      id: campaign._id.toString(),
+      businessName: campaign.businessName || campaign.userName || "Unknown",
+      userName: campaign.userName || "",
+      userEmail: campaign.userEmail || "",
+      userPhone: campaign.userPhone || "",
+      businessGoal: campaign.businessGoal || "",
+      businessCategory: campaign.businessCategory || "",
+      adImage: campaign.adImage || "",
+      name: campaign.campaignName,
+      platforms: campaign.platforms || [],
+      platform: campaign.platform || (campaign.platforms && campaign.platforms[0]) || "",
+      budget: campaign.budget,
+      budgetType: campaign.budgetType,
+      currency: campaign.currency || "INR",
+      duration: campaign.duration,
+      estimatedReach: campaign.estimatedReach,
+      startDatePreference: campaign.startDatePreference || "",
+      dateSubmitted: campaign.createdAt,
+      adContentDescription: campaign.adContentDescription || "",
+      adCaption: campaign.adCaption || campaign.content?.caption || "",
+      adCopyText: campaign.adCopyText || "",
+      callToAction: campaign.callToAction || "",
+      creativeFiles: campaign.creativeFiles || [],
+      targeting: campaign.targeting,
+      language: campaign.language,
+      socialHandles: campaign.socialHandles || {},
+      content: campaign.content,
+      links: campaign.links,
+      payment: campaign.payment,
+      paymentAmount: campaign.paymentAmount || campaign.payment?.amount || "",
+      paymentStatus: campaign.paymentStatus || "paid",
+      paymentId: campaign.paymentId || campaign.payment?.paymentId || "",
+      transactionId: campaign.transactionId || campaign.payment?.transactionId || "",
+      paymentDate: campaign.paymentDate || campaign.payment?.timestamp || campaign.createdAt,
+      status: campaign.status,
+      rejectionReason: campaign.rejectionReason || "",
+      adminMessage: campaign.adminMessage || "",
+      analytics: campaign.analytics,
+    };
+
+    return res.json({ success: true, campaign: normalized });
+  } catch (err) {
+    console.error("getCampaignDetail error:", err);
+    return res.status(500).json({ success: false, message: "Server error fetching campaign." });
+  }
+};
+
+module.exports = { adminLogin, getAllCampaigns, getCampaignDetail, updateCampaignStatus, getAllUsers };

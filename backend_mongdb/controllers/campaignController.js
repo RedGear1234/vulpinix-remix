@@ -89,6 +89,137 @@ const createCampaign = async (req, res) => {
 
     await campaign.save();
 
+    // --- INSTANT PUBLISHING LOGIC (META) ---
+    try {
+      const platformsLower = platforms ? platforms.map(p => p.toLowerCase()) : [];
+      console.log("🔍 [PUBLISH] Platforms received:", platforms, "→ lowercased:", platformsLower);
+
+      if (platformsLower.includes('facebook') || platformsLower.includes('instagram')) {
+        const User = require("../models/user");
+        const axios = require("axios");
+        
+        // Grab the token from the user who submitted the campaign
+        const user = await User.findOne({ email: userEmail || effectiveUserId });
+        console.log(`🔍 [PUBLISH] User found for ${userEmail || effectiveUserId}:`, !!user);
+        
+        const fbToken = user?.socialAccounts?.facebook?.accessToken;
+        console.log("🔍 [PUBLISH] Token found:", !!fbToken);
+        
+        if (fbToken) {
+          console.log("✅ Found Meta access token! Attempting to publish...");
+          
+          // 1. Get the list of Facebook Pages this user manages
+          const pagesRes = await axios.get(`https://graph.facebook.com/v18.0/me/accounts?access_token=${fbToken}`);
+          let pages = pagesRes.data.data || [];
+          
+          // FALLBACK: If Facebook returns 0 pages (common with New Page Experience), 
+          // but our debug token showed we have access to ID 1111932568671242, try to fetch it directly.
+          if (pages.length === 0) {
+            console.log("🔍 [PUBLISH] Standard list empty. Attempting force-fetch for Page ID 1111932568671242...");
+            try {
+              const forceRes = await axios.get(`https://graph.facebook.com/v18.0/1111932568671242?fields=access_token,name&access_token=${fbToken}`);
+              if (forceRes.data && forceRes.data.access_token) {
+                pages = [forceRes.data];
+                console.log("✅ [PUBLISH] Force-fetch successful! Found page:", forceRes.data.name);
+              }
+            } catch (forceErr) {
+              console.log("❌ [PUBLISH] Force-fetch failed:", forceErr.response?.data?.error?.message || forceErr.message);
+            }
+          }
+
+          if (pages.length > 0) {
+            const targetPage = pages[0];
+            const pageId = targetPage.id;
+            const pageToken = targetPage.access_token;
+            console.log("🔍 [PUBLISH] Publishing to Facebook Page:", targetPage.name, "ID:", pageId);
+            
+            // --- FACEBOOK PUBLISHING ---
+            let fbPhotoId = null;
+            if (platformsLower.includes('facebook')) {
+              try {
+                if (adImage && adImage.startsWith('data:image')) {
+                  const FormData = require('form-data');
+                  const form = new FormData();
+                  const base64Data = adImage.split(';base64,').pop();
+                  const imageBuffer = Buffer.from(base64Data, 'base64');
+                  form.append('source', imageBuffer, { filename: 'post_image.png', contentType: 'image/png' });
+                  form.append('message', adCaption || adCopyText || campaignName);
+                  form.append('access_token', pageToken);
+                  const fbRes = await axios.post(`https://graph.facebook.com/v18.0/${pageId}/photos`, form, { headers: { ...form.getHeaders() } });
+                  fbPhotoId = fbRes.data.id;
+                  console.log(`✅ [FB] Successfully published IMAGE to Facebook Page: ${targetPage.name}`);
+                } else {
+                  const payload = { message: adCaption || adCopyText || campaignName, access_token: pageToken };
+                  if (adImage && adImage.startsWith('http')) payload.url = adImage;
+                  await axios.post(`https://graph.facebook.com/v18.0/${pageId}/feed`, payload);
+                  console.log(`✅ [FB] Successfully published TEXT/URL to Facebook Page: ${targetPage.name}`);
+                }
+              } catch (fbErr) {
+                console.error("❌ [FB] Publishing failed:", fbErr.response?.data || fbErr.message);
+              }
+            }
+
+            // --- INSTAGRAM PUBLISHING ---
+            if (platformsLower.includes('instagram')) {
+              try {
+                const igAccountRes = await axios.get(`https://graph.facebook.com/v18.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`);
+                const igAccountId = igAccountRes.data?.instagram_business_account?.id;
+                
+                if (igAccountId) {
+                  console.log("🔍 [IG] Found linked Instagram Account ID:", igAccountId);
+                  
+                  let igImageUrl = adImage && adImage.startsWith('http') ? adImage : null;
+                  
+                  // Bridge: If we have an FB photo ID, get its public source URL for Instagram
+                  if (!igImageUrl && fbPhotoId) {
+                    const photoDetail = await axios.get(`https://graph.facebook.com/v18.0/${fbPhotoId}?fields=images&access_token=${pageToken}`);
+                    igImageUrl = photoDetail.data.images[0]?.source;
+                    console.log("🔍 [IG] Bridged image URL from Facebook:", !!igImageUrl);
+                  }
+
+                  if (igImageUrl) {
+                    console.log("🔍 [IG] Creating media container...");
+                    const containerRes = await axios.post(`https://graph.facebook.com/v18.0/${igAccountId}/media`, {
+                      image_url: igImageUrl,
+                      caption: adCaption || adCopyText || campaignName,
+                      access_token: pageToken // IG uses Page Token for linked accounts
+                    });
+                    
+                    const creationId = containerRes.data.id;
+                    if (creationId) {
+                      console.log("🔍 [IG] Publishing container:", creationId);
+                      await axios.post(`https://graph.facebook.com/v18.0/${igAccountId}/media_publish`, {
+                        creation_id: creationId,
+                        access_token: pageToken
+                      });
+                      console.log(`✅ [IG] Successfully published to Instagram!`);
+                    }
+                  } else {
+                    console.log("⚠️ [IG] Skipping Instagram: No public image URL available (Instagram requires an image URL).");
+                  }
+                } else {
+                  console.log("⚠️ [IG] No Instagram Business Account linked to this Facebook Page.");
+                }
+              } catch (igErr) {
+                console.error("❌ [IG] Publishing failed:", igErr.response?.data || igErr.message);
+              }
+            }
+
+            campaign.status = "published";
+            await campaign.save();
+          } else {
+            console.log("⚠️ User has connected Facebook but does not own any Business Pages.");
+          }
+        } else {
+           console.log("⚠️ User has not connected their Facebook account yet.");
+        }
+      }
+    } catch (publishErr) {
+      console.error("❌ Instant publishing failed:", publishErr.response?.data || publishErr.message);
+      // We don't throw here so the frontend still gets a success response for saving the campaign
+    }
+    // --- END INSTANT PUBLISHING LOGIC ---
+
     // Issue a user token so the dashboard can fetch campaigns via API
     const token = issueUserToken(userEmail || effectiveUserId, userName || "User");
 
@@ -123,7 +254,7 @@ const getUserCampaigns = async (req, res) => {
 
     const campaigns = await Campaign.find({ 
       userId: { $regex: new RegExp(`^${userId}$`, "i") } 
-    }).sort({ createdAt: -1 }).lean();
+    }, { adImage: 0 }).sort({ createdAt: -1 }).allowDiskUse(true).lean();
 
     // Normalize fields for frontend compatibility
     const normalized = campaigns.map((c) => ({

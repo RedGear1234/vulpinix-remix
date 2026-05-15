@@ -23,7 +23,7 @@ import { VulpinixLogo } from '../../components/VulpinixLogo';
 /* ─────────────────────────────────────────────────────────────────────────────
    TYPES & INTERFACES
 ───────────────────────────────────────────────────────────────────────────── */
-type CampaignStatus = 'pending' | 'in_review' | 'approved' | 'rejected';
+type CampaignStatus = 'pending' | 'in_review' | 'approved' | 'rejected' | 'running' | 'completed' | 'published';
 
 interface Campaign {
   id: string;
@@ -303,6 +303,9 @@ const ADMIN_STYLES = `
   .vx-admin__status--approved  { background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
   .vx-admin__status--rejected  { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
   .vx-admin__status--in_review { background: rgba(99, 102, 241, 0.1); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.2); }
+  .vx-admin__status--running   { background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
+  .vx-admin__status--published { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.2); }
+  .vx-admin__status--completed { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); }
 
   .vx-admin__search-input {
     width: 100%;
@@ -870,6 +873,23 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleViewCampaign = async (c: Campaign) => {
+    try {
+      const token = sessionStorage.getItem("adminToken");
+      const res = await fetch(`${API_BASE}/api/admin/campaigns/${c.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success && data.campaign) {
+        setSelectedCampaign(data.campaign);
+      } else {
+        setSelectedCampaign(c);
+      }
+    } catch {
+      setSelectedCampaign(c);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="vx-admin__login-wrap">
@@ -952,7 +972,7 @@ export default function AdminDashboard() {
         </header>
 
         <div className="vx-admin__stats-grid">
-          <StatCard label="Live Ads" value={campaigns.filter(c => c.status === 'approved').length} color="#10b981" delay={0} />
+          <StatCard label="Live Ads" value={campaigns.filter(c => c.status === 'approved' || c.status === 'running' || c.status === 'published').length} color="#10b981" delay={0} />
           <StatCard label="In Queue" value={campaigns.filter(c => c.status === 'pending').length} color="#f59e0b" delay={0.1} />
           <StatCard label="Registered Users" value={users.length} color="#6366f1" delay={0.2} />
           <StatCard label="Total Revenue" value={campaigns.length * 150} color="#ec4899" delay={0.3} />
@@ -1022,7 +1042,7 @@ export default function AdminDashboard() {
                   <button 
                     className="vx-admin__logout-btn" 
                     style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', padding: '8px 12px' }}
-                    onClick={() => setSelectedCampaign(c)}
+                    onClick={() => handleViewCampaign(c)}
                   >
                     <Eye size={16} />
                   </button>
