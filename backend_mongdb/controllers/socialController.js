@@ -79,8 +79,26 @@ exports.handleCallback = async (req, res) => {
         }
       });
       
-      const accessToken = tokenResponse.data.access_token;
-      console.log(`Successfully fetched user access token for ${platform}!`);
+      const shortLivedToken = tokenResponse.data.access_token;
+      console.log(`Successfully fetched short-lived user access token for ${platform}!`);
+
+      // ✅ CRITICAL: Exchange for a 60-day long-lived token to prevent expiry
+      let accessToken = shortLivedToken;
+      try {
+        const longLivedRes = await axios.get(`https://graph.facebook.com/v18.0/oauth/access_token`, {
+          params: {
+            grant_type: 'fb_exchange_token',
+            client_id: fbAppId,
+            client_secret: fbAppSecret,
+            fb_exchange_token: shortLivedToken
+          }
+        });
+        accessToken = longLivedRes.data.access_token;
+        const expiresIn = longLivedRes.data.expires_in;
+        console.log(`✅ Long-lived token obtained! Expires in: ${Math.round(expiresIn / 86400)} days`);
+      } catch (llErr) {
+        console.warn(`⚠️ Could not exchange for long-lived token, using short-lived token:`, llErr.response?.data?.error?.message || llErr.message);
+      }
 
       // 2. Fetch Pages and potential Instagram accounts
       let fbPageId = "";
@@ -140,24 +158,30 @@ exports.handleCallback = async (req, res) => {
       if (targetUser) {
         if (!targetUser.socialAccounts) targetUser.socialAccounts = {};
         
-        // Always update Facebook details (Meta tokens are shared)
-        targetUser.socialAccounts.facebook = {
-          accessToken: accessToken,
-          pageId: fbPageId,
-          pageAccessToken: fbPageToken
-        };
-        
-        // Save Instagram details if found (works for both platforms since they share Meta OAuth)
-        if (igAccountId) {
-          targetUser.socialAccounts.instagram = {
+        // Only save the platform the user actually clicked to connect
+        if (platform === 'facebook') {
+          targetUser.socialAccounts.facebook = {
             accessToken: accessToken,
-            igAccountId: igAccountId,
-            username: igUsername
+            pageId: fbPageId,
+            pageAccessToken: fbPageToken
           };
-          console.log(`✅ Linked Instagram (IG Account: ${igAccountId}) for user: ${targetUser.email}`);
-        } else {
-          console.log(`✅ Linked Facebook for user: ${targetUser.email}. No IG business account found on Page.`);
-          console.log(`   → To enable Instagram posting: connect your IG Business/Creator account to your Facebook Page in Meta Business Suite.`);
+          console.log(`✅ Linked Facebook for user: ${targetUser.email}`);
+        }
+        
+        if (platform === 'instagram') {
+          if (igAccountId) {
+            targetUser.socialAccounts.instagram = {
+              accessToken: accessToken,
+              igAccountId: igAccountId,
+              username: igUsername,
+              pageId: fbPageId,
+              pageAccessToken: fbPageToken
+            };
+            console.log(`✅ Linked Instagram (IG Account: ${igAccountId}) for user: ${targetUser.email}`);
+          } else {
+            console.log(`⚠️ No IG Business Account found on Page for user: ${targetUser.email}`);
+            console.log(`   → Make sure your Instagram is a Business/Creator account linked to your Facebook Page.`);
+          }
         }
         
         await targetUser.save();

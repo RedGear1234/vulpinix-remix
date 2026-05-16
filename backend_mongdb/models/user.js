@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema(
     onboardingCompleted: { type: Boolean, default: false },
     socialAccounts: {
       facebook: { accessToken: String, pageId: String, pageAccessToken: String },
-      instagram: { accessToken: String, igAccountId: String, username: String },
+      instagram: { accessToken: String, igAccountId: String, username: String, pageId: String, pageAccessToken: String },
       twitter: { accessToken: String, tokenSecret: String },
       linkedin: { accessToken: String }
     }

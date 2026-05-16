@@ -118,8 +118,8 @@ export default function CreatePostPage() {
     } catch {}
     const accounts = getLinkedAccounts();
     setLinkedAccounts(accounts);
-    // Auto-select only the platforms the user has actually connected
-    setSelectedPlatforms(accounts.filter(id => PLATFORMS.some(p => p.id === id)));
+    // Don't auto-select any platform — let the user explicitly choose where to post
+    setSelectedPlatforms([]);
   }, [navigate]);
 
   const togglePlatform = (id: string) => {

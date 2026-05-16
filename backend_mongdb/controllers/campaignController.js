@@ -130,18 +130,54 @@ const createCampaign = async (req, res) => {
         }
 
         // --- STEP 2: Load user & tokens ---
-        const user = await User.findOne({ email: userEmail || effectiveUserId });
-        console.log(`🔍 [PUBLISH] User found for ${userEmail || effectiveUserId}:`, !!user);
-
+        // Try by email first (most reliable), then by userId
+        let user = null;
+        if (userEmail) {
+          user = await User.findOne({ email: userEmail.toLowerCase().trim() });
+        }
+        if (!user && effectiveUserId && effectiveUserId !== 'anonymous') {
+          if (effectiveUserId.includes('@')) {
+            user = await User.findOne({ email: effectiveUserId.toLowerCase().trim() });
+          } else {
+            try { user = await User.findById(effectiveUserId); } catch (e) {}
+          }
+        }
+        // --- STEP 2: Resolve Meta access token ---
+        // Check both facebook and instagram entries — either can provide the Meta token
+        // (user may have disconnected one platform but the other still has valid tokens)
         const fbToken = user?.socialAccounts?.facebook?.accessToken;
-        const savedPageId = user?.socialAccounts?.facebook?.pageId;
-        const savedPageToken = user?.socialAccounts?.facebook?.pageAccessToken;
-        const savedIgAccountId = user?.socialAccounts?.instagram?.igAccountId;
-        console.log("🔍 [PUBLISH] FB Token:", !!fbToken, "| Saved Page:", savedPageId, "| Saved IG Account:", savedIgAccountId);
+        const igToken = user?.socialAccounts?.instagram?.accessToken;
+        const metaToken = fbToken || igToken;
 
-        if (!fbToken) {
+        const savedFbPageId = user?.socialAccounts?.facebook?.pageId;
+        const savedFbPageToken = user?.socialAccounts?.facebook?.pageAccessToken;
+        const savedIgPageId = user?.socialAccounts?.instagram?.pageId;
+        const savedIgPageToken = user?.socialAccounts?.instagram?.pageAccessToken;
+        const savedIgAccountId = user?.socialAccounts?.instagram?.igAccountId;
+
+        // Use whichever page info is available (FB entry first, then IG entry)
+        const savedPageId = savedFbPageId || savedIgPageId;
+        const savedPageToken = savedFbPageToken || savedIgPageToken;
+
+        console.log("🔍 [PUBLISH] FB Token:", !!fbToken, "| IG Token:", !!igToken, "| Meta Token:", !!metaToken);
+        console.log("🔍 [PUBLISH] Saved Page:", savedPageId, "| Saved IG Account:", savedIgAccountId);
+
+        if (!metaToken) {
           console.log("⚠️ [PUBLISH] No Meta access token found. User must connect Facebook/Instagram first.");
+          console.log(`   → Lookup attempted with email: '${userEmail}', effectiveId: '${effectiveUserId}'`);
         } else {
+          // ✅ Pre-validate that the saved token is still alive before attempting to publish
+          let skipPublish = false;
+          try {
+            await axios.get(`https://graph.facebook.com/v18.0/me?access_token=${metaToken}&fields=id`);
+          } catch (tokenCheckErr) {
+            const errMsg = tokenCheckErr.response?.data?.error?.message || tokenCheckErr.message;
+            console.error("❌ [PUBLISH] Saved Meta token is EXPIRED or INVALID:", errMsg);
+            console.log("   → User must reconnect their Facebook/Instagram account from the Social Accounts page.");
+            skipPublish = true;
+          }
+          if (!skipPublish) {
+          console.log("✅ [PUBLISH] Meta token is valid. Proceeding with publish...");
           // --- STEP 3: Get the live Page token (prefer saved, fallback to live fetch) ---
           let pageId = savedPageId;
           let pageToken = savedPageToken;
@@ -149,12 +185,12 @@ const createCampaign = async (req, res) => {
           if (!pageToken) {
             console.log("🔍 [PUBLISH] No saved page token. Fetching live from Meta...");
             try {
-              const pagesRes = await axios.get(`https://graph.facebook.com/v18.0/me/accounts?access_token=${fbToken}`);
+              const pagesRes = await axios.get(`https://graph.facebook.com/v18.0/me/accounts?access_token=${metaToken}`);
               let pages = pagesRes.data.data || [];
               if (pages.length === 0) {
                 // Fallback: force-fetch the known page
                 try {
-                  const forceRes = await axios.get(`https://graph.facebook.com/v18.0/1111932568671242?fields=access_token,name&access_token=${fbToken}`);
+                  const forceRes = await axios.get(`https://graph.facebook.com/v18.0/1111932568671242?fields=access_token,name&access_token=${metaToken}`);
                   if (forceRes.data?.access_token) pages = [forceRes.data];
                 } catch (e) { console.log("❌ [PUBLISH] Force-fetch failed:", e.message); }
               }
@@ -282,6 +318,7 @@ const createCampaign = async (req, res) => {
             campaign.status = "published";
             await campaign.save();
           }
+          } // closes the token-valid block
         }
       }
     } catch (publishErr) {
