@@ -20,7 +20,8 @@ const userSchema = new mongoose.Schema(
       facebook: { accessToken: String, pageId: String, pageAccessToken: String },
       instagram: { accessToken: String, igAccountId: String, username: String, pageId: String, pageAccessToken: String },
       twitter: { accessToken: String, refreshToken: String, username: String, tokenSecret: String },
-      linkedin: { accessToken: String }
+      linkedin: { accessToken: String },
+      youtube: { accessToken: String, refreshToken: String, channelId: String, channelTitle: String }
     }
   },
   { timestamps: true }

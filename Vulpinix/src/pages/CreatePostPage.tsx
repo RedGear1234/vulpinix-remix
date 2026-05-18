@@ -298,7 +298,11 @@ export default function CreatePostPage() {
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                       {mediaFiles.map((src, i) => (
                         <div key={i} className="vxcp-media-thumb">
-                          <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          {src.startsWith("data:video") ? (
+                            <video src={src} muted controls style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          )}
                           <div className="vxcp-media-remove" onClick={() => setMediaFiles(f => f.filter((_, j) => j !== i))}>
                             <X size={12} />
                           </div>

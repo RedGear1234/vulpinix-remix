@@ -153,7 +153,7 @@ export default function SocialAccountsPage() {
     if (localStorage.getItem("isAuthenticated") !== "true") { navigate("/auth", { replace: true }); return; }
     const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
     if (u.name) setUserName(u.name.split(" ")[0]);
-    const userId = u.id || u._id || "";
+    const userId = u.id || u._id || u.email || "";
 
     const fetchStatus = async () => {
       try {
@@ -165,6 +165,7 @@ export default function SocialAccountsPage() {
           if (data.socialStatus.instagram) nextLinked.push("instagram");
           if (data.socialStatus.twitter) nextLinked.push("twitter");
           if (data.socialStatus.linkedin) nextLinked.push("linkedin");
+          if (data.socialStatus.youtube) nextLinked.push("youtube");
           
           setLinked(nextLinked);
           setLinkedAccounts(nextLinked);
@@ -173,6 +174,7 @@ export default function SocialAccountsPage() {
           if (data.socialStatus.handles.facebook) nextHandles.facebook = data.socialStatus.handles.facebook;
           if (data.socialStatus.handles.instagram) nextHandles.instagram = data.socialStatus.handles.instagram;
           if (data.socialStatus.handles.twitter) nextHandles.twitter = data.socialStatus.handles.twitter;
+          if (data.socialStatus.handles.youtube) nextHandles.youtube = data.socialStatus.handles.youtube;
           
           setHandles(nextHandles);
           localStorage.setItem("socialHandles", JSON.stringify(nextHandles));
@@ -204,7 +206,7 @@ export default function SocialAccountsPage() {
 
   const handleToggle = async (platformId: string) => {
     const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
-    const userId = u.id || u._id || "";
+    const userId = u.id || u._id || u.email || "";
 
     if (linked.includes(platformId)) {
       // Disconnect via API

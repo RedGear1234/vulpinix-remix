@@ -29,8 +29,10 @@ const getOAuthUrl = (platform, userId) => {
       return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${linkedinClientId}&redirect_uri=${REDIRECT_URI}&state=${stateString}&scope=r_liteprofile%20r_emailaddress`;
       
     case 'youtube':
-      const googleClientId = process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
-      return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/youtube.readonly`;
+      const googleClientId = process.env.GOOGLE_CLIENT_ID;
+      if (!googleClientId || googleClientId === 'YOUR_GOOGLE_CLIENT_ID') return null;
+      // Request offline access to get a refresh token, and prompt=consent to ensure we get it
+      return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/youtube.upload%20https://www.googleapis.com/auth/youtube.readonly&access_type=offline&prompt=consent&state=${stateString}`;
       
     default:
       return null;
@@ -68,8 +70,13 @@ exports.handleCallback = async (req, res) => {
 
   try {
     let userId = null;
+    console.log(`[OAUTH CALLBACK] Received state from Google:`, state);
+    
     if (state && state.startsWith('userId=')) {
       userId = state.split('=')[1];
+      console.log(`[OAUTH CALLBACK] Extracted userId:`, userId);
+    } else {
+      console.log(`[OAUTH CALLBACK] State did not contain userId. Using default fallback.`);
     }
 
     if (platform === 'facebook' || platform === 'instagram') {
@@ -265,6 +272,72 @@ exports.handleCallback = async (req, res) => {
         await targetUser.save();
         console.log(`✅ Saved Twitter credentials for ${targetUser.email}`);
       }
+    } else if (platform === 'youtube') {
+      const REDIRECT_URI = `http://localhost:5000/api/social/callback/youtube`;
+      const googleClientId = process.env.GOOGLE_CLIENT_ID;
+      const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+      if (!googleClientId || !googleClientSecret) {
+        throw new Error('Google Client ID/Secret not configured in .env');
+      }
+
+      // 1. Exchange code for token
+      const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
+        code,
+        client_id: googleClientId,
+        client_secret: googleClientSecret,
+        redirect_uri: REDIRECT_URI,
+        grant_type: 'authorization_code'
+      });
+
+      const access_token = tokenRes.data.access_token;
+      const refresh_token = tokenRes.data.refresh_token;
+
+      // 2. Get YouTube Channel Info
+      let channelTitle = "YouTube Channel";
+      let channelId = "";
+      try {
+        const ytRes = await axios.get(`https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true`, {
+          headers: { Authorization: `Bearer ${access_token}` }
+        });
+        if (ytRes.data.items && ytRes.data.items.length > 0) {
+          channelTitle = ytRes.data.items[0].snippet.title;
+          channelId = ytRes.data.items[0].id;
+        }
+      } catch (ytErr) {
+        console.error("⚠️ Could not fetch YouTube channel info (user might not have a channel):", ytErr.response?.data || ytErr.message);
+      }
+
+      // 3. Save to User Model
+      let targetUser = null;
+      if (userId) {
+        if (userId.includes('@')) {
+          console.log(`[OAUTH CALLBACK] Searching for user by email:`, userId);
+          targetUser = await User.findOne({ email: userId });
+        } else {
+          console.log(`[OAUTH CALLBACK] Searching for user by ID:`, userId);
+          try { targetUser = await User.findById(userId); } catch (e) {}
+        }
+      }
+      
+      console.log(`[OAUTH CALLBACK] targetUser found before fallback?`, !!targetUser);
+      if (!targetUser) {
+        console.log(`[OAUTH CALLBACK] targetUser not found. Falling back to any user.`);
+        targetUser = await User.findOne({});
+      }
+
+      if (targetUser) {
+        if (!targetUser.socialAccounts) targetUser.socialAccounts = {};
+        targetUser.socialAccounts.youtube = {
+          accessToken: access_token,
+          refreshToken: refresh_token,
+          channelId: channelId,
+          channelTitle: channelTitle
+        };
+        targetUser.markModified('socialAccounts');
+        await targetUser.save();
+        console.log(`✅ Saved YouTube credentials for ${targetUser.email}`);
+      }
     }
 
     res.redirect(`http://localhost:3000/social?success=true&platform=${platform}`);
@@ -294,10 +367,12 @@ exports.getSocialAccounts = async (req, res) => {
       instagram: !!user.socialAccounts?.instagram?.igAccountId,
       twitter: !!user.socialAccounts?.twitter?.accessToken,
       linkedin: !!user.socialAccounts?.linkedin?.accessToken,
+      youtube: !!user.socialAccounts?.youtube?.accessToken,
       handles: {
         facebook: user.socialAccounts?.facebook?.pageId ? "Connected Page" : null,
         instagram: user.socialAccounts?.instagram?.username ? `@${user.socialAccounts.instagram.username}` : null,
         twitter: user.socialAccounts?.twitter?.username ? `@${user.socialAccounts.twitter.username}` : null,
+        youtube: user.socialAccounts?.youtube?.channelTitle ? user.socialAccounts.youtube.channelTitle : null,
       }
     };
 
