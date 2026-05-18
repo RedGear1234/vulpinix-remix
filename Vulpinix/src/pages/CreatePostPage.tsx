@@ -123,20 +123,36 @@ export default function CreatePostPage() {
   }, [navigate]);
 
   const togglePlatform = (id: string) => {
-    setSelectedPlatforms(prev =>
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-    );
+    setSelectedPlatforms(prev => {
+      const next = prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id];
+      // If YouTube was deselected, clear any existing videos
+      if (!next.includes("youtube")) {
+        setMediaFiles(files => files.filter(f => !f.startsWith("data:video")));
+      }
+      return next;
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    const isYoutubeSelected = selectedPlatforms.includes("youtube");
+
     files.forEach(file => {
+      // Strictly prevent video uploads if YouTube is not selected
+      if (file.type.startsWith("video/") && !isYoutubeSelected) {
+        alert("Videos are only allowed when YouTube is selected as a platform.");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = ev => {
         if (ev.target?.result) setMediaFiles(prev => [...prev, ev.target!.result as string]);
       };
       reader.readAsDataURL(file);
     });
+    
+    // Clear input so the same file can be selected again if needed
+    e.target.value = "";
   };
 
   const handlePost = async () => {
@@ -173,7 +189,8 @@ export default function CreatePostPage() {
           budget: "0",                                      // Required by backend
           platforms: selectedPlatforms,
           adCaption: caption,
-          adImage: mediaFiles.length > 0 ? mediaFiles[0] : "", // Pass base64 image
+          adImage: mediaFiles.find(f => f.startsWith("data:image")) || "", // Pass base64 image
+          adVideo: mediaFiles.find(f => f.startsWith("data:video")) || "", // Pass base64 video
         })
       });
 
@@ -287,12 +304,16 @@ export default function CreatePostPage() {
                 {/* Media */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="vxcp-card">
                   <div className="vxcp-card-title"><ImageIcon size={14} /> Media</div>
-                  <input ref={fileRef} type="file" accept="image/*,video/*" multiple style={{ display: "none" }} onChange={handleFileChange} />
+                  <input ref={fileRef} type="file" accept={selectedPlatforms.includes("youtube") ? "image/*,video/*" : "image/*"} multiple style={{ display: "none" }} onChange={handleFileChange} />
                   {mediaFiles.length === 0 ? (
                     <div className="vxcp-media-drop" onClick={() => fileRef.current?.click()}>
                       <ImageIcon size={32} style={{ margin: "0 auto 12px", opacity: 0.25 }} />
-                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Click to upload photos or videos</div>
-                      <div style={{ fontSize: 12, color: "var(--vx-text-muted)" }}>PNG, JPG, GIF, MP4 up to 50MB</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+                        {selectedPlatforms.includes("youtube") ? "Click to upload photos or videos" : "Click to upload photos"}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--vx-text-muted)" }}>
+                        {selectedPlatforms.includes("youtube") ? "PNG, JPG, GIF, MP4 up to 50MB" : "PNG, JPG, GIF up to 50MB"}
+                      </div>
                     </div>
                   ) : (
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>

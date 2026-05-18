@@ -29,7 +29,7 @@ const createCampaign = async (req, res) => {
       platform, platforms,
       // Ad creative
       adContentDescription, adCaption, adCopyText, callToAction,
-      creativeFiles, adImage,
+      creativeFiles, adImage, adVideo,
       // Targeting
       targeting, language,
       // Social handles
@@ -396,65 +396,62 @@ const createCampaign = async (req, res) => {
               let fileSize = 0;
               let mimeType = "video/mp4";
 
-              if (adImage && adImage.startsWith('data:video')) {
-                console.log("🔍 [YOUTUBE] Detected user-uploaded video from dashboard. Decoding video buffer...");
-                const parts = adImage.split(';base64,');
+              const sourceVideo = adVideo || (adImage && adImage.startsWith('data:video') ? adImage : null);
+
+              if (!sourceVideo) {
+                console.log("⚠️ [YOUTUBE] No video file uploaded for YouTube! Skipping YouTube publish block since YouTube requires a video format.");
+                // We skip quietly. 
+              } else {
+                console.log("🔍 [YOUTUBE] Detected user-uploaded video. Decoding video buffer...");
+                const parts = sourceVideo.split(';base64,');
                 const base64Data = parts.pop();
                 const header = parts[0];
                 mimeType = header.split('data:').pop().split(';')[0] || "video/mp4";
                 videoBuffer = Buffer.from(base64Data, 'base64');
                 fileSize = videoBuffer.length;
                 console.log(`✅ [YOUTUBE] User video decoded successfully. Size: ${(fileSize / 1024).toFixed(2)} KB | Type: ${mimeType}`);
-              } else {
-                console.log("🔍 [YOUTUBE] No user video uploaded (image/text post detected). Downloading high-speed test video from W3Schools...");
-                // A tiny 770KB test video that is 100% reliable
-                const sampleVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
-                const videoRes = await axios.get(sampleVideoUrl, { responseType: 'arraybuffer', timeout: 15000 });
-                videoBuffer = Buffer.from(videoRes.data);
-                fileSize = videoBuffer.length;
-                console.log(`✅ [YOUTUBE] Test video downloaded. Size: ${(fileSize / 1024).toFixed(2)} KB`);
-              }
 
-              console.log("🔍 [YOUTUBE] Initializing resumable upload session on YouTube...");
-              const metadata = {
-                snippet: {
-                  title: `${campaignName || "Vulpinix Campaign"} - Live Video Ad`,
-                  description: `${adCaption || adCopyText || "Created automatically using Vulpinix."}\n\nPublished via Vulpinix Ad Platform.`,
-                  categoryId: "22" // People & Blogs
-                },
-                status: {
-                  privacyStatus: "public" // Makes it live directly on their YouTube Channel
-                }
-              };
-
-              const initRes = await axios.post(
-                'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
-                metadata,
-                {
-                  headers: {
-                    'Authorization': `Bearer ${youtubeToken}`,
-                    'Content-Type': 'application/json; charset=UTF-8',
-                    'X-Upload-Content-Length': fileSize,
-                    'X-Upload-Content-Type': mimeType
+                console.log("🔍 [YOUTUBE] Initializing resumable upload session on YouTube...");
+                const metadata = {
+                  snippet: {
+                    title: `${campaignName || "Vulpinix Campaign"} - Live Video Ad`,
+                    description: `${adCaption || adCopyText || "Created automatically using Vulpinix."}\n\nPublished via Vulpinix Ad Platform.`,
+                    categoryId: "22" // People & Blogs
+                  },
+                  status: {
+                    privacyStatus: "public" // Makes it live directly on their YouTube Channel
                   }
-                }
-              );
+                };
 
-              const uploadUrl = initRes.headers.location;
-              if (!uploadUrl) throw new Error("Could not retrieve upload Location header from YouTube.");
+                const initRes = await axios.post(
+                  'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
+                  metadata,
+                  {
+                    headers: {
+                      'Authorization': `Bearer ${youtubeToken}`,
+                      'Content-Type': 'application/json; charset=UTF-8',
+                      'X-Upload-Content-Length': fileSize,
+                      'X-Upload-Content-Type': mimeType
+                    }
+                  }
+                );
 
-              console.log("🔍 [YOUTUBE] Uploading video binary data to YouTube...");
-              const uploadRes = await axios.put(uploadUrl, videoBuffer, {
-                headers: {
-                  'Content-Length': fileSize,
-                  'Content-Type': mimeType
-                }
-              });
+                const uploadUrl = initRes.headers.location;
+                if (!uploadUrl) throw new Error("Could not retrieve upload Location header from YouTube.");
 
-              const uploadedVideoId = uploadRes.data?.id;
-              console.log(`✅ [YOUTUBE] Video uploaded successfully to YouTube! Video ID: ${uploadedVideoId}`);
-              console.log(`👉 View in YouTube Studio: https://studio.youtube.com/video/${uploadedVideoId}/edit`);
-              isPublishedAny = true;
+                console.log("🔍 [YOUTUBE] Uploading video binary data to YouTube...");
+                const uploadRes = await axios.put(uploadUrl, videoBuffer, {
+                  headers: {
+                    'Content-Length': fileSize,
+                    'Content-Type': mimeType
+                  }
+                });
+
+                const uploadedVideoId = uploadRes.data?.id;
+                console.log(`✅ [YOUTUBE] Video uploaded successfully to YouTube! Video ID: ${uploadedVideoId}`);
+                console.log(`👉 View in YouTube Studio: https://studio.youtube.com/video/${uploadedVideoId}/edit`);
+                isPublishedAny = true;
+              }
             } catch (ytErr) {
               let errorMsg = ytErr.message;
               if (ytErr.response?.data) {
@@ -463,8 +460,7 @@ const createCampaign = async (req, res) => {
                   : JSON.stringify(ytErr.response.data);
               }
               console.error("❌ [YOUTUBE] Real YouTube upload failed:", errorMsg);
-              console.log("⚠️ [YOUTUBE] Falling back to successful simulated post on connected YouTube channel.");
-              isPublishedAny = true;
+              // Since we don't fallback to dummy video, we don't flag isPublishedAny true here if it failed.
             }
           }
         }

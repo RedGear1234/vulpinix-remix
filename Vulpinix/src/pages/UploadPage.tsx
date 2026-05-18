@@ -157,7 +157,12 @@ export default function UploadPage() {
     e.target.value = "";
   };
   const handleFile = (file: File) => {
-    if (!ALLOWED_FILE_TYPES.includes(file.type.toLowerCase())) { toast.error("Invalid file type"); return; }
+    const isYoutubeEnabled = platforms.find(p => p.id === "youtube")?.enabled;
+    const currentAllowedTypes = isYoutubeEnabled ? ALLOWED_FILE_TYPES : ALLOWED_IMAGE_TYPES;
+    if (!currentAllowedTypes.includes(file.type.toLowerCase())) { 
+      toast.error(isYoutubeEnabled ? "Invalid file type" : "Invalid file type. Please select YouTube to upload videos."); 
+      return; 
+    }
     const preview = URL.createObjectURL(file);
     setUploadedFile({ file, preview });
     startAnalysis();
@@ -205,8 +210,19 @@ export default function UploadPage() {
     setGeneratingCaption(false);
   };
 
-  const togglePlatform = (id: string) =>
+  const togglePlatform = (id: string) => {
     setPlatforms(platforms.map(p => p.id === id ? { ...p, enabled: !p.enabled } : p));
+    
+    // If user is disabling YouTube, check if a video is currently uploaded and remove it
+    if (id === "youtube") {
+      const isDisabling = platforms.find(p => p.id === "youtube")?.enabled === true;
+      if (isDisabling && uploadedFile?.file.type.startsWith("video/")) {
+        setUploadedFile(null);
+        setProgress(0);
+        toast.info("Video removed because YouTube was deselected.");
+      }
+    }
+  };
 
   // ── Launch ────────────────────────────────────────────────────────────────
   const handleLaunch = () => {
@@ -312,12 +328,16 @@ export default function UploadPage() {
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                   </div>
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "var(--vx-text-primary)", marginBottom: 4 }}>Drop your creative here</div>
-                    <div style={{ fontSize: 13, color: "var(--vx-text-muted)" }}>or click to browse files</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "var(--vx-text-primary)", marginBottom: 4 }}>
+                      {platforms.find(p => p.id === "youtube")?.enabled ? "Drop your photos or videos here" : "Drop your photos here"}
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--vx-text-muted)" }}>
+                      {platforms.find(p => p.id === "youtube")?.enabled ? "PNG, JPG, GIF, MP4 up to 50MB" : "PNG, JPG, GIF up to 50MB"}
+                    </div>
                   </div>
                 </div>
               )}
-              <input ref={fileInputRef} type="file" style={{ display: "none" }} onChange={handleChange} accept={ALLOWED_EXTENSIONS} />
+              <input ref={fileInputRef} type="file" style={{ display: "none" }} onChange={handleChange} accept={platforms.find(p => p.id === "youtube")?.enabled ? ALLOWED_EXTENSIONS : '.jpg,.jpeg,.png,.gif,.webp,.heic,.heif'} />
             </div>
 
             {/* Stats Strip */}
