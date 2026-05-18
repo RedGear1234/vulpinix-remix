@@ -172,6 +172,7 @@ export default function SocialAccountsPage() {
           const nextHandles: Record<string, string> = {};
           if (data.socialStatus.handles.facebook) nextHandles.facebook = data.socialStatus.handles.facebook;
           if (data.socialStatus.handles.instagram) nextHandles.instagram = data.socialStatus.handles.instagram;
+          if (data.socialStatus.handles.twitter) nextHandles.twitter = data.socialStatus.handles.twitter;
           
           setHandles(nextHandles);
           localStorage.setItem("socialHandles", JSON.stringify(nextHandles));
@@ -188,7 +189,12 @@ export default function SocialAccountsPage() {
     const error = params.get("error");
     
     if (success === "true" || error) {
-      if (error) alert(`Connection failed: ${error}`);
+      if (error === "missing_credentials") {
+        const pName = platform ? platform.charAt(0).toUpperCase() + platform.slice(1) : "This platform";
+        alert(`⚠️ ${pName} is not configured yet.\n\nThe backend is missing API credentials for ${pName}.\nPlease add your ${pName} Client ID and Secret to the backend .env file and restart the server.`);
+      } else if (error) {
+        alert(`Connection failed: ${error}`);
+      }
       window.history.replaceState({}, document.title, window.location.pathname);
       fetchStatus();
     } else {

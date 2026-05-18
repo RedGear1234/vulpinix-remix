@@ -18,8 +18,11 @@ const getOAuthUrl = (platform, userId) => {
       return `https://www.facebook.com/v18.0/dialog/oauth?client_id=${fbAppId}&redirect_uri=${REDIRECT_URI}&state=${stateString}&scope=${fbScope}&auth_type=rerequest`;
       
     case 'twitter':
-      const twitterClientId = process.env.TWITTER_CLIENT_ID || 'YOUR_TWITTER_CLIENT_ID';
-      return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${twitterClientId}&redirect_uri=${REDIRECT_URI}&scope=tweet.read%20users.read%20tweet.write%20offline.access&state=${stateString}&code_challenge=challenge&code_challenge_method=plain`;
+      const twitterClientId = process.env.TWITTER_CLIENT_ID;
+      if (!twitterClientId || twitterClientId.startsWith('paste_') || twitterClientId === 'your_twitter_client_id') {
+        return null; // Signals missing config
+      }
+      return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${twitterClientId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=tweet.read%20users.read%20tweet.write%20offline.access&state=${stateString}&code_challenge=challenge&code_challenge_method=plain`;
       
     case 'linkedin':
       const linkedinClientId = process.env.LINKEDIN_CLIENT_ID || 'YOUR_LINKEDIN_CLIENT_ID';
@@ -40,6 +43,11 @@ exports.authorizePlatform = (req, res) => {
   
   const authUrl = getOAuthUrl(platform, userId);
   if (!authUrl) {
+    // authUrl is null — either unsupported platform or missing credentials
+    const missingCreds = ['twitter', 'linkedin'].includes(platform);
+    if (missingCreds) {
+      return res.redirect(`http://localhost:3000/social?error=missing_credentials&platform=${platform}`);
+    }
     return res.status(400).json({ error: 'Unsupported platform' });
   }
 
@@ -186,12 +194,84 @@ exports.handleCallback = async (req, res) => {
         
         await targetUser.save();
       }
+    } else if (platform === 'twitter') {
+      const REDIRECT_URI = `http://localhost:5000/api/social/callback/twitter`;
+      const twitterClientId = process.env.TWITTER_CLIENT_ID;
+      const twitterClientSecret = process.env.TWITTER_CLIENT_SECRET;
+
+      let access_token = null;
+      let refresh_token = null;
+      let twitterUsername = null;
+
+      if (!twitterClientId) {
+        throw new Error('TWITTER_CLIENT_ID is not configured in backend .env');
+      }
+
+      try {
+        const params = new URLSearchParams();
+        params.append('code', code);
+        params.append('grant_type', 'authorization_code');
+        params.append('client_id', twitterClientId);
+        params.append('redirect_uri', REDIRECT_URI);
+        params.append('code_verifier', 'challenge'); // Must match the plain code_challenge sent during auth
+
+        const headers = {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        };
+
+        if (twitterClientSecret) {
+          const credentials = Buffer.from(`${twitterClientId}:${twitterClientSecret}`).toString('base64');
+          headers['Authorization'] = `Basic ${credentials}`;
+        }
+
+        const tokenResponse = await axios.post('https://api.twitter.com/2/oauth2/token', params, { headers });
+        access_token = tokenResponse.data.access_token;
+        refresh_token = tokenResponse.data.refresh_token;
+
+        try {
+          const userRes = await axios.get('https://api.twitter.com/2/users/me', {
+            headers: { 'Authorization': `Bearer ${access_token}` }
+          });
+          twitterUsername = userRes.data?.data?.username;
+        } catch (uErr) {
+          console.error('Error fetching Twitter user info:', uErr.response?.data || uErr.message);
+        }
+      } catch (authErr) {
+        console.error('Real Twitter OAuth failed:', authErr.response?.data || authErr.message);
+        const errMsg = authErr.response?.data?.error_description || authErr.response?.data?.error || authErr.message;
+        return res.redirect(`http://localhost:3000/social?error=${encodeURIComponent('Twitter Auth Failed: ' + errMsg)}`);
+      }
+
+      // Save to User Model
+      let targetUser = null;
+      if (userId) {
+        if (userId.includes('@')) {
+          targetUser = await User.findOne({ email: userId });
+        } else {
+          try { targetUser = await User.findById(userId); } catch (e) {}
+        }
+      }
+      if (!targetUser) {
+        targetUser = await User.findOne({ email: "shubhamchavan@live.com" });
+      }
+
+      if (targetUser) {
+        if (!targetUser.socialAccounts) targetUser.socialAccounts = {};
+        targetUser.socialAccounts.twitter = {
+          accessToken: access_token,
+          refreshToken: refresh_token,
+          username: twitterUsername
+        };
+        await targetUser.save();
+        console.log(`✅ Saved Twitter credentials for ${targetUser.email}`);
+      }
     }
 
     res.redirect(`http://localhost:3000/social?success=true&platform=${platform}`);
   } catch (err) {
     console.error(`Error handling ${platform} callback:`, err.response?.data || err.message);
-    res.redirect(`http://localhost:3000/social?error=auth_failed`);
+    const errMsg = err.response?.data?.error?.message || err.message || 'auth_failed';
+    res.redirect(`http://localhost:3000/social?error=${encodeURIComponent(errMsg)}`);
   }
 };
 
@@ -217,6 +297,7 @@ exports.getSocialAccounts = async (req, res) => {
       handles: {
         facebook: user.socialAccounts?.facebook?.pageId ? "Connected Page" : null,
         instagram: user.socialAccounts?.instagram?.username ? `@${user.socialAccounts.instagram.username}` : null,
+        twitter: user.socialAccounts?.twitter?.username ? `@${user.socialAccounts.twitter.username}` : null,
       }
     };
 

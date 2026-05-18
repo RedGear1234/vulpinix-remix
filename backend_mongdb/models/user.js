@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema(
     socialAccounts: {
       facebook: { accessToken: String, pageId: String, pageAccessToken: String },
       instagram: { accessToken: String, igAccountId: String, username: String, pageId: String, pageAccessToken: String },
-      twitter: { accessToken: String, tokenSecret: String },
+      twitter: { accessToken: String, refreshToken: String, username: String, tokenSecret: String },
       linkedin: { accessToken: String }
     }
   },

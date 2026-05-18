@@ -11,6 +11,7 @@ import {
   Instagram, 
   Facebook, 
   Youtube, 
+  Twitter,
   Globe,
   Zap,
   PieChart,
@@ -24,7 +25,16 @@ import {
 import { toast } from "sonner";
 import { VulpinixLogo } from "../components/VulpinixLogo";
 
-type Platform = "instagram-feed" | "instagram-story" | "facebook-feed" | "youtube";
+type Platform = "instagram-feed" | "instagram-story" | "facebook-feed" | "twitter-feed" | "youtube";
+
+const platformSpecs: Record<string, { color: string; icon: string; name: string }> = {
+  instagram: { color: "#38bdf8", icon: "📸", name: "Instagram" },
+  facebook: { color: "#a78bfa", icon: "👍", name: "Facebook" },
+  youtube: { color: "#10b981", icon: "▶️", name: "YouTube" },
+  twitter: { color: "#1da1f2", icon: "𝕏", name: "X" },
+  x: { color: "#1da1f2", icon: "𝕏", name: "X" },
+  linkedin: { color: "#0077b5", icon: "💼", name: "LinkedIn" },
+};
 
 export default function AdPreviewPage() {
   const navigate = useNavigate();
@@ -104,14 +114,43 @@ export default function AdPreviewPage() {
     navigate('/payment');
   };
 
+  const selectedPlats = campaignData.platforms || ["Instagram", "Facebook", "YouTube"];
+  const totalBudgetVal = parseInt(campaignData.totalAmount.replace(/[^0-9]/g, "")) || 35000;
+
+  const dynamicSlices = selectedPlats.map((p, idx) => {
+    const key = p.toLowerCase();
+    const spec = platformSpecs[key] || { color: idx === 0 ? "#38bdf8" : idx === 1 ? "#a78bfa" : "#10b981", icon: "🔗", name: p };
+    const pct = Math.round(100 / selectedPlats.length);
+    return {
+      name: spec.name,
+      value: pct,
+      color: spec.color,
+      icon: spec.icon,
+      spend: Math.round(totalBudgetVal / selectedPlats.length)
+    };
+  });
+
   const platforms = [
     { id: "instagram-feed", label: "Instagram Feed", icon: Instagram, color: "#e1306c" },
     { id: "instagram-story", label: "Instagram Story", icon: Smartphone, color: "#833ab4" },
     { id: "facebook-feed", label: "Facebook Feed", icon: Facebook, color: "#1877f2" },
+    { id: "twitter-feed", label: "X / Twitter Post", icon: Twitter, color: "#1da1f2" },
     { id: "youtube", label: "YouTube Ad", icon: Youtube, color: "#ff0000" },
-  ];
+  ].filter(p => {
+    if (p.id.startsWith("instagram")) return selectedPlats.some(sp => sp.toLowerCase() === "instagram");
+    if (p.id.startsWith("facebook")) return selectedPlats.some(sp => sp.toLowerCase() === "facebook");
+    if (p.id === "twitter-feed") return selectedPlats.some(sp => sp.toLowerCase() === "twitter" || sp.toLowerCase() === "x");
+    return selectedPlats.some(sp => sp.toLowerCase() === p.id);
+  });
 
-  const currentPlatform = platforms.find(p => p.id === selectedPlatform) || platforms[0];
+  // Ensure selected platform is actually available in the filtered list, otherwise fallback to first available
+  useEffect(() => {
+    if (platforms.length > 0 && !platforms.some(p => p.id === selectedPlatform)) {
+      setSelectedPlatform(platforms[0].id as Platform);
+    }
+  }, [platforms, selectedPlatform]);
+
+  const currentPlatform = platforms.find(p => p.id === selectedPlatform) || platforms[0] || { id: "instagram-feed", label: "Instagram Feed", icon: Instagram, color: "#e1306c" };
 
   const renderAdPreview = () => {
     const commonStyle = { 
@@ -277,6 +316,42 @@ export default function AdPreviewPage() {
           {["👍 Like", "💬 Comment", "↗️ Share"].map(a => (
             <button key={a} style={{ flex: 1, background: "none", border: "none", color: "var(--vx-text-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "4px 0" }}>{a}</button>
           ))}
+        </div>
+      </motion.div>
+    );
+
+    if (selectedPlatform === "twitter-feed") return (
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={commonStyle}>
+        <div style={{ padding: "14px 16px", display: "flex", gap: 12 }}>
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#000", border: "1px solid var(--vx-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, flexShrink: 0, fontSize: 16 }}>𝕏</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>Vulpinix AI</span>
+              <span style={{ fontSize: 11, color: "var(--vx-text-muted)" }}>@vulpinix_x</span>
+              <span style={{ fontSize: 11, color: "var(--vx-text-muted)" }}>· Sponsored</span>
+            </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.5, margin: "6px 0 12px", color: "var(--vx-text-primary)" }}>
+              {adCreative.caption}
+            </p>
+            {previewImage ? (
+              <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid var(--vx-border)", aspectRatio: "1.91/1" }}>
+                <img src={previewImage} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="Ad" />
+              </div>
+            ) : (
+              <div style={{ height: 160, borderRadius: 16, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ textAlign: "center", color: "var(--vx-text-muted)" }}>
+                  <Sparkles size={24} style={{ marginBottom: 6, opacity: 0.3 }} />
+                  <div style={{ fontSize: 11 }}>Ad Visual Ready</div>
+                </div>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", color: "var(--vx-text-muted)", fontSize: 12, marginTop: 14, maxWidth: 300 }}>
+              <span>💬 12</span>
+              <span>🔁 48</span>
+              <span>❤️ 234</span>
+              <span>📊 12.4K</span>
+            </div>
+          </div>
         </div>
       </motion.div>
     );
@@ -487,14 +562,14 @@ export default function AdPreviewPage() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6, height: 6, borderRadius: 3, overflow: "hidden" }}>
-                  <div style={{ flex: 4, background: "#38bdf8" }} />
-                  <div style={{ flex: 3, background: "#a78bfa" }} />
-                  <div style={{ flex: 3, background: "#10b981" }} />
+                  {dynamicSlices.map((slice, i) => (
+                    <div key={i} style={{ flex: slice.value, background: slice.color }} />
+                  ))}
                 </div>
-                <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
-                  {[{c:"#38bdf8",l:"Instagram",p:"40%"},{c:"#a78bfa",l:"Facebook",p:"30%"},{c:"#10b981",l:"YouTube",p:"30%"}].map(({c,l,p}) => (
-                    <div key={l} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: c }} /> {l} <span style={{ color: c }}>{p}</span>
+                <div style={{ display: "flex", gap: 16, marginTop: 12, flexWrap: "wrap" }}>
+                  {dynamicSlices.map((slice) => (
+                    <div key={slice.name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: slice.color }} /> {slice.name} <span style={{ color: slice.color }}>{slice.value}%</span>
                     </div>
                   ))}
                 </div>
@@ -529,12 +604,7 @@ export default function AdPreviewPage() {
 
       <AnimatePresence>
         {showPieChart && (() => {
-          const totalBudget = parseInt(campaignData.totalAmount.replace(/[^0-9]/g, "")) || 35000;
-          const pieData = [
-            { name: "Instagram", value: 40, color: "#38bdf8", icon: "📸", spend: Math.round(totalBudget * 0.40) },
-            { name: "Facebook",  value: 30, color: "#a78bfa", icon: "👍", spend: Math.round(totalBudget * 0.30) },
-            { name: "YouTube",   value: 30, color: "#10b981", icon: "▶️", spend: Math.round(totalBudget * 0.30) },
-          ];
+          const pieData = dynamicSlices;
           return (
             <>
               {/* Backdrop */}
