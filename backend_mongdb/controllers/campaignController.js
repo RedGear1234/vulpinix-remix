@@ -651,13 +651,45 @@ const createCampaign = async (req, res) => {
               console.log("⚠️ [PINTEREST] No Pinterest access token found. User must connect Pinterest first or provide PINTEREST_PERSONAL_ACCESS_TOKEN in .env.");
               publishResults.pinterest = { status: "failed", error: "No Pinterest access token found. Please connect Pinterest." };
             } else {
+              // Helper to retry request using Pinterest Sandbox if Trial mode is detected
+              const makePinterestRequest = async (method, path, data = null) => {
+                let baseUrl = 'https://api.pinterest.com/v5';
+                try {
+                  const config = {
+                    method,
+                    url: `${baseUrl}${path}`,
+                    headers: { 'Authorization': `Bearer ${pinterestToken}` }
+                  };
+                  if (data) {
+                    config.data = data;
+                    config.headers['Content-Type'] = 'application/json';
+                  }
+                  return await axios(config);
+                } catch (err) {
+                  // Code 3 = Your application consumer type is not supported (Trial Access app hitting production)
+                  if (err.response?.data?.code === 3) {
+                    console.log("⚠️ [PINTEREST] App is in Trial mode (code 3). Retrying request using Pinterest API Sandbox...");
+                    baseUrl = 'https://api-sandbox.pinterest.com/v5';
+                    const config = {
+                      method,
+                      url: `${baseUrl}${path}`,
+                      headers: { 'Authorization': `Bearer ${pinterestToken}` }
+                    };
+                    if (data) {
+                      config.data = data;
+                      config.headers['Content-Type'] = 'application/json';
+                    }
+                    return await axios(config);
+                  }
+                  throw err;
+                }
+              };
+
               // A. Fetch User's boards
               console.log("🔍 [PINTEREST] Fetching boards...");
               let boardId = null;
               try {
-                const boardsRes = await axios.get('https://api.pinterest.com/v5/boards', {
-                  headers: { 'Authorization': `Bearer ${pinterestToken}` }
-                });
+                const boardsRes = await makePinterestRequest('GET', '/boards');
                 if (boardsRes.data?.items && boardsRes.data.items.length > 0) {
                   boardId = boardsRes.data.items[0].id;
                   console.log(`✅ [PINTEREST] Found existing board: ${boardsRes.data.items[0].name} (ID: ${boardId})`);
@@ -670,15 +702,10 @@ const createCampaign = async (req, res) => {
               if (!boardId) {
                 console.log("🔍 [PINTEREST] No board found. Creating a default 'Vulpinix Ads' board...");
                 try {
-                  const createBoardRes = await axios.post('https://api.pinterest.com/v5/boards', {
+                  const createBoardRes = await makePinterestRequest('POST', '/boards', {
                     name: "Vulpinix Ads",
                     description: "Created via Vulpinix Ad Manager",
                     privacy: "PUBLIC"
-                  }, {
-                    headers: { 
-                      'Authorization': `Bearer ${pinterestToken}`,
-                      'Content-Type': 'application/json'
-                    }
                   });
                   boardId = createBoardRes.data?.id;
                   console.log(`✅ [PINTEREST] Default board created! ID: ${boardId}`);
@@ -702,12 +729,7 @@ const createCampaign = async (req, res) => {
                   }
                 };
 
-                const pinRes = await axios.post('https://api.pinterest.com/v5/pins', pinPayload, {
-                  headers: {
-                    'Authorization': `Bearer ${pinterestToken}`,
-                    'Content-Type': 'application/json'
-                  }
-                });
+                const pinRes = await makePinterestRequest('POST', '/pins', pinPayload);
 
                 console.log("✅ [PINTEREST] Pin successfully published! ID:", pinRes.data?.id);
                 isPublishedAny = true;
