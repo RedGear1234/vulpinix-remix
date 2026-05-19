@@ -25,8 +25,12 @@ const getOAuthUrl = (platform, userId) => {
       return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${twitterClientId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=tweet.read%20users.read%20tweet.write%20offline.access&state=${stateString}&code_challenge=challenge&code_challenge_method=plain`;
       
     case 'linkedin':
-      const linkedinClientId = process.env.LINKEDIN_CLIENT_ID || 'YOUR_LINKEDIN_CLIENT_ID';
-      return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${linkedinClientId}&redirect_uri=${REDIRECT_URI}&state=${stateString}&scope=r_liteprofile%20r_emailaddress`;
+      const linkedinClientId = process.env.LINKEDIN_CLIENT_ID;
+      const linkedinClientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+      if (!linkedinClientId || linkedinClientId.startsWith('your_') || !linkedinClientSecret) return null;
+      // openid and profile for identity, w_member_social for posting.
+      // Note: User MUST add "Sign In with LinkedIn using OpenID Connect" product in their developer portal.
+      return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${linkedinClientId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${stateString}&scope=openid%20profile%20w_member_social`;
       
     case 'youtube':
       const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -34,6 +38,14 @@ const getOAuthUrl = (platform, userId) => {
       // Request offline access to get a refresh token, and prompt=consent to ensure we get it
       return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/youtube.upload%20https://www.googleapis.com/auth/youtube.readonly&access_type=offline&prompt=consent&state=${stateString}`;
       
+    case 'pinterest':
+      const pinterestClientId = process.env.PINTEREST_CLIENT_ID;
+      const pinterestClientSecret = process.env.PINTEREST_CLIENT_SECRET;
+      if (!pinterestClientId || pinterestClientId.startsWith('your_') || !pinterestClientSecret) return null;
+      // Use https to bypass Pinterest's developer dashboard validation restrictions
+      const pinterestRedirectUri = `https://localhost:5000/api/social/callback/pinterest`;
+      return `https://www.pinterest.com/oauth/?client_id=${pinterestClientId}&redirect_uri=${encodeURIComponent(pinterestRedirectUri)}&response_type=code&scope=user_accounts:read,boards:read,pins:read,pins:write&state=${stateString}`;
+
     default:
       return null;
   }
@@ -46,7 +58,7 @@ exports.authorizePlatform = (req, res) => {
   const authUrl = getOAuthUrl(platform, userId);
   if (!authUrl) {
     // authUrl is null — either unsupported platform or missing credentials
-    const missingCreds = ['twitter', 'linkedin'].includes(platform);
+    const missingCreds = ['twitter', 'linkedin', 'youtube', 'pinterest'].includes(platform);
     if (missingCreds) {
       return res.redirect(`http://localhost:3000/social?error=missing_credentials&platform=${platform}`);
     }
@@ -338,6 +350,169 @@ exports.handleCallback = async (req, res) => {
         await targetUser.save();
         console.log(`✅ Saved YouTube credentials for ${targetUser.email}`);
       }
+    } else if (platform === 'linkedin') {
+      const REDIRECT_URI = `http://localhost:5000/api/social/callback/linkedin`;
+      const linkedinClientId = process.env.LINKEDIN_CLIENT_ID;
+      const linkedinClientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+
+      if (!linkedinClientId || !linkedinClientSecret) {
+        throw new Error('LinkedIn Client ID/Secret not configured in .env');
+      }
+
+      // 1. Exchange code for access token
+      const params = new URLSearchParams();
+      params.append('grant_type', 'authorization_code');
+      params.append('code', code);
+      params.append('redirect_uri', REDIRECT_URI);
+      params.append('client_id', linkedinClientId);
+      params.append('client_secret', linkedinClientSecret);
+
+      const tokenRes = await axios.post(
+        'https://www.linkedin.com/oauth/v2/accessToken',
+        params,
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
+
+      const access_token = tokenRes.data.access_token;
+      console.log(`✅ [LINKEDIN] Access token received.`);
+
+      // 2. Fetch LinkedIn profile using Verified on LinkedIn /rest/identityMe, legacy /v2/me, or OpenID Connect
+      let linkedinId = '';
+      let linkedinName = '';
+      try {
+        console.log("🔍 [LINKEDIN] Fetching profile info via /rest/identityMe...");
+        const profileRes = await axios.get('https://api.linkedin.com/rest/identityMe', {
+          headers: { 
+            'Authorization': `Bearer ${access_token}`,
+            'LinkedIn-Version': '202401'
+          }
+        });
+        const fullUrn = profileRes.data?.id || '';
+        linkedinId = fullUrn.split(':').pop();
+        linkedinName = profileRes.data?.name || 'LinkedIn User';
+        console.log(`✅ [LINKEDIN] Profile fetched: ${linkedinName} (ID: ${linkedinId})`);
+      } catch (idMeErr) {
+        console.log('⚠️ [LINKEDIN] Could not fetch profile via /rest/identityMe:', idMeErr.response?.data || idMeErr.message);
+        try {
+          console.log("🔍 [LINKEDIN] Fetching profile info via /v2/me...");
+          const profileRes = await axios.get('https://api.linkedin.com/v2/me', {
+            headers: { 'Authorization': `Bearer ${access_token}` }
+          });
+          linkedinId   = profileRes.data?.id || '';
+          const first  = profileRes.data?.localizedFirstName || '';
+          const last   = profileRes.data?.localizedLastName || '';
+          linkedinName = `${first} ${last}`.trim() || 'LinkedIn User';
+          console.log(`✅ [LINKEDIN] Profile fetched: ${linkedinName} (ID: ${linkedinId})`);
+        } catch (profileErr) {
+          console.log('⚠️ [LINKEDIN] Could not fetch profile via /v2/me, trying /v2/userinfo...', profileErr.message);
+          try {
+            const profileRes = await axios.get('https://api.linkedin.com/v2/userinfo', {
+              headers: { 'Authorization': `Bearer ${access_token}` }
+            });
+            linkedinId   = profileRes.data?.sub || '';
+            const first  = profileRes.data?.given_name || '';
+            const last   = profileRes.data?.family_name || '';
+            linkedinName = `${first} ${last}`.trim() || 'LinkedIn User';
+            console.log(`✅ [LINKEDIN] Profile fetched via /v2/userinfo: ${linkedinName} (ID: ${linkedinId})`);
+          } catch (uiErr) {
+            console.error('❌ [LINKEDIN] All profile fetch attempts failed:', uiErr.response?.data || uiErr.message);
+          }
+        }
+      }
+
+      // 3. Save to User Model
+      let targetUser = null;
+      if (userId) {
+        if (userId.includes('@')) {
+          targetUser = await User.findOne({ email: userId });
+        } else {
+          try { targetUser = await User.findById(userId); } catch (e) {}
+        }
+      }
+      if (!targetUser) {
+        targetUser = await User.findOne({});
+        console.log(`[LINKEDIN CALLBACK] Using fallback user: ${targetUser?.email}`);
+      }
+
+      if (targetUser) {
+        if (!targetUser.socialAccounts) targetUser.socialAccounts = {};
+        targetUser.socialAccounts.linkedin = {
+          accessToken: access_token,
+          linkedinId:  linkedinId,
+          linkedinName: linkedinName
+        };
+        targetUser.markModified('socialAccounts');
+        await targetUser.save();
+        console.log(`✅ [LINKEDIN] Saved credentials for ${targetUser.email}`);
+      }
+    } else if (platform === 'pinterest') {
+      const REDIRECT_URI = `https://localhost:5000/api/social/callback/pinterest`;
+      const pinterestClientId = process.env.PINTEREST_CLIENT_ID;
+      const pinterestClientSecret = process.env.PINTEREST_CLIENT_SECRET;
+
+      if (!pinterestClientId || !pinterestClientSecret) {
+        throw new Error('Pinterest Client ID/Secret not configured in .env');
+      }
+
+      // 1. Exchange code for access token using Basic Auth
+      const authStr = Buffer.from(`${pinterestClientId}:${pinterestClientSecret}`).toString('base64');
+      
+      const params = new URLSearchParams();
+      params.append('grant_type', 'authorization_code');
+      params.append('code', code);
+      params.append('redirect_uri', REDIRECT_URI);
+
+      const tokenRes = await axios.post(
+        'https://api.pinterest.com/v5/oauth/token',
+        params,
+        {
+          headers: {
+            'Authorization': `Basic ${authStr}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        }
+      );
+
+      const { access_token, refresh_token } = tokenRes.data;
+      console.log(`✅ [PINTEREST] Access token received.`);
+
+      // 2. Fetch Pinterest profile username
+      let username = 'Pinterest User';
+      try {
+        console.log("🔍 [PINTEREST] Fetching profile info via /v5/user_account...");
+        const profileRes = await axios.get('https://api.pinterest.com/v5/user_account', {
+          headers: { 'Authorization': `Bearer ${access_token}` }
+        });
+        username = profileRes.data?.username || 'Pinterest User';
+        console.log(`✅ [PINTEREST] Profile fetched: ${username}`);
+      } catch (profErr) {
+        console.error('❌ [PINTEREST] Profile fetch failed:', profErr.response?.data || profErr.message);
+      }
+
+      // 3. Save to User Model
+      let targetUser = null;
+      if (userId) {
+        if (userId.includes('@')) {
+          targetUser = await User.findOne({ email: userId });
+        } else {
+          try { targetUser = await User.findById(userId); } catch (e) {}
+        }
+      }
+      if (!targetUser) {
+        targetUser = await User.findOne({});
+      }
+
+      if (targetUser) {
+        if (!targetUser.socialAccounts) targetUser.socialAccounts = {};
+        targetUser.socialAccounts.pinterest = {
+          accessToken: access_token,
+          refreshToken: refresh_token,
+          username: username
+        };
+        targetUser.markModified('socialAccounts');
+        await targetUser.save();
+        console.log(`✅ [PINTEREST] Saved credentials for ${targetUser.email}`);
+      }
     }
 
     res.redirect(`http://localhost:3000/social?success=true&platform=${platform}`);
@@ -368,11 +543,14 @@ exports.getSocialAccounts = async (req, res) => {
       twitter: !!user.socialAccounts?.twitter?.accessToken,
       linkedin: !!user.socialAccounts?.linkedin?.accessToken,
       youtube: !!user.socialAccounts?.youtube?.accessToken,
+      pinterest: !!user.socialAccounts?.pinterest?.accessToken || !!process.env.PINTEREST_PERSONAL_ACCESS_TOKEN,
       handles: {
         facebook: user.socialAccounts?.facebook?.pageId ? "Connected Page" : null,
         instagram: user.socialAccounts?.instagram?.username ? `@${user.socialAccounts.instagram.username}` : null,
         twitter: user.socialAccounts?.twitter?.username ? `@${user.socialAccounts.twitter.username}` : null,
         youtube: user.socialAccounts?.youtube?.channelTitle ? user.socialAccounts.youtube.channelTitle : null,
+        linkedin: user.socialAccounts?.linkedin?.linkedinName ? user.socialAccounts.linkedin.linkedinName : null,
+        pinterest: user.socialAccounts?.pinterest?.username ? `@${user.socialAccounts.pinterest.username}` : (process.env.PINTEREST_PERSONAL_ACCESS_TOKEN ? "Developer Account" : null),
       }
     };
 

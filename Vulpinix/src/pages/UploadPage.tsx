@@ -105,7 +105,7 @@ export default function UploadPage() {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis>({
     caption: "",
     hashtags: [],
-    platforms: ["Instagram", "LinkedIn", "Facebook"],
+    platforms: ["Instagram", "LinkedIn", "Facebook", "Pinterest"],
   });
 
   const [platforms, setPlatforms] = useState<Platform[]>([
@@ -114,6 +114,7 @@ export default function UploadPage() {
     { id: "youtube",   name: "YouTube",   enabled: false, recommendedTime: "3:00 PM", color: "#ff0000",                                             symbol: "YT" },
     { id: "linkedin",  name: "LinkedIn",  enabled: true,  recommendedTime: "8:00 AM", color: "#0077b5",                                             symbol: "in" },
     { id: "twitter",   name: "X",         enabled: false, recommendedTime: "12:00 PM",color: "#1d9bf0",                                             symbol: "𝕏"  },
+    { id: "pinterest", name: "Pinterest", enabled: false, recommendedTime: "2:00 PM", color: "#e60023",                                             symbol: "P"  },
   ]);
 
   // ── Reach counter ─────────────────────────────────────────────────────────

@@ -4,9 +4,10 @@ import { CheckCircle2, Bell, Clock, Mail, ChevronRight, Zap } from "lucide-react
 interface PaymentSuccessModalProps {
   isOpen: boolean;
   onConfirm: () => void;
+  publishResults?: Record<string, { status: string; error?: string; id?: string }>;
 }
 
-export default function PaymentSuccessModal({ isOpen, onConfirm }: PaymentSuccessModalProps) {
+export default function PaymentSuccessModal({ isOpen, onConfirm, publishResults }: PaymentSuccessModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -97,9 +98,50 @@ export default function PaymentSuccessModal({ isOpen, onConfirm }: PaymentSucces
                   Submission Received
                 </h2>
                 <p style={{ fontSize: "15px", color: "var(--vx-text-secondary)", lineHeight: 1.6, margin: 0 }}>
-                  Your campaign content has been successfully submitted and is now in our priority review queue.
+                  Your campaign content has been successfully submitted and processed.
                 </p>
               </div>
+
+              {/* Publish Results Panel */}
+              {publishResults && Object.keys(publishResults).length > 0 && (
+                <div style={{
+                  marginBottom: "28px",
+                  padding: "20px",
+                  background: "rgba(255, 255, 255, 0.02)",
+                  border: "1px solid var(--vx-border)",
+                  borderRadius: "20px",
+                  textAlign: "left"
+                }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--vx-text-muted)", marginBottom: "12px" }}>
+                    Instant Publishing Status
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {Object.entries(publishResults).map(([platform, res]) => (
+                      <div key={platform} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: "13px", fontWeight: 600, textTransform: "capitalize", color: "var(--vx-text-primary)" }}>
+                            {platform}
+                          </span>
+                          {res.status === "success" ? (
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
+                              ● Published
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: "#ef4444", display: "flex", alignItems: "center", gap: 4 }}>
+                              ● Failed
+                            </span>
+                          )}
+                        </div>
+                        {res.status !== "success" && res.error && (
+                          <div style={{ fontSize: "11px", color: "rgba(239, 68, 68, 0.85)", lineHeight: 1.4, paddingLeft: "8px", borderLeft: "2px solid #ef4444", whiteSpace: "pre-line" }}>
+                            {res.error}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Step Indicators (Bento Style) */}
               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 40 }}>

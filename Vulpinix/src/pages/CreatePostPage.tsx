@@ -17,6 +17,11 @@ const PLATFORMS = [
   { id: "twitter",   label: "X / Twitter", icon: <Twitter size={16} />, color: "#1DA1F2" },
   { id: "linkedin",  label: "LinkedIn",  icon: <Linkedin  size={16} />, color: "#0A66C2" },
   { id: "youtube",   label: "YouTube",   icon: <Youtube   size={16} />, color: "#FF0000" },
+  { id: "pinterest", label: "Pinterest", icon: (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.965 1.406-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146 1.124.347 2.317.535 3.554.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z"/>
+    </svg>
+  ), color: "#BD081C" },
 ];
 
 const PRIVACY_OPTIONS = [
@@ -105,6 +110,7 @@ export default function CreatePostPage() {
   const [scheduleTime, setScheduleTime] = useState("");
   const [posting, setPosting] = useState(false);
   const [posted, setPosted] = useState(false);
+  const [publishResults, setPublishResults] = useState<Record<string, { status: string; error?: string; id?: string }>>({});
 
   const [linkedAccounts, setLinkedAccounts] = useState<string[]>([]);
 
@@ -199,6 +205,9 @@ export default function CreatePostPage() {
         // Store the auth token so the dashboard can fetch this campaign
         if (data.token && !authToken) {
           localStorage.setItem("authToken", data.token);
+        }
+        if (data.publishResults) {
+          setPublishResults(data.publishResults);
         }
       } else {
         console.error("Failed to post:", data.message);
@@ -412,13 +421,76 @@ export default function CreatePostPage() {
         {/* Success overlay */}
         {posted && (
           <div className="vxcp-success" onClick={() => { setPosted(false); navigate("/dashboard"); }}>
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="vxcp-success-card">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              className="vxcp-success-card"
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: 440, width: "100%", boxSizing: "border-box" }}
+            >
               <CheckCircle2 size={56} color="#22c55e" style={{ margin: "0 auto 20px" }} />
-              <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Post Published! 🎉</div>
+              <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Post Processed! 🎉</div>
               <div style={{ color: "var(--vx-text-muted)", fontSize: 14, marginBottom: 24 }}>
-                Your post has been published to {selectedPlatforms.length} platform{selectedPlatforms.length > 1 ? "s" : ""}.
+                Your post has been submitted and processed.
               </div>
-              <div style={{ fontSize: 13, color: "var(--vx-text-muted)" }}>Tap anywhere to go back to Dashboard</div>
+
+              {/* Publish Results Panel */}
+              {publishResults && Object.keys(publishResults).length > 0 && (
+                <div style={{
+                  marginBottom: "24px",
+                  padding: "16px",
+                  background: "rgba(255, 255, 255, 0.02)",
+                  border: "1px solid var(--vx-border)",
+                  borderRadius: "16px",
+                  textAlign: "left"
+                }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--vx-text-muted)", marginBottom: "12px" }}>
+                    Instant Publishing Status
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {Object.entries(publishResults).map(([platform, res]) => (
+                      <div key={platform} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: "13px", fontWeight: 600, textTransform: "capitalize", color: "var(--vx-text-primary)" }}>
+                            {platform}
+                          </span>
+                          {res.status === "success" ? (
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
+                              ✓ Success
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: "#ef4444", display: "flex", alignItems: "center", gap: 4 }}>
+                              ✗ Failed
+                            </span>
+                          )}
+                        </div>
+                        {res.status !== "success" && res.error && (
+                          <div style={{ fontSize: "11px", color: "rgba(239, 68, 68, 0.85)", lineHeight: 1.4, paddingLeft: "8px", borderLeft: "2px solid #ef4444" }}>
+                            {res.error}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button 
+                onClick={() => { setPosted(false); navigate("/dashboard"); }}
+                style={{
+                  width: "100%",
+                  padding: "14px",
+                  borderRadius: "12px",
+                  background: "var(--vx-text-primary)",
+                  color: "var(--vx-bg-primary)",
+                  border: "none",
+                  fontWeight: 700,
+                  fontSize: "14px",
+                  cursor: "pointer"
+                }}
+              >
+                Go to Dashboard
+              </button>
             </motion.div>
           </div>
         )}

@@ -23,6 +23,7 @@ export default function PaymentPage() {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [publishResults, setPublishResults] = useState<Record<string, { status: string; error?: string; id?: string }> | undefined>(undefined);
 
   // OTP state
   const [showOtpInput, setShowOtpInput] = useState(false);
@@ -127,6 +128,9 @@ export default function PaymentPage() {
 
       if (data.success) {
         setIsProcessing(false);
+        if (data.publishResults) {
+          setPublishResults(data.publishResults);
+        }
         setShowSuccessModal(true);
         
         // Also keep a local copy for immediate feedback if needed, 
@@ -210,6 +214,7 @@ export default function PaymentPage() {
       <PaymentSuccessModal
         isOpen={showSuccessModal}
         onConfirm={() => navigate("/dashboard/campaigns")}
+        publishResults={publishResults}
       />
 
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
