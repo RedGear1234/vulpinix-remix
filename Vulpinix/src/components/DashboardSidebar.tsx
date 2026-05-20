@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard, BarChart3, Upload, User,
   ChevronLeft, ChevronRight, LogOut,
-  Sparkles, Share2
+  Sparkles, Share2, Settings
 } from "lucide-react";
 import { VulpinixLogo } from "./VulpinixLogo";
 
@@ -120,6 +120,7 @@ const NAV_ITEMS = [
   { label: "My Profile",      icon: <User size={18} />,            path: "/profile" },
   { label: "My Analytics",    icon: <BarChart3 size={18} />,       path: "/dashboard/campaigns" },
   { label: "Social Accounts", icon: <Share2 size={18} />,          path: "/social" },
+  { label: "Settings",        icon: <Settings size={18} />,        path: "/settings" },
 ];
 
 interface Props {
