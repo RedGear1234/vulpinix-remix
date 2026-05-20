@@ -115,7 +115,7 @@ export default function CreateAdPage() {
     
     const totalAmount = budgetType === "daily" ? budget * campaignDuration : budget;
     const savedCreative = localStorage.getItem("adCreativeData");
-    let platforms = ["Instagram", "Facebook", "YouTube"];
+    let platforms = ["Instagram", "Facebook", "YouTube", "Pinterest"];
     if (savedCreative) {
       try {
         const creativeData = JSON.parse(savedCreative);

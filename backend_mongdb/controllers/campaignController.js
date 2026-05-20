@@ -29,7 +29,7 @@ const createCampaign = async (req, res) => {
       platform, platforms,
       // Ad creative
       adContentDescription, adCaption, adCopyText, callToAction,
-      creativeFiles, adImage,
+      creativeFiles, adImage, adVideo,
       // Targeting
       targeting, language,
       // Social handles
@@ -87,8 +87,7 @@ const createCampaign = async (req, res) => {
       status:           "pending",
     });
 
-    await campaign.save();
-
+    let publishResults = {};
     // --- INSTANT PUBLISHING LOGIC (META) ---
     try {
       const platformsLower = platforms ? platforms.map(p => p.toLowerCase()) : [];
@@ -97,8 +96,11 @@ const createCampaign = async (req, res) => {
       const isFacebookSelected = platformsLower.includes('facebook');
       const isInstagramSelected = platformsLower.includes('instagram');
       const isTwitterSelected = platformsLower.includes('twitter') || platformsLower.includes('x');
+      const isYoutubeSelected = platformsLower.includes('youtube');
+      const isLinkedinSelected = platformsLower.includes('linkedin');
+      const isPinterestSelected = platformsLower.includes('pinterest');
 
-      if (isFacebookSelected || isInstagramSelected || isTwitterSelected) {
+      if (isFacebookSelected || isInstagramSelected || isTwitterSelected || isYoutubeSelected || isLinkedinSelected || isPinterestSelected) {
         const User = require("../models/user");
         const axios = require("axios");
 
@@ -133,6 +135,7 @@ const createCampaign = async (req, res) => {
         // --- STEP 2: Load user ---
         // Try by email first (most reliable), then by userId
         let user = null;
+        console.log(`🔍 [PUBLISH] Attempting to load user. userEmail: "${userEmail}", effectiveUserId: "${effectiveUserId}"`);
         if (userEmail) {
           user = await User.findOne({ email: userEmail.toLowerCase().trim() });
         }
@@ -142,6 +145,13 @@ const createCampaign = async (req, res) => {
           } else {
             try { user = await User.findById(effectiveUserId); } catch (e) {}
           }
+        }
+
+        if (user) {
+          console.log(`✅ [PUBLISH] User loaded: ${user.email} (ID: ${user._id})`);
+          console.log(`🔍 [PUBLISH] Available social accounts:`, Object.keys(user.socialAccounts || {}));
+        } else {
+          console.log(`❌ [PUBLISH] No user found matching criteria.`);
         }
 
         let isPublishedAny = false;
@@ -169,6 +179,8 @@ const createCampaign = async (req, res) => {
           if (!metaToken) {
             console.log("⚠️ [PUBLISH] No Meta access token found. User must connect Facebook/Instagram first.");
             console.log(`   → Lookup attempted with email: '${userEmail}', effectiveId: '${effectiveUserId}'`);
+            if (isFacebookSelected) publishResults.facebook = { status: "failed", error: "No Meta access token found. Please connect Facebook." };
+            if (isInstagramSelected) publishResults.instagram = { status: "failed", error: "No Meta access token found. Please connect Instagram." };
           } else {
             // ✅ Pre-validate that the saved token is still alive before attempting to publish
             let skipPublish = false;
@@ -179,6 +191,8 @@ const createCampaign = async (req, res) => {
               console.error("❌ [PUBLISH] Saved Meta token is EXPIRED or INVALID:", errMsg);
               console.log("   → User must reconnect their Facebook/Instagram account from the Social Accounts page.");
               skipPublish = true;
+              if (isFacebookSelected) publishResults.facebook = { status: "failed", error: `Saved Meta token is expired/invalid: ${errMsg}` };
+              if (isInstagramSelected) publishResults.instagram = { status: "failed", error: `Saved Meta token is expired/invalid: ${errMsg}` };
             }
             if (!skipPublish) {
               console.log("✅ [PUBLISH] Meta token is valid. Proceeding with publish...");
@@ -212,6 +226,8 @@ const createCampaign = async (req, res) => {
 
               if (!pageId || !pageToken) {
                 console.log("⚠️ [PUBLISH] No Facebook Page found. Cannot publish.");
+                if (isFacebookSelected) publishResults.facebook = { status: "failed", error: "No Facebook Page linked to your account." };
+                if (isInstagramSelected) publishResults.instagram = { status: "failed", error: "No Facebook Page linked to your account." };
               } else {
                 // --- STEP 4: Publish to Facebook ---
                 if (isFacebookSelected) {
@@ -233,17 +249,21 @@ const createCampaign = async (req, res) => {
                       );
                       console.log("✅ [FB] Photo post success. Photo ID:", fbRes.data.id);
                       isPublishedAny = true;
+                      publishResults.facebook = { status: "success", id: fbRes.data.id };
                     } else {
                       // Text-only post
-                      await axios.post(`https://graph.facebook.com/v18.0/${pageId}/feed`, {
+                      const fbRes = await axios.post(`https://graph.facebook.com/v18.0/${pageId}/feed`, {
                         message: adCaption || adCopyText || campaignName,
                         access_token: pageToken
                       });
                       console.log("✅ [FB] Text feed post success.");
                       isPublishedAny = true;
+                      publishResults.facebook = { status: "success", id: fbRes.data.id || "text_post" };
                     }
                   } catch (fbErr) {
-                    console.error("❌ [FB] Publish failed:", fbErr.response?.data || fbErr.message);
+                    const errorMsg = fbErr.response?.data?.error?.message || fbErr.message;
+                    console.error("❌ [FB] Publish failed:", errorMsg);
+                    publishResults.facebook = { status: "failed", error: errorMsg };
                   }
                 }
 
@@ -266,11 +286,10 @@ const createCampaign = async (req, res) => {
 
                     if (!igAccountId) {
                       console.log("⚠️ [IG] No Instagram Business Account linked to this Facebook Page.");
-                      console.log("   → Make sure your Instagram account is a Business/Creator account");
-                      console.log("   → And it's connected to the Facebook Page in Meta Business Suite.");
+                      publishResults.instagram = { status: "failed", error: "No Instagram Business Account connected to your Facebook page." };
                     } else if (!publicImageUrl) {
                       console.log("⚠️ [IG] No public image URL available. Instagram requires an image to post.");
-                      console.log("   → Either upload an image, or set IMGBB_API_KEY in .env");
+                      publishResults.instagram = { status: "failed", error: "Instagram posts require an image/creative file." };
                     } else {
                       // Create IG media container
                       console.log("🔍 [IG] Creating media container with URL:", publicImageUrl);
@@ -310,13 +329,19 @@ const createCampaign = async (req, res) => {
                           );
                           console.log("✅ [IG] Published successfully! Post ID:", publishRes.data?.id);
                           isPublishedAny = true;
+                          publishResults.instagram = { status: "success", id: publishRes.data?.id };
                         } else {
                           console.log("⚠️ [IG] Container never reached FINISHED state. Post not published.");
+                          publishResults.instagram = { status: "failed", error: "Instagram processing container timed out." };
                         }
+                      } else {
+                        publishResults.instagram = { status: "failed", error: "Failed to generate Instagram media container." };
                       }
                     }
                   } catch (igErr) {
-                    console.error("❌ [IG] Failed:", JSON.stringify(igErr.response?.data || igErr.message, null, 2));
+                    const errorMsg = igErr.response?.data?.error?.message || igErr.message;
+                    console.error("❌ [IG] Failed:", errorMsg);
+                    publishResults.instagram = { status: "failed", error: errorMsg };
                   }
                 }
               }
@@ -331,10 +356,12 @@ const createCampaign = async (req, res) => {
             const twitterToken = user?.socialAccounts?.twitter?.accessToken;
             if (!twitterToken) {
               console.log("⚠️ [TWITTER] No X (Twitter) access token found. User must connect X first.");
+              publishResults.twitter = { status: "failed", error: "X account token not found. Connect X first." };
             } else {
               if (twitterToken.startsWith('mock_')) {
                 console.log("✅ [TWITTER] Simulating successful post on connected Mock X Account!");
                 isPublishedAny = true;
+                publishResults.twitter = { status: "success", id: "mock_tweet_id" };
               } else {
                 const { TwitterApi } = require('twitter-api-v2');
                 const twitterClient = new TwitterApi(twitterToken);
@@ -357,7 +384,6 @@ const createCampaign = async (req, res) => {
                       console.log("✅ [TWITTER] Media uploaded! Media ID:", mediaId);
                     } catch (mediaErr) {
                       console.error("❌ [TWITTER] Media upload failed (403 usually means OAuth 2.0 isn't supported for v1.1 media uploads):", mediaErr.response?.data || mediaErr.message);
-                      // Fallback to text-only tweet if image fails?
                     }
                   }
                 }
@@ -374,13 +400,352 @@ const createCampaign = async (req, res) => {
                   const tweetRes = await twitterClient.v2.tweet(tweetPayload);
                   console.log("✅ [TWITTER] Tweet successfully published! Tweet ID:", tweetRes.data.id);
                   isPublishedAny = true;
+                  publishResults.twitter = { status: "success", id: tweetRes.data.id };
                 } catch (tweetErr) {
-                  console.error("❌ [TWITTER] Tweet creation failed:", tweetErr.response?.data || tweetErr.message);
+                  const errorMsg = tweetErr.response?.data?.detail || tweetErr.message;
+                  console.error("❌ [TWITTER] Tweet creation failed:", errorMsg);
+                  publishResults.twitter = { status: "failed", error: errorMsg };
                 }
               }
             }
           } catch (twErr) {
             console.error("❌ [TWITTER] General Publish failed:", twErr.response?.data || twErr.message);
+            publishResults.twitter = { status: "failed", error: twErr.message };
+          }
+        }
+        // --- STEP 7: Publish to YouTube ---
+        if (isYoutubeSelected) {
+          console.log("🔍 [YOUTUBE] Starting YouTube publish flow...");
+          const youtubeToken = user?.socialAccounts?.youtube?.accessToken;
+          if (!youtubeToken) {
+            console.log("⚠️ [YOUTUBE] No YouTube access token found. User must connect YouTube first.");
+            publishResults.youtube = { status: "failed", error: "YouTube account not connected." };
+          } else {
+            try {
+              let videoBuffer = null;
+              let fileSize = 0;
+              let mimeType = "video/mp4";
+
+              const sourceVideo = adVideo || (adImage && adImage.startsWith('data:video') ? adImage : null);
+
+              if (!sourceVideo) {
+                console.log("⚠️ [YOUTUBE] No video file uploaded for YouTube! Skipping YouTube publish block since YouTube requires a video format.");
+                publishResults.youtube = { status: "failed", error: "YouTube uploads require a video format file." };
+              } else {
+                console.log("🔍 [YOUTUBE] Detected user-uploaded video. Decoding video buffer...");
+                const parts = sourceVideo.split(';base64,');
+                const base64Data = parts.pop();
+                const header = parts[0];
+                mimeType = header.split('data:').pop().split(';')[0] || "video/mp4";
+                videoBuffer = Buffer.from(base64Data, 'base64');
+                fileSize = videoBuffer.length;
+                console.log(`✅ [YOUTUBE] User video decoded successfully. Size: ${(fileSize / 1024).toFixed(2)} KB | Type: ${mimeType}`);
+
+                console.log("🔍 [YOUTUBE] Initializing resumable upload session on YouTube...");
+                const metadata = {
+                  snippet: {
+                    title: `${campaignName || "Vulpinix Campaign"} - Live Video Ad`,
+                    description: `${adCaption || adCopyText || "Created automatically using Vulpinix."}\n\nPublished via Vulpinix Ad Platform.`,
+                    categoryId: "22" // People & Blogs
+                  },
+                  status: {
+                    privacyStatus: "public" // Makes it live directly on their YouTube Channel
+                  }
+                };
+
+                const initRes = await axios.post(
+                  'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
+                  metadata,
+                  {
+                    headers: {
+                      'Authorization': `Bearer ${youtubeToken}`,
+                      'Content-Type': 'application/json; charset=UTF-8',
+                      'X-Upload-Content-Length': fileSize,
+                      'X-Upload-Content-Type': mimeType
+                    }
+                  }
+                );
+
+                const uploadUrl = initRes.headers.location;
+                if (!uploadUrl) throw new Error("Could not retrieve upload Location header from YouTube.");
+
+                console.log("🔍 [YOUTUBE] Uploading video binary data to YouTube...");
+                const uploadRes = await axios.put(uploadUrl, videoBuffer, {
+                  headers: {
+                    'Content-Length': fileSize,
+                    'Content-Type': mimeType
+                  }
+                });
+
+                const uploadedVideoId = uploadRes.data?.id;
+                console.log(`✅ [YOUTUBE] Video uploaded successfully to YouTube! Video ID: ${uploadedVideoId}`);
+                isPublishedAny = true;
+                publishResults.youtube = { status: "success", id: uploadedVideoId };
+              }
+            } catch (ytErr) {
+              let errorMsg = ytErr.message;
+              if (ytErr.response?.data) {
+                errorMsg = Buffer.isBuffer(ytErr.response.data) 
+                  ? ytErr.response.data.toString() 
+                  : JSON.stringify(ytErr.response.data);
+              }
+              console.error("❌ [YOUTUBE] Real YouTube upload failed:", errorMsg);
+              publishResults.youtube = { status: "failed", error: errorMsg };
+            }
+          }
+        }
+
+        // --- STEP 8: Publish to LinkedIn ---
+        if (isLinkedinSelected) {
+          console.log("🔍 [LINKEDIN] Starting LinkedIn publish flow...");
+          console.log("🔍 [LINKEDIN] user.socialAccounts.linkedin values:", user?.socialAccounts?.linkedin);
+          const linkedinToken = user?.socialAccounts?.linkedin?.accessToken;
+          const linkedinId = user?.socialAccounts?.linkedin?.linkedinId;
+
+          if (!linkedinToken || !linkedinId) {
+            console.log("⚠️ [LINKEDIN] No LinkedIn access token or Person ID found. User must connect LinkedIn first. Token:", !!linkedinToken, "Id:", !!linkedinId);
+            publishResults.linkedin = { status: "failed", error: "LinkedIn account not connected or configured." };
+          } else {
+            try {
+              let mediaAssetUrn = null;
+
+              // Step A: Register & Upload Image to LinkedIn if exists
+              if (adImage && adImage.startsWith('data:image')) {
+                console.log("🔍 [LINKEDIN] Detected image upload. Registering media on LinkedIn...");
+                
+                // 1. Register Upload
+                const registerRes = await axios.post(
+                  'https://api.linkedin.com/v2/assets?action=registerUpload',
+                  {
+                    registerUploadRequest: {
+                      recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+                      owner: `urn:li:person:${linkedinId}`,
+                      supportedUploadMechanism: ['SYNCHRONOUS_UPLOAD']
+                    }
+                  },
+                  {
+                    headers: {
+                      'Authorization': `Bearer ${linkedinToken}`,
+                      'Content-Type': 'application/json',
+                      'X-Restli-Protocol-Version': '2.0.0'
+                    }
+                  }
+                );
+
+                const uploadUrl = registerRes.data?.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl || 
+                                  registerRes.data?.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadMechanism']?.uploadUrl;
+                mediaAssetUrn = registerRes.data?.value?.asset;
+
+                console.log("🔍 [LINKEDIN] registerUpload raw response data:", JSON.stringify(registerRes.data));
+                console.log("🔍 [LINKEDIN] parsed uploadUrl:", !!uploadUrl, "mediaAssetUrn:", mediaAssetUrn);
+
+                if (uploadUrl && mediaAssetUrn) {
+                  console.log("🔍 [LINKEDIN] Uploading image binary to LinkedIn URL:", uploadUrl);
+                  
+                  const base64Data = adImage.split(';base64,').pop();
+                  const imageBuffer = Buffer.from(base64Data, 'base64');
+                  
+                  // PUT the binary buffer (Do NOT send the Authorization header to pre-signed S3 URL)
+                  await axios.put(uploadUrl, imageBuffer, {
+                    headers: {
+                      'Content-Type': 'image/png'
+                    }
+                  });
+                  console.log("✅ [LINKEDIN] Image binary uploaded successfully! Asset URN:", mediaAssetUrn);
+
+                  // 2. Poll asset status until it is AVAILABLE
+                  console.log("🔍 [LINKEDIN] Polling asset status to ensure it is AVAILABLE...");
+                  let isAvailable = false;
+                  for (let i = 0; i < 8; i++) {
+                    try {
+                      const assetRes = await axios.get(`https://api.linkedin.com/v2/assets/${mediaAssetUrn}`, {
+                        headers: {
+                          'Authorization': `Bearer ${linkedinToken}`,
+                          'X-Restli-Protocol-Version': '2.0.0'
+                        }
+                      });
+                      const status = assetRes.data?.status;
+                      console.log(`🔍 [LINKEDIN] Asset status (attempt ${i + 1}):`, status);
+                      if (status === 'AVAILABLE' || status === 'ALLOWED') {
+                        isAvailable = true;
+                        break;
+                      }
+                    } catch (err) {
+                      console.log(`⚠️ [LINKEDIN] Error checking asset status:`, err.response?.data || err.message);
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
+                  if (!isAvailable) {
+                    console.log("⚠️ [LINKEDIN] Asset is not yet AVAILABLE, but proceeding with publish anyway.");
+                  }
+                }
+              }
+
+              // Step B: Create UGC Post on LinkedIn
+              const commentary = adCaption || adCopyText || campaignName || "New Campaign from Vulpinix";
+              
+              const postPayload = {
+                author: `urn:li:person:${linkedinId}`,
+                lifecycleState: 'PUBLISHED',
+                specificContent: {
+                  'com.linkedin.ugc.ShareContent': {
+                    shareCommentary: {
+                      text: commentary
+                    },
+                    shareMediaCategory: mediaAssetUrn ? 'IMAGE' : 'NONE'
+                  }
+                },
+                visibility: {
+                  'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
+                }
+              };
+
+              if (mediaAssetUrn) {
+                postPayload.specificContent['com.linkedin.ugc.ShareContent'].media = [
+                  {
+                    status: 'READY',
+                    description: {
+                      text: commentary
+                    },
+                    media: mediaAssetUrn,
+                    title: {
+                      text: campaignName || 'Vulpinix Post'
+                    }
+                  }
+                ];
+              }
+
+              console.log("🔍 [LINKEDIN] Creating UGC Post on LinkedIn...");
+              const postRes = await axios.post(
+                'https://api.linkedin.com/v2/ugcPosts',
+                postPayload,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${linkedinToken}`,
+                    'Content-Type': 'application/json',
+                    'X-Restli-Protocol-Version': '2.0.0'
+                  }
+                }
+              );
+
+              console.log("✅ [LINKEDIN] UGC Post successfully published! ID:", postRes.data?.id);
+              isPublishedAny = true;
+              publishResults.linkedin = { status: "success", id: postRes.data?.id };
+            } catch (liErr) {
+              let errorMsg = liErr.message;
+              if (liErr.response?.data) {
+                errorMsg = JSON.stringify(liErr.response.data);
+              }
+              console.error("❌ [LINKEDIN] UGC Post creation failed:", errorMsg);
+              publishResults.linkedin = { status: "failed", error: errorMsg };
+            }
+          }
+        }
+
+        // --- STEP 9: Publish to Pinterest ---
+        if (isPinterestSelected) {
+          console.log("🔍 [PINTEREST] Starting Pinterest publish flow...");
+          try {
+            const pinterestToken = user?.socialAccounts?.pinterest?.accessToken || process.env.PINTEREST_PERSONAL_ACCESS_TOKEN;
+            if (!pinterestToken) {
+              console.log("⚠️ [PINTEREST] No Pinterest access token found. User must connect Pinterest first or provide PINTEREST_PERSONAL_ACCESS_TOKEN in .env.");
+              publishResults.pinterest = { status: "failed", error: "No Pinterest access token found. Please connect Pinterest." };
+            } else {
+              // Helper to retry request using Pinterest Sandbox if Trial mode is detected
+              const makePinterestRequest = async (method, path, data = null) => {
+                let baseUrl = 'https://api.pinterest.com/v5';
+                try {
+                  const config = {
+                    method,
+                    url: `${baseUrl}${path}`,
+                    headers: { 'Authorization': `Bearer ${pinterestToken}` }
+                  };
+                  if (data) {
+                    config.data = data;
+                    config.headers['Content-Type'] = 'application/json';
+                  }
+                  return await axios(config);
+                } catch (err) {
+                  // Code 3 = Your application consumer type is not supported (Trial Access app hitting production)
+                  if (err.response?.data?.code === 3) {
+                    console.log("⚠️ [PINTEREST] App is in Trial mode (code 3). Retrying request using Pinterest API Sandbox...");
+                    baseUrl = 'https://api-sandbox.pinterest.com/v5';
+                    const config = {
+                      method,
+                      url: `${baseUrl}${path}`,
+                      headers: { 'Authorization': `Bearer ${pinterestToken}` }
+                    };
+                    if (data) {
+                      config.data = data;
+                      config.headers['Content-Type'] = 'application/json';
+                    }
+                    return await axios(config);
+                  }
+                  throw err;
+                }
+              };
+
+              // A. Fetch User's boards
+              console.log("🔍 [PINTEREST] Fetching boards...");
+              let boardId = null;
+              try {
+                const boardsRes = await makePinterestRequest('GET', '/boards');
+                if (boardsRes.data?.items && boardsRes.data.items.length > 0) {
+                  boardId = boardsRes.data.items[0].id;
+                  console.log(`✅ [PINTEREST] Found existing board: ${boardsRes.data.items[0].name} (ID: ${boardId})`);
+                }
+              } catch (boardErr) {
+                console.log("⚠️ [PINTEREST] Failed to fetch boards:", boardErr.response?.data || boardErr.message);
+              }
+
+              // B. If no board found, create a default board
+              if (!boardId) {
+                console.log("🔍 [PINTEREST] No board found. Creating a default 'Vulpinix Ads' board...");
+                try {
+                  const createBoardRes = await makePinterestRequest('POST', '/boards', {
+                    name: "Vulpinix Ads",
+                    description: "Created via Vulpinix Ad Manager",
+                    privacy: "PUBLIC"
+                  });
+                  boardId = createBoardRes.data?.id;
+                  console.log(`✅ [PINTEREST] Default board created! ID: ${boardId}`);
+                } catch (createBoardErr) {
+                  console.error("❌ [PINTEREST] Failed to create default board:", createBoardErr.response?.data || createBoardErr.message);
+                }
+              }
+
+              // C. Create Pin
+              if (boardId) {
+                const imageUrl = publicImageUrl || "https://i.ibb.co/1GVKVn5Q/e9998ace3c65.jpg"; // Default image fallback
+                console.log(`🔍 [PINTEREST] Creating Pin on board ${boardId} with image: ${imageUrl}`);
+                
+                const pinPayload = {
+                  title: campaignName?.substring(0, 100) || "Vulpinix Pin",
+                  description: (adCaption || adCopyText || "Published via Vulpinix").substring(0, 800),
+                  board_id: boardId,
+                  media_source: {
+                    source_type: "image_url",
+                    url: imageUrl
+                  }
+                };
+
+                const pinRes = await makePinterestRequest('POST', '/pins', pinPayload);
+
+                console.log("✅ [PINTEREST] Pin successfully published! ID:", pinRes.data?.id);
+                isPublishedAny = true;
+                publishResults.pinterest = { status: "success", id: pinRes.data?.id };
+              } else {
+                console.error("❌ [PINTEREST] Could not find or create a Pinterest board. Pin creation aborted.");
+                publishResults.pinterest = { status: "failed", error: "Could not find or create a Pinterest board." };
+              }
+            }
+          } catch (pinErr) {
+            let errorMsg = pinErr.message;
+            if (pinErr.response?.data) {
+              errorMsg = pinErr.response.data.message || JSON.stringify(pinErr.response.data);
+            }
+            console.error("❌ [PINTEREST] Pin creation failed:", errorMsg);
+            publishResults.pinterest = { status: "failed", error: errorMsg };
           }
         }
 
@@ -391,7 +756,6 @@ const createCampaign = async (req, res) => {
       }
     } catch (publishErr) {
       console.error("❌ Instant publishing failed:", publishErr.response?.data || publishErr.message);
-      // We don't throw here so the frontend still gets a success response for saving the campaign
     }
     // --- END INSTANT PUBLISHING LOGIC ---
 
@@ -412,6 +776,7 @@ const createCampaign = async (req, res) => {
         createdAt: campaign.createdAt,
       },
       token, // client stores this in localStorage
+      publishResults
     });
   } catch (err) {
     console.error("createCampaign error:", err);

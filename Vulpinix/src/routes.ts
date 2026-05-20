@@ -21,6 +21,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import CreatePostPage from "./pages/CreatePostPage";
 import SocialAccountsPage from "./pages/SocialAccountsPage";
 import OnboardingPage from "./pages/OnboardingPage";
+import SettingsPage from "./pages/SettingsPage";
 
 export const router = createBrowserRouter([
   {
@@ -110,6 +111,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard/campaigns/:id/analytics",
         Component: CampaignAnalyticsPage,
+      },
+      {
+        path: "settings",
+        Component: SettingsPage,
       },
       {
         path: "admin",
