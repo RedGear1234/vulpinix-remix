@@ -120,7 +120,8 @@ export default function ProfilePage(){
           status:c.status==="pending"||c.status==="in_review"?"review":c.status==="approved"||c.status==="running"?"active":c.status==="completed"?"completed":c.status==="rejected"?"rejected":"paused",
           createdAt:c.dateSubmitted,
           reach:c.analytics?.reach?.toLocaleString()||"0",clicks:c.analytics?.clicks?.toLocaleString()||"0",
-          impressions:c.analytics?.impressions?.toLocaleString()||"0",spent:`?${c.analytics?.adSpend?.toLocaleString()||"0"}`,
+          impressions:c.analytics?.impressions?.toLocaleString()||"0",
+          spent:c.analytics?.adSpend?`$${c.analytics.adSpend.toLocaleString()}`:`$${(parseFloat(String(c.budget||"0").replace(/[^0-9.-]+/g,""))||0).toLocaleString()}`,
         }));
         setAdsInReview(norm.filter(a=>a.status==="review"));
         setPreviousAds(norm.filter(a=>a.status!=="review"));

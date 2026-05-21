@@ -12,13 +12,13 @@ import {
   DollarSign,
   TrendingUp,
   BarChart3,
-
   Instagram,
   Facebook,
   Youtube,
   Twitter,
   Linkedin,
   Globe,
+  Clock,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 
@@ -41,31 +41,20 @@ interface Campaign {
   };
 }
 
-// Default demo analytics when real data is zero / not set
-const DEMO_ANALYTICS = {
-  impressions: 124500,
-  reach: 98200,
-  clicks: 3120,
-  ctr: 2.51,
-  conversions: 412,
-  adSpend: 5000,
-  roas: 3.82,
-};
-
 const getPlatformIcon = (platform: string) => {
   switch (platform.toLowerCase()) {
     case "instagram": return <Instagram className="w-4 h-4" />;
-    case "facebook": return <Facebook className="w-4 h-4" />;
-    case "youtube": return <Youtube className="w-4 h-4" />;
-    case "twitter": return <Twitter className="w-4 h-4" />;
-    case "linkedin": return <Linkedin className="w-4 h-4" />;
-    default: return <Globe className="w-4 h-4" />;
+    case "facebook":  return <Facebook className="w-4 h-4" />;
+    case "youtube":   return <Youtube className="w-4 h-4" />;
+    case "twitter":   return <Twitter className="w-4 h-4" />;
+    case "linkedin":  return <Linkedin className="w-4 h-4" />;
+    default:          return <Globe className="w-4 h-4" />;
   }
 };
 
 const formatNumber = (n: number) => {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
   return n.toString();
 };
 
@@ -73,14 +62,12 @@ export default function CampaignAnalyticsPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchCampaignDetails = async () => {
       const authToken = localStorage.getItem("authToken");
       if (!authToken) {
-        // Fallback to localStorage if no token
         const raw = localStorage.getItem("userCampaigns");
         if (raw) {
           const parsed = JSON.parse(raw);
@@ -90,16 +77,14 @@ export default function CampaignAnalyticsPage() {
         setIsLoading(false);
         return;
       }
-
       try {
         const response = await fetch(`${API_BASE}/api/campaign/${id}`, {
-          headers: { "Authorization": `Bearer ${authToken}` }
+          headers: { Authorization: `Bearer ${authToken}` },
         });
         const data = await response.json();
         if (data.success) {
           setCampaign(data.campaign);
         } else {
-          // Try local fallback if API fails
           const raw = localStorage.getItem("userCampaigns");
           if (raw) {
             const parsed = JSON.parse(raw);
@@ -113,7 +98,6 @@ export default function CampaignAnalyticsPage() {
         setIsLoading(false);
       }
     };
-
     fetchCampaignDetails();
   }, [id]);
 
@@ -143,105 +127,19 @@ export default function CampaignAnalyticsPage() {
     );
   }
 
-  // Use stored analytics if real values exist, otherwise fall back to demo data
-  const raw = campaign.analytics;
-  const analytics =
-    raw && raw.impressions > 0
-      ? raw
-      : DEMO_ANALYTICS;
+  // Use ONLY real analytics — no fabricated fallback data
+  const analytics = campaign.analytics ?? { impressions: 0, reach: 0, clicks: 0, ctr: 0, conversions: 0, adSpend: 0, roas: 0 };
+  const hasRealData = (analytics.impressions > 0 || analytics.clicks > 0 || analytics.reach > 0);
+  const isPendingOrScheduled = ["pending", "in_review", "scheduled", "draft"].includes(campaign.status);
 
   const stats = [
-    {
-      id: "impressions",
-      label: "Impressions",
-      value: formatNumber(analytics.impressions),
-      rawValue: analytics.impressions,
-      icon: <Eye className="w-6 h-6" />,
-      color: "from-purple-600 to-violet-600",
-      glow: "shadow-purple-500/40",
-      border: "border-purple-500/30",
-      bg: "from-purple-500/10",
-      description: "Total times your ad was displayed",
-      max: analytics.impressions,
-    },
-    {
-      id: "reach",
-      label: "Reach",
-      value: formatNumber(analytics.reach),
-      rawValue: analytics.reach,
-      icon: <Users className="w-6 h-6" />,
-      color: "from-cyan-600 to-sky-600",
-      glow: "shadow-cyan-500/40",
-      border: "border-cyan-500/30",
-      bg: "from-cyan-500/10",
-      description: "Unique people who saw your ad",
-      max: analytics.impressions,
-    },
-    {
-      id: "clicks",
-      label: "Clicks",
-      value: formatNumber(analytics.clicks),
-      rawValue: analytics.clicks,
-      icon: <MousePointer className="w-6 h-6" />,
-      color: "from-blue-600 to-indigo-600",
-      glow: "shadow-blue-500/40",
-      border: "border-blue-500/30",
-      bg: "from-blue-500/10",
-      description: "Total clicks on your ad",
-      max: analytics.reach,
-    },
-    {
-      id: "ctr",
-      label: "CTR",
-      value: `${analytics.ctr.toFixed(2)}%`,
-      rawValue: analytics.ctr,
-      icon: <Percent className="w-6 h-6" />,
-      color: "from-teal-600 to-green-600",
-      glow: "shadow-teal-500/40",
-      border: "border-teal-500/30",
-      bg: "from-teal-500/10",
-      description: "Click-through rate",
-      max: 10,
-    },
-    {
-      id: "conversions",
-      label: "Conversions",
-      value: formatNumber(analytics.conversions),
-      rawValue: analytics.conversions,
-      icon: <ShoppingCart className="w-6 h-6" />,
-      color: "from-emerald-600 to-green-600",
-      glow: "shadow-emerald-500/40",
-      border: "border-emerald-500/30",
-      bg: "from-emerald-500/10",
-      description: "Desired actions completed",
-      max: analytics.clicks,
-    },
-    {
-      id: "adSpend",
-      label: "Ad Spend",
-      value: `₹${formatNumber(analytics.adSpend)}`,
-      rawValue: analytics.adSpend,
-      icon: <DollarSign className="w-6 h-6" />,
-      color: "from-orange-600 to-amber-600",
-      glow: "shadow-orange-500/40",
-      border: "border-orange-500/30",
-      bg: "from-orange-500/10",
-      description: "Total budget spent",
-      max: analytics.adSpend,
-    },
-    {
-      id: "roas",
-      label: "ROAS",
-      value: `${analytics.roas.toFixed(2)}x`,
-      rawValue: analytics.roas,
-      icon: <TrendingUp className="w-6 h-6" />,
-      color: "from-pink-600 to-rose-600",
-      glow: "shadow-pink-500/40",
-      border: "border-pink-500/30",
-      bg: "from-pink-500/10",
-      description: "Return on ad spend",
-      max: 10,
-    },
+    { id: "impressions", label: "Impressions",  value: formatNumber(analytics.impressions), rawValue: analytics.impressions, icon: <Eye className="w-6 h-6" />,          color: "from-purple-600 to-violet-600", glow: "shadow-purple-500/40",  border: "border-purple-500/30",  bg: "from-purple-500/10",  description: "Total times your ad was displayed",  max: Math.max(analytics.impressions, 1) },
+    { id: "reach",       label: "Reach",         value: formatNumber(analytics.reach),       rawValue: analytics.reach,       icon: <Users className="w-6 h-6" />,         color: "from-cyan-600 to-sky-600",     glow: "shadow-cyan-500/40",    border: "border-cyan-500/30",    bg: "from-cyan-500/10",    description: "Unique people who saw your ad",      max: Math.max(analytics.impressions, 1) },
+    { id: "clicks",      label: "Clicks",        value: formatNumber(analytics.clicks),      rawValue: analytics.clicks,      icon: <MousePointer className="w-6 h-6" />,   color: "from-blue-600 to-indigo-600",  glow: "shadow-blue-500/40",    border: "border-blue-500/30",    bg: "from-blue-500/10",    description: "Total clicks on your ad",            max: Math.max(analytics.reach, 1) },
+    { id: "ctr",         label: "CTR",           value: `${analytics.ctr.toFixed(2)}%`,      rawValue: analytics.ctr,         icon: <Percent className="w-6 h-6" />,        color: "from-teal-600 to-green-600",   glow: "shadow-teal-500/40",    border: "border-teal-500/30",    bg: "from-teal-500/10",    description: "Click-through rate",                 max: 10 },
+    { id: "conversions", label: "Conversions",   value: formatNumber(analytics.conversions), rawValue: analytics.conversions, icon: <ShoppingCart className="w-6 h-6" />,   color: "from-emerald-600 to-green-600",glow: "shadow-emerald-500/40", border: "border-emerald-500/30", bg: "from-emerald-500/10", description: "Desired actions completed",           max: Math.max(analytics.clicks, 1) },
+    { id: "adSpend",     label: "Ad Spend",      value: `₹${formatNumber(analytics.adSpend)}`,rawValue: analytics.adSpend,   icon: <DollarSign className="w-6 h-6" />,     color: "from-orange-600 to-amber-600", glow: "shadow-orange-500/40",  border: "border-orange-500/30",  bg: "from-orange-500/10",  description: "Total budget spent",                 max: Math.max(analytics.adSpend, 1) },
+    { id: "roas",        label: "ROAS",          value: `${analytics.roas.toFixed(2)}x`,     rawValue: analytics.roas,        icon: <TrendingUp className="w-6 h-6" />,     color: "from-pink-600 to-rose-600",    glow: "shadow-pink-500/40",    border: "border-pink-500/30",    bg: "from-pink-500/10",    description: "Return on ad spend",                 max: 10 },
   ];
 
   return (
@@ -278,6 +176,20 @@ export default function CampaignAnalyticsPage() {
       <div className="relative z-10 min-h-screen px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-6xl mx-auto">
 
+          {/* "Not yet live" notice */}
+          {!hasRealData && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 flex items-center gap-3 px-5 py-3 rounded-2xl bg-yellow-500/8 border border-yellow-500/25 text-yellow-300 text-sm font-medium"
+            >
+              <Clock className="w-4 h-4 flex-shrink-0" />
+              {isPendingOrScheduled
+                ? "This campaign is pending launch — analytics will populate once it goes live."
+                : "No analytics data yet. Metrics will appear once the campaign starts running."}
+            </motion.div>
+          )}
+
           {/* Header */}
           <div className="mb-8">
             <Button
@@ -299,19 +211,20 @@ export default function CampaignAnalyticsPage() {
               </div>
 
               <div className="flex flex-col items-end gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/15 border border-green-400/40 text-green-400 text-[10px] sm:text-xs font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                  Live Campaign
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-semibold border ${
+                  ["approved","running","active","published"].includes(campaign.status)
+                    ? "bg-green-500/15 border-green-400/40 text-green-400"
+                    : campaign.status === "scheduled"
+                    ? "bg-purple-500/15 border-purple-400/40 text-purple-400"
+                    : "bg-yellow-500/15 border-yellow-400/40 text-yellow-400"
+                }`}>
+                  <span className="w-2 h-2 rounded-full bg-current animate-pulse" />
+                  {["approved","running","active","published"].includes(campaign.status) ? "Live" : campaign.status === "scheduled" ? "Scheduled" : "Pending"}
                 </span>
-                {/* Platforms */}
                 <div className="flex flex-wrap justify-end gap-1.5">
                   {campaign.platforms.map((p) => (
-                    <span
-                      key={p}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[10px] sm:text-xs"
-                    >
-                      {getPlatformIcon(p)}
-                      {p}
+                    <span key={p} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[10px] sm:text-xs">
+                      {getPlatformIcon(p)} {p}
                     </span>
                   ))}
                 </div>
@@ -319,11 +232,10 @@ export default function CampaignAnalyticsPage() {
             </div>
           </div>
 
-          {/* Stats Grid — 7 metrics */}
+          {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 mb-10">
             {stats.map((stat, index) => {
               const pct = Math.min(100, stat.max > 0 ? (stat.rawValue / stat.max) * 100 : 0);
-
               return (
                 <motion.div
                   key={stat.id}
@@ -332,20 +244,13 @@ export default function CampaignAnalyticsPage() {
                   transition={{ delay: 0.08 * index, type: "spring", stiffness: 200, damping: 20 }}
                   className={`relative rounded-2xl bg-gradient-to-br ${stat.bg} to-gray-900/60 border ${stat.border} backdrop-blur-sm shadow-xl ${stat.glow} p-5 sm:p-6 overflow-hidden group hover:scale-[1.02] transition-transform duration-300`}
                 >
-                  {/* Glow orb */}
                   <div className={`absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br ${stat.color} opacity-15 blur-2xl group-hover:opacity-25 transition-opacity`} />
-
-                  {/* Icon */}
                   <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shadow-lg ${stat.glow} mb-4`}>
                     {stat.icon}
                   </div>
-
-                  {/* Value */}
                   <p className="text-2xl sm:text-3xl font-bold text-white mb-1">{stat.value}</p>
                   <p className="text-xs sm:text-sm font-semibold text-gray-300 mb-1">{stat.label}</p>
                   <p className="text-[10px] sm:text-xs text-gray-500 mb-4">{stat.description}</p>
-
-                  {/* Progress bar */}
                   <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
@@ -359,7 +264,7 @@ export default function CampaignAnalyticsPage() {
             })}
           </div>
 
-          {/* Performance Overview bar chart */}
+          {/* Performance Breakdown */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -370,13 +275,12 @@ export default function CampaignAnalyticsPage() {
               <BarChart3 className="w-5 h-5 text-cyan-400" />
               <h2 className="text-white font-semibold text-base sm:text-lg">Performance Breakdown</h2>
             </div>
-
             <div className="space-y-4">
               {[
-                { label: "Impressions", value: analytics.impressions, max: analytics.impressions, color: "from-purple-600 to-violet-500", display: formatNumber(analytics.impressions) },
-                { label: "Reach", value: analytics.reach, max: analytics.impressions, color: "from-cyan-600 to-sky-500", display: formatNumber(analytics.reach) },
-                { label: "Clicks", value: analytics.clicks, max: analytics.reach, color: "from-blue-600 to-indigo-500", display: formatNumber(analytics.clicks) },
-                { label: "Conversions", value: analytics.conversions, max: analytics.clicks, color: "from-emerald-600 to-green-500", display: formatNumber(analytics.conversions) },
+                { label: "Impressions", value: analytics.impressions, max: Math.max(analytics.impressions, 1), color: "from-purple-600 to-violet-500", display: formatNumber(analytics.impressions) },
+                { label: "Reach",       value: analytics.reach,       max: Math.max(analytics.impressions, 1), color: "from-cyan-600 to-sky-500",    display: formatNumber(analytics.reach) },
+                { label: "Clicks",      value: analytics.clicks,      max: Math.max(analytics.reach, 1),       color: "from-blue-600 to-indigo-500", display: formatNumber(analytics.clicks) },
+                { label: "Conversions", value: analytics.conversions, max: Math.max(analytics.clicks, 1),      color: "from-emerald-600 to-green-500",display: formatNumber(analytics.conversions) },
               ].map((item, i) => {
                 const barPct = Math.min(100, item.max > 0 ? (item.value / item.max) * 100 : 0);
                 return (
@@ -389,9 +293,7 @@ export default function CampaignAnalyticsPage() {
                         transition={{ delay: 0.7 + i * 0.1, duration: 0.9, ease: "easeOut" }}
                         className={`h-full rounded-lg bg-gradient-to-r ${item.color} flex items-center justify-end pr-2`}
                       >
-                        <span className="text-white text-[10px] sm:text-xs font-semibold whitespace-nowrap">
-                          {item.display}
-                        </span>
+                        <span className="text-white text-[10px] sm:text-xs font-semibold whitespace-nowrap">{item.display}</span>
                       </motion.div>
                     </div>
                   </div>
@@ -407,7 +309,6 @@ export default function CampaignAnalyticsPage() {
             transition={{ delay: 0.75 }}
             className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mb-8"
           >
-            {/* Ad Spend vs Return */}
             <div className="rounded-2xl bg-gradient-to-br from-orange-500/10 to-amber-500/5 border border-orange-500/25 p-5 sm:p-6">
               <div className="flex items-center gap-2 mb-3">
                 <DollarSign className="w-5 h-5 text-orange-400" />
@@ -422,7 +323,7 @@ export default function CampaignAnalyticsPage() {
                 <div>
                   <p className="text-[10px] text-gray-500 mb-0.5">Estimated Return</p>
                   <p className="text-xl sm:text-2xl font-bold text-emerald-400">
-                    ₹{formatNumber(Math.round(analytics.adSpend * analytics.roas))}
+                    ₹{formatNumber(Math.round(analytics.adSpend * (analytics.roas || 1)))}
                   </p>
                 </div>
               </div>
@@ -436,7 +337,6 @@ export default function CampaignAnalyticsPage() {
               </div>
             </div>
 
-            {/* ROAS highlight */}
             <div className="rounded-2xl bg-gradient-to-br from-pink-500/10 to-rose-500/5 border border-pink-500/25 p-5 sm:p-6 flex flex-col justify-between">
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="w-5 h-5 text-pink-400" />
@@ -447,7 +347,9 @@ export default function CampaignAnalyticsPage() {
                   {analytics.roas.toFixed(2)}x
                 </p>
                 <p className="text-gray-400 text-xs sm:text-sm mt-2">
-                  For every ₹1 spent, you earned ₹{analytics.roas.toFixed(2)}
+                  {analytics.roas > 0
+                    ? `For every ₹1 spent, you earned ₹${analytics.roas.toFixed(2)}`
+                    : "ROAS data will appear once campaign runs"}
                 </p>
               </div>
             </div>
@@ -472,7 +374,6 @@ export default function CampaignAnalyticsPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="relative z-10 bg-gray-900/50 backdrop-blur-sm py-8 px-4 mt-16">
         <div className="max-w-6xl mx-auto text-center">
           <p className="text-gray-400">

@@ -179,20 +179,11 @@ const updateCampaignStatus = async (req, res) => {
       campaign.rejectionReason = rejectionReason || "Did not meet content guidelines.";
     }
 
-    // Seed analytics when approved or set to running
-    if ((status === "approved" || status === "running") &&
-        campaign.analytics.impressions === 0) {
-      const budgetNum = parseInt(campaign.budget.replace(/\D/g, "")) || 5000;
-      campaign.analytics = {
-        impressions: Math.floor(Math.random() * 50000) + 10000,
-        reach: Math.floor(Math.random() * 30000) + 5000,
-        clicks: Math.floor(Math.random() * 3000) + 500,
-        ctr: parseFloat((Math.random() * 3.3 + 1.2).toFixed(2)),
-        conversions: Math.floor(Math.random() * 200) + 20,
-        adSpend: Math.floor(budgetNum * (Math.random() * 0.4 + 0.5)),
-        roas: parseFloat((Math.random() * 4 + 1.5).toFixed(2)),
-      };
-    }
+    // NOTE: Analytics are NOT seeded here. They are fetched from real
+    // platform APIs (Facebook, Instagram, Twitter, LinkedIn, YouTube)
+    // via POST /api/campaign/analytics/refresh using stored OAuth tokens.
+    // Analytics start at 0 and update only with real platform data.
+
 
     await campaign.save();
 

@@ -991,4 +991,364 @@ const deleteCampaign = async (req, res) => {
   }
 };
 
-module.exports = { createCampaign, getUserCampaigns, getCampaignById, updateCampaign, deleteCampaign, publishCampaign };
+/**
+ * GET /api/campaign/analytics/summary
+ * Returns aggregated real analytics totals for the current user.
+ */
+const getAnalyticsSummary = async (req, res) => {
+  try {
+    const userId = req.user?.email || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized." });
+    }
+
+    const campaigns = await Campaign.find({
+      userId: { $regex: new RegExp(`^${userId}$`, "i") }
+    }, { adImage: 0 }).lean();
+
+    // ── Aggregate real numbers ────────────────────────────────────────────────
+    let totalImpressions = 0;
+    let totalReach = 0;
+    let totalClicks = 0;
+    let totalConversions = 0;
+    let totalAdSpend = 0;
+    let activeCampaigns = 0;
+    let scheduledCampaigns = 0;
+    let pendingCampaigns = 0;
+    let completedCampaigns = 0;
+    let rejectedCampaigns = 0;
+    let totalBudget = 0;
+
+    const platformCounts = {};
+    const recentActivity = [];
+
+    // ── One-time cleanup: zero out campaigns with fake seeded analytics ─────────
+    // Any campaign that has analytics but was never synced from a real platform
+    // was seeded by Math.random() in the old admin controller. Clear them now.
+    const fakeSeededIds = campaigns
+      .filter(c => !c.analyticsLastSynced && (
+        c.analytics?.impressions > 0 ||
+        c.analytics?.reach > 0 ||
+        c.analytics?.clicks > 0
+      ))
+      .map(c => c._id);
+
+    if (fakeSeededIds.length > 0) {
+      await Campaign.updateMany(
+        { _id: { $in: fakeSeededIds } },
+        { $set: {
+            "analytics.impressions": 0,
+            "analytics.reach":       0,
+            "analytics.clicks":      0,
+            "analytics.ctr":         0,
+            "analytics.conversions": 0,
+            "analytics.adSpend":     0,
+            "analytics.roas":        0,
+        }}
+      );
+      // Update in-memory copies too so this request returns clean data
+      campaigns.forEach(c => {
+        if (fakeSeededIds.some(id => id.toString() === c._id.toString())) {
+          c.analytics = { impressions:0, reach:0, clicks:0, ctr:0, conversions:0, adSpend:0, roas:0 };
+        }
+      });
+      console.log(`✅ [CLEANUP] Zeroed fake-seeded analytics for ${fakeSeededIds.length} campaign(s).`);
+    }
+
+    campaigns.forEach(c => {
+      // Only count analytics from campaigns synced from real platforms
+      const hasRealData = !!c.analyticsLastSynced;
+      totalImpressions += hasRealData ? (c.analytics?.impressions || 0) : 0;
+      totalReach       += hasRealData ? (c.analytics?.reach       || 0) : 0;
+      totalClicks      += hasRealData ? (c.analytics?.clicks      || 0) : 0;
+      totalConversions += hasRealData ? (c.analytics?.conversions || 0) : 0;
+      totalAdSpend     += hasRealData ? (c.analytics?.adSpend     || 0) : 0;
+
+      const bVal = parseFloat(String(c.budget || "0").replace(/[^0-9.-]+/g, "")) || 0;
+      totalBudget += bVal;
+
+      if (["running", "approved", "active", "published"].includes(c.status)) activeCampaigns++;
+      if (c.status === "scheduled") scheduledCampaigns++;
+      if (["pending", "in_review"].includes(c.status)) pendingCampaigns++;
+      if (c.status === "completed") completedCampaigns++;
+      if (c.status === "rejected") rejectedCampaigns++;
+
+      (c.platforms || []).forEach(p => {
+        const key = p.toLowerCase().trim();
+        platformCounts[key] = (platformCounts[key] || 0) + 1;
+      });
+
+      recentActivity.push({
+        id: c._id.toString(),
+        name: c.campaignName,
+        status: c.status,
+        platforms: c.platforms || [],
+        createdAt: c.createdAt,
+        scheduledAt: c.scheduledAt,
+        startDatePreference: c.startDatePreference || "",
+        analytics: hasRealData ? c.analytics : { impressions:0, reach:0, clicks:0, ctr:0, conversions:0, adSpend:0, roas:0 },
+        analyticsLastSynced: c.analyticsLastSynced || null,
+        budget: c.budget,
+      });
+    });
+
+    // Sort activity by newest first
+    recentActivity.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Top platforms sorted by usage count
+    const platformBreakdown = Object.entries(platformCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: campaigns.length > 0 ? Math.round((count / campaigns.length) * 100) : 0,
+      }));
+
+    // CTR calculation
+    const ctr = totalImpressions > 0
+      ? parseFloat(((totalClicks / totalImpressions) * 100).toFixed(2))
+      : 0;
+
+    // Engagement = clicks + conversions as a proxy
+    const engagementRate = totalReach > 0
+      ? parseFloat((((totalClicks + totalConversions) / totalReach) * 100).toFixed(2))
+      : 0;
+
+    return res.json({
+      success: true,
+      summary: {
+        totalCampaigns: campaigns.length,
+        totalPosts: campaigns.length,          // each campaign = 1 post
+        activeCampaigns,
+        scheduledCampaigns,
+        pendingCampaigns,
+        completedCampaigns,
+        rejectedCampaigns,
+        totalImpressions,
+        totalReach,
+        totalClicks,
+        totalConversions,
+        totalAdSpend: parseFloat(totalAdSpend.toFixed(2)),
+        totalBudget: parseFloat(totalBudget.toFixed(2)),
+        ctr,
+        engagementRate,
+        platformBreakdown,
+        recentActivity: recentActivity.slice(0, 10),
+      },
+    });
+  } catch (err) {
+    console.error("getAnalyticsSummary error:", err);
+    return res.status(500).json({ success: false, message: "Server error fetching analytics summary." });
+  }
+};
+
+/**
+ * POST /api/campaign/refresh-analytics
+ * Calls REAL social platform APIs using stored OAuth tokens.
+ * Fetches actual impressions, reach, clicks, engagement from
+ * Facebook, Instagram, Twitter/X, LinkedIn, YouTube.
+ * Saves real numbers to campaign.analytics in MongoDB.
+ */
+const refreshCampaignAnalytics = async (req, res) => {
+  const axios = require("axios");
+  const User  = require("../models/user");
+
+  try {
+    const userId = req.user?.email || req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Unauthorized." });
+
+    // Load user (for OAuth tokens)
+    let user = null;
+    if (userId.includes("@")) {
+      user = await User.findOne({ email: userId.toLowerCase().trim() });
+    } else {
+      try { user = await User.findById(userId); } catch (_) {}
+      if (!user) user = await User.findOne({ email: userId });
+    }
+
+    // Load all published/running campaigns
+    const campaigns = await Campaign.find({
+      userId: { $regex: new RegExp(`^${userId}$`, "i") },
+      status: { $in: ["published", "running", "approved", "completed", "active"] },
+    });
+
+    const refreshed = [];
+
+    for (const campaign of campaigns) {
+      const pr = campaign.publishResults || {};
+      let impressions = 0, reach = 0, clicks = 0, engagement = 0;
+      let syncedAny = false;
+
+      // ── FACEBOOK ────────────────────────────────────────────────────────────
+      if (pr.facebook?.status === "success" && pr.facebook?.id) {
+        const pageToken = user?.socialAccounts?.facebook?.pageAccessToken
+                       || user?.socialAccounts?.facebook?.accessToken;
+        if (pageToken) {
+          try {
+            const fbRes = await axios.get(
+              `https://graph.facebook.com/v18.0/${pr.facebook.id}/insights`,
+              { params: {
+                  metric: "post_impressions,post_reach,post_clicks,post_engaged_users",
+                  access_token: pageToken,
+                  period: "lifetime",
+              }}
+            );
+            (fbRes.data?.data || []).forEach(d => {
+              const val = d.values?.find?.(v => v)?.value || d.value || 0;
+              if (d.name === "post_impressions")    impressions += val;
+              if (d.name === "post_reach")          reach       += val;
+              if (d.name === "post_clicks")         clicks      += val;
+              if (d.name === "post_engaged_users")  engagement  += val;
+            });
+            syncedAny = true;
+            console.log(`✅ [REFRESH] FB insights for "${campaign.campaignName}": impr=${impressions} reach=${reach} clicks=${clicks}`);
+          } catch (e) {
+            console.error(`❌ [REFRESH] FB insights failed for "${campaign.campaignName}":`, e.response?.data?.error?.message || e.message);
+          }
+        }
+      }
+
+      // ── INSTAGRAM ───────────────────────────────────────────────────────────
+      if (pr.instagram?.status === "success" && pr.instagram?.id) {
+        const igToken = user?.socialAccounts?.instagram?.pageAccessToken
+                     || user?.socialAccounts?.instagram?.accessToken;
+        if (igToken) {
+          try {
+            const igRes = await axios.get(
+              `https://graph.facebook.com/v18.0/${pr.instagram.id}/insights`,
+              { params: {
+                  metric: "impressions,reach,engagement,saved",
+                  access_token: igToken,
+                  period: "lifetime",
+              }}
+            );
+            (igRes.data?.data || []).forEach(d => {
+              const val = d.values?.[0]?.value ?? d.value ?? 0;
+              if (d.name === "impressions") impressions += val;
+              if (d.name === "reach")       reach       += val;
+              if (d.name === "engagement")  engagement  += val;
+            });
+            syncedAny = true;
+            console.log(`✅ [REFRESH] IG insights for "${campaign.campaignName}": impr=${impressions} reach=${reach}`);
+          } catch (e) {
+            console.error(`❌ [REFRESH] IG insights failed for "${campaign.campaignName}":`, e.response?.data?.error?.message || e.message);
+          }
+        }
+      }
+
+      // ── TWITTER / X ─────────────────────────────────────────────────────────
+      if (pr.twitter?.status === "success" && pr.twitter?.id) {
+        const twitterBearer = process.env.TWITTER_BEARER_TOKEN
+                           || user?.socialAccounts?.twitter?.accessToken;
+        if (twitterBearer) {
+          try {
+            const twRes = await axios.get(
+              `https://api.twitter.com/2/tweets/${pr.twitter.id}`,
+              { params: { "tweet.fields": "public_metrics,non_public_metrics" },
+                headers: { Authorization: `Bearer ${twitterBearer}` } }
+            );
+            const pm  = twRes.data?.data?.public_metrics     || {};
+            const npm = twRes.data?.data?.non_public_metrics || {};
+            impressions += npm.impression_count || pm.impression_count || 0;
+            clicks      += npm.url_link_clicks  || pm.url_link_clicks  || 0;
+            engagement  += (pm.like_count || 0) + (pm.reply_count || 0) + (pm.retweet_count || 0);
+            reach       += npm.impression_count || pm.impression_count || 0;
+            syncedAny = true;
+            console.log(`✅ [REFRESH] Twitter metrics for "${campaign.campaignName}"`);
+          } catch (e) {
+            console.error(`❌ [REFRESH] Twitter failed for "${campaign.campaignName}":`, e.response?.data || e.message);
+          }
+        }
+      }
+
+      // ── LINKEDIN ────────────────────────────────────────────────────────────
+      if (pr.linkedin?.status === "success" && pr.linkedin?.id) {
+        const liToken = user?.socialAccounts?.linkedin?.accessToken;
+        if (liToken) {
+          try {
+            const liRes = await axios.get(
+              `https://api.linkedin.com/v2/socialActions/${encodeURIComponent(pr.linkedin.id)}`,
+              { headers: { Authorization: `Bearer ${liToken}`, "X-Restli-Protocol-Version": "2.0.0" } }
+            );
+            clicks     += liRes.data?.clickCount || 0;
+            engagement += (liRes.data?.likesSummary?.totalLikes || 0)
+                        + (liRes.data?.commentsSummary?.totalFirstLevelComments || 0);
+            syncedAny = true;
+            console.log(`✅ [REFRESH] LinkedIn stats for "${campaign.campaignName}"`);
+          } catch (e) {
+            console.error(`❌ [REFRESH] LinkedIn failed for "${campaign.campaignName}":`, e.response?.data || e.message);
+          }
+        }
+      }
+
+      // ── YOUTUBE ─────────────────────────────────────────────────────────────
+      if (pr.youtube?.status === "success" && pr.youtube?.id) {
+        const ytToken = user?.socialAccounts?.youtube?.accessToken;
+        if (ytToken) {
+          try {
+            const ytRes = await axios.get(
+              "https://www.googleapis.com/youtube/v3/videos",
+              { params: { part: "statistics", id: pr.youtube.id },
+                headers: { Authorization: `Bearer ${ytToken}` } }
+            );
+            const stats    = ytRes.data?.items?.[0]?.statistics || {};
+            const views    = parseInt(stats.viewCount    || 0);
+            const likes    = parseInt(stats.likeCount    || 0);
+            const comments = parseInt(stats.commentCount || 0);
+            impressions += views;
+            reach       += views;
+            clicks      += views;
+            engagement  += likes + comments;
+            syncedAny = true;
+            console.log(`✅ [REFRESH] YouTube stats for "${campaign.campaignName}": views=${views}`);
+          } catch (e) {
+            console.error(`❌ [REFRESH] YouTube failed for "${campaign.campaignName}":`, e.response?.data || e.message);
+          }
+        }
+      }
+
+      // ── Save real metrics to MongoDB ─────────────────────────────────────────
+      if (syncedAny) {
+        const ctr = impressions > 0
+          ? parseFloat(((clicks / impressions) * 100).toFixed(2))
+          : 0;
+
+        await Campaign.updateOne(
+          { _id: campaign._id },
+          { $set: {
+              "analytics.impressions": impressions,
+              "analytics.reach":       reach,
+              "analytics.clicks":      clicks,
+              "analytics.ctr":         ctr,
+              "analytics.conversions": engagement,
+              analyticsLastSynced:     new Date(),
+          }}
+        );
+
+        refreshed.push({
+          id: campaign._id.toString(),
+          name: campaign.campaignName,
+          impressions, reach, clicks, ctr, engagement,
+        });
+        console.log(`✅ [REFRESH] Saved real analytics for: "${campaign.campaignName}"`);
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: refreshed.length > 0
+        ? `Synced real analytics for ${refreshed.length} campaign(s).`
+        : "No published campaigns with platform data found to sync yet.",
+      refreshed: refreshed.length,
+      campaigns: refreshed,
+      lastSynced: new Date().toISOString(),
+    });
+
+  } catch (err) {
+    console.error("refreshCampaignAnalytics error:", err);
+    return res.status(500).json({ success: false, message: "Server error refreshing analytics." });
+  }
+};
+
+module.exports = { createCampaign, getUserCampaigns, getCampaignById, updateCampaign, deleteCampaign, publishCampaign, getAnalyticsSummary, refreshCampaignAnalytics };
+

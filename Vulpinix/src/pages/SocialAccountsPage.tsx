@@ -1,11 +1,12 @@
+import { API_BASE } from "../config/api";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2, Link2, Unlink, ExternalLink,
   Sparkles, Users, TrendingUp, RefreshCw, Zap, Shield,
-  ArrowRight, BarChart3, Eye, Heart,
-  MessageCircle, Calendar, Clock, ChevronRight
+  ArrowRight, BarChart3, Eye,
+  Calendar, Clock, ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardSidebar } from "../components/DashboardSidebar";
@@ -110,21 +111,7 @@ export function getLinkedAccounts():string[]{try{return JSON.parse(localStorage.
 function setLinkedAccountsStore(ids:string[]){localStorage.setItem("linkedSocialAccounts",JSON.stringify(ids));}
 function hexRgba(hex:string,a:number){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;}
 
-const MOCK_STATS:Record<string,{followers:string;reach:string;engagement:string;posts:string}>={
-  instagram:{followers:"12.4K",reach:"48.2K",engagement:"6.8%",posts:"142"},
-  facebook:{followers:"8.9K",reach:"31.7K",engagement:"4.2%",posts:"89"},
-  twitter:{followers:"5.2K",reach:"22.1K",engagement:"3.9%",posts:"234"},
-  linkedin:{followers:"3.8K",reach:"15.6K",engagement:"8.1%",posts:"56"},
-  youtube:{followers:"2.1K",reach:"94.5K",engagement:"7.4%",posts:"28"},
-  reddit:{followers:"980",reach:"18.3K",engagement:"12.4%",posts:"67"},
-  pinterest:{followers:"4.5K",reach:"38.9K",engagement:"5.6%",posts:"312"},
-};
-
-const MOCK_POSTS=[
-  {type:"Image",likes:"1.2K",comments:"48"},{type:"Reel",likes:"8.4K",comments:"231"},
-  {type:"Story",likes:"934",comments:"12"},{type:"Video",likes:"3.7K",comments:"109"},
-  {type:"Image",likes:"621",comments:"29"},{type:"Carousel",likes:"2.1K",comments:"87"},
-];
+function fmtN(n:number){if(n>=1_000_000)return(n/1_000_000).toFixed(1)+"M";if(n>=1_000)return(n/1_000).toFixed(1)+"K";return String(n);}
 
 export default function SocialAccountsPage(){
   const navigate=useNavigate();
@@ -133,6 +120,9 @@ export default function SocialAccountsPage(){
   const [handles,setHandles]=useState<Record<string,string>>({});
   const [loading,setLoading]=useState(false);
   const [selected,setSelected]=useState(SOCIAL_PLATFORMS[0].id);
+  // Real per-platform data from campaigns
+  const [platformStats,setPlatformStats]=useState<Record<string,{reach:number;impressions:number;clicks:number;campaigns:number;ctr:string}>>({});
+  const [platformCampaigns,setPlatformCampaigns]=useState<Record<string,any[]>>({});
 
   const fetchStatus=async()=>{
     setLoading(true);
@@ -153,6 +143,42 @@ export default function SocialAccountsPage(){
       setLinked(getLinkedAccounts());
       try{setHandles(JSON.parse(localStorage.getItem("socialHandles")||"{}"));}catch{}
     }finally{setLoading(false);}
+    // Load real campaign analytics per platform
+    const token=localStorage.getItem("authToken");
+    if(token){
+      try{
+        const r=await fetch(`${API_BASE}/api/campaign/analytics/summary`,{headers:{Authorization:`Bearer ${token}`}});
+        const d=await r.json();
+        if(d.success&&d.summary){
+          const statsMap:Record<string,{reach:number;impressions:number;clicks:number;campaigns:number;ctr:string}>= {};
+          (d.summary.platformBreakdown||[]).forEach((pb:any)=>{
+            statsMap[pb.name.toLowerCase()]={
+              reach:0,impressions:0,clicks:0,campaigns:pb.count,ctr:"0%"
+            };
+          });
+          // Aggregate per-platform from recentActivity
+          const campMap:Record<string,any[]>={};
+          (d.summary.recentActivity||[]).forEach((c:any)=>{
+            (c.platforms||[]).forEach((p:string)=>{
+              const key=p.toLowerCase();
+              if(!campMap[key])campMap[key]=[];
+              campMap[key].push(c);
+              if(!statsMap[key])statsMap[key]={reach:0,impressions:0,clicks:0,campaigns:0,ctr:"0%"};
+              statsMap[key].reach+=(c.analytics?.reach||0);
+              statsMap[key].impressions+=(c.analytics?.impressions||0);
+              statsMap[key].clicks+=(c.analytics?.clicks||0);
+              statsMap[key].campaigns++;
+            });
+          });
+          Object.keys(statsMap).forEach(k=>{
+            const s=statsMap[k];
+            s.ctr=s.impressions>0?((s.clicks/s.impressions)*100).toFixed(2)+"%":"0%";
+          });
+          setPlatformStats(statsMap);
+          setPlatformCampaigns(campMap);
+        }
+      }catch(e){console.error("Platform analytics load failed",e);}
+    }
   };
 
   useEffect(()=>{
@@ -189,7 +215,8 @@ export default function SocialAccountsPage(){
 
   const platform=SOCIAL_PLATFORMS.find(p=>p.id===selected)!;
   const isLinked=linked.includes(selected);
-  const stats=MOCK_STATS[selected]||{followers:"—",reach:"—",engagement:"—",posts:"—"};
+  const realStats=platformStats[selected];
+  const realCampaigns=platformCampaigns[selected]||[];
   const userInitial=userName[0]?.toUpperCase()||"U";
 
   return(
@@ -281,13 +308,13 @@ export default function SocialAccountsPage(){
                             @{handles[selected]}
                           </div>
                         )}
-                        <div className="vxsa-section-title"><BarChart3 size={12}/> Performance Overview</div>
+                        <div className="vxsa-section-title"><BarChart3 size={12}/> Campaign Performance on {platform.name}</div>
                         <div className="vxsa-stats" style={{marginBottom:22}}>
                           {[
-                            {icon:<Users size={14}/>,bg:hexRgba(platform.color,0.12),col:platform.color,val:stats.followers,lbl:"Followers"},
-                            {icon:<Eye size={14}/>,bg:"rgba(167,139,250,0.12)",col:"#a78bfa",val:stats.reach,lbl:"Reach"},
-                            {icon:<TrendingUp size={14}/>,bg:"rgba(34,197,94,0.12)",col:"#22c55e",val:stats.engagement,lbl:"Engagement"},
-                            {icon:<Calendar size={14}/>,bg:"rgba(56,189,248,0.12)",col:"#38bdf8",val:stats.posts,lbl:"Total Posts"},
+                            {icon:<Eye size={14}/>,bg:hexRgba(platform.color,0.12),col:platform.color,val:realStats?fmtN(realStats.impressions):"0",lbl:"Impressions"},
+                            {icon:<Users size={14}/>,bg:"rgba(167,139,250,0.12)",col:"#a78bfa",val:realStats?fmtN(realStats.reach):"0",lbl:"Reach"},
+                            {icon:<TrendingUp size={14}/>,bg:"rgba(34,197,94,0.12)",col:"#22c55e",val:realStats?realStats.ctr:"0%",lbl:"CTR"},
+                            {icon:<Calendar size={14}/>,bg:"rgba(56,189,248,0.12)",col:"#38bdf8",val:realStats?String(realStats.campaigns):"0",lbl:"Campaigns"},
                           ].map((s,i)=>(
                             <div key={i} className="vxsa-stat">
                               <div className="vxsa-stat-ic" style={{background:s.bg,color:s.col}}>{s.icon}</div>
@@ -296,21 +323,32 @@ export default function SocialAccountsPage(){
                             </div>
                           ))}
                         </div>
+                        {(!realStats||realStats.impressions===0)&&(
+                          <div style={{fontSize:12,color:"#475569",textAlign:"center",padding:"6px 0 16px",lineHeight:1.6}}>
+                            No campaign analytics yet for {platform.name}. Launch a campaign to see real data.
+                          </div>
+                        )}
                         <div className="vxsa-divider"/>
-                        <div className="vxsa-section-title"><Clock size={12}/> Recent Posts</div>
-                        <div className="vxsa-post-grid">
-                          {MOCK_POSTS.map((post,i)=>(
-                            <motion.div key={i} initial={{opacity:0,scale:0.9}} animate={{opacity:1,scale:1}} transition={{delay:i*0.06}} className="vxsa-post"
-                              style={{background:`linear-gradient(135deg,${hexRgba(platform.color,0.08)},rgba(255,255,255,0.02))`,border:`1px solid ${hexRgba(platform.color,0.13)}`}}>
-                              <div style={{width:34,height:34,borderRadius:10,background:platform.gradient,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}}>{platform.icon(15)}</div>
-                              <div className="vxsa-post-type">{post.type}</div>
-                              <div style={{display:"flex",gap:8}}>
-                                <span className="vxsa-post-stat"><Heart size={9}/> {post.likes}</span>
-                                <span className="vxsa-post-stat"><MessageCircle size={9}/> {post.comments}</span>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
+                        <div className="vxsa-section-title"><Clock size={12}/> Published Campaigns on {platform.name}</div>
+                        {realCampaigns.length===0?(
+                          <div style={{fontSize:13,color:"#334155",textAlign:"center",padding:"18px 0"}}>
+                            No campaigns published to {platform.name} yet.
+                          </div>
+                        ):(
+                          <div className="vxsa-post-grid">
+                            {realCampaigns.slice(0,6).map((c:any,i:number)=>(
+                              <motion.div key={i} initial={{opacity:0,scale:0.9}} animate={{opacity:1,scale:1}} transition={{delay:i*0.06}} className="vxsa-post"
+                                style={{background:`linear-gradient(135deg,${hexRgba(platform.color,0.08)},rgba(255,255,255,0.02))`,border:`1px solid ${hexRgba(platform.color,0.13)}`,padding:"12px 8px"}}>
+                                <div style={{width:34,height:34,borderRadius:10,background:platform.gradient,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}}>{platform.icon(15)}</div>
+                                <div className="vxsa-post-type" style={{maxWidth:"90%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center"}}>{c.name}</div>
+                                <div style={{display:"flex",gap:8}}>
+                                  <span className="vxsa-post-stat"><Eye size={9}/> {fmtN(c.analytics?.impressions||0)}</span>
+                                  <span className="vxsa-post-stat"><TrendingUp size={9}/> {fmtN(c.analytics?.clicks||0)}</span>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        )}
                         <div className="vxsa-divider"/>
                         <div style={{display:"flex",gap:12,justifyContent:"center"}}>
                           <button className="vxsa-btn-pri" onClick={()=>navigate("/create-post")}><Sparkles size={13}/> Create Post for {platform.name}</button>

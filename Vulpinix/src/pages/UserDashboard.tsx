@@ -8,7 +8,7 @@ import {
   Globe, Bell, ArrowRight, Sparkles, Target, Eye,
   MousePointer, DollarSign, CheckCircle2, XCircle,
   Clock, Settings, Calendar, AlertCircle, MessageCircle,
-  PieChart
+  PieChart, RefreshCw
 } from "lucide-react";
 import { DashboardSidebar } from "../components/DashboardSidebar";
 import { DashboardTopBar } from "../components/DashboardTopBar";
@@ -170,18 +170,17 @@ export default function UserDashboard(){
   const navigate=useNavigate();
   const [userName,setUserName]=useState("there");
   const [campaigns,setCampaigns]=useState<Campaign[]>([]);
-  const [stats,setStats]=useState({active:0,impressions:0,clicks:0,spent:0});
+  const [stats,setStats]=useState({active:0,impressions:0,clicks:0,spent:0,reach:0,engagementRate:0,totalPosts:0,totalBudget:0});
   
   // Real dynamic features state
   const [topPlatforms,setTopPlatforms]=useState<{name:string;val:string;col:string;ic:any}[]>([]);
   const [scheduledPosts,setScheduledPosts]=useState<any[]>([]);
   const [alerts,setAlerts]=useState<any[]>([]);
   const [budgetPercent,setBudgetPercent]=useState(0);
-  const [aiIdeas,setAiIdeas]=useState<{text:string;tag:string}[]>([
-    {text:"\"3 ways our product saves you time\"", tag:"#ProductivityHack"},
-    {text:"\"Behind the scenes: How we build our services\"", tag:"#BuildInPublic"}
-  ]);
+  const [aiIdeas,setAiIdeas]=useState<{text:string;tag:string}[]>([]);
   const [recentActivity,setRecentActivity]=useState<any[]>([]);
+  const [syncing,setSyncing]=useState(false);
+  const [lastSynced,setLastSynced]=useState<Date|null>(null);
 
   useEffect(()=>{
     if(localStorage.getItem("isAuthenticated")!=="true"){navigate("/auth",{replace:true});return;}
@@ -190,12 +189,87 @@ export default function UserDashboard(){
       if(u.name)setUserName(u.name.split(" ")[0]);
       if(u.onboardingCompleted===false){navigate("/onboarding",{replace:true});return;}
     }catch{}
-    loadData();
+    // First sync real platform data, then load dashboard
+    syncLiveData().then(()=>loadData());
     generateRealAIIdeas();
   },[navigate]);
 
+  const syncLiveData=async()=>{
+    const token=localStorage.getItem("authToken");
+    if(!token)return;
+    setSyncing(true);
+    try{
+      await fetch(`${API_BASE}/api/campaign/analytics/refresh`,{
+        method:"POST",
+        headers:{Authorization:`Bearer ${token}`},
+      });
+      setLastSynced(new Date());
+    }catch(e){
+      console.warn("Live sync failed (no published campaigns or platform error):",e);
+    }finally{
+      setSyncing(false);
+    }
+  };
+
   const loadData=async()=>{
     const token=localStorage.getItem("authToken");
+
+    // ── 1. Fetch aggregated analytics summary (real data) ──────────────────────
+    if(token){
+      try{
+        const r=await fetch(`${API_BASE}/api/campaign/analytics/summary`,{headers:{Authorization:`Bearer ${token}`}});
+        const d=await r.json();
+        if(d.success&&d.summary){
+          const s=d.summary;
+          setStats({active:s.activeCampaigns,impressions:s.totalImpressions,clicks:s.totalClicks,spent:s.totalAdSpend,reach:s.totalReach,engagementRate:s.engagementRate,totalPosts:s.totalPosts,totalBudget:s.totalBudget});
+
+          // Platform breakdown from summary
+          const topPlats=s.platformBreakdown.slice(0,4).map((p:any)=>{
+            const lc=p.name.toLowerCase();
+            const proper=lc.charAt(0).toUpperCase()+lc.slice(1);
+            return{name:proper,val:p.percentage+"%",col:getPlatformColor(lc),ic:getPlatformIcon(lc)};
+          });
+          setTopPlatforms(topPlats);
+
+          // Budget % from real spend vs real total budget
+          const bPct=s.totalBudget>0?Math.min(Math.round((s.totalAdSpend/s.totalBudget)*100),100):0;
+          setBudgetPercent(bPct);
+
+          // Scheduled / pending queue from recentActivity
+          const scheduled=s.recentActivity
+            .filter((c:any)=>c.status==="scheduled"||c.status==="pending"||c.status==="in_review")
+            .slice(0,4)
+            .map((c:any)=>({
+              dot:getPlatformColor(c.platforms?.[0]||""),
+              text:c.name,
+              sub:c.scheduledAt?new Date(c.scheduledAt).toLocaleString():c.startDatePreference||"Pending Review",
+              icon:getPlatformIcon(c.platforms?.[0]||"")
+            }));
+          setScheduledPosts(scheduled);
+
+          // Activity log
+          const dActivity=s.recentActivity.slice(0,4).map((c:any)=>{
+            if(c.status==="rejected")return{dot:"#ef4444",text:`${c.name} needs revision`,sub:"Recent",icon:<XCircle size={13} color="#ef4444"/>};
+            if(["running","approved","active","published"].includes(c.status))return{dot:"#22c55e",text:`${c.name} approved & live`,sub:"Recent",icon:<CheckCircle2 size={13} color="#22c55e"/>};
+            if(c.status==="scheduled")return{dot:"#fbbf24",text:`${c.name} scheduled`,sub:"Recent",icon:<Calendar size={13} color="#fbbf24"/>};
+            if(c.status==="pending"||c.status==="in_review")return{dot:"#a78bfa",text:`${c.name} pending review`,sub:"Recent",icon:<Clock size={13} color="#a78bfa"/>};
+            if(c.status==="draft")return{dot:"#94a3b8",text:`${c.name} saved as draft`,sub:"Recent",icon:<PenSquare size={13} color="#94a3b8"/>};
+            return{dot:"#38bdf8",text:`${c.name} status updated`,sub:"Recent",icon:<BarChart3 size={13} color="#38bdf8"/>};
+          });
+          if(dActivity.length===0)dActivity.push({dot:"#38bdf8",text:"Account ready",sub:"Just now",icon:<CheckCircle2 size={13} color="#38bdf8"/>});
+          setRecentActivity(dActivity);
+
+          // Alerts
+          const dynamicAlerts:any[]=[];
+          if(s.rejectedCampaigns>0)dynamicAlerts.push({type:"error",icon:<MessageCircle size={18} color="#ef4444"/>,title:`${s.rejectedCampaigns} Rejected Campaign(s)`,text:"Review the feedback and update your campaigns."});
+          if(s.pendingCampaigns>0)dynamicAlerts.push({type:"warn",icon:<AlertCircle size={18} color="#eab308"/>,title:`${s.pendingCampaigns} Campaign(s) Pending`,text:"Awaiting admin review and approval."});
+          if(dynamicAlerts.length===0)dynamicAlerts.push({type:"info",icon:<CheckCircle2 size={18} color="#38bdf8"/>,title:"All Good",text:"Your workspace is healthy and active."});
+          setAlerts(dynamicAlerts);
+        }
+      }catch(e){console.error("Analytics summary fetch failed",e);}
+    }
+
+    // ── 2. Fetch campaign list for the Recent Campaigns card ──────────────────
     let list:Campaign[]=[];
     if(token){
       try{
@@ -206,111 +280,24 @@ export default function UserDashboard(){
     }
     if(!list.length){try{const raw=localStorage.getItem("userCampaigns");if(raw)list=JSON.parse(raw);}catch{}}
     if(!Array.isArray(list))list=[];
-    
-    // Process real campaigns
-    let active=0,impressions=0,clicks=0,spent=0;
-    
-    // Feature: Budget tracker
-    const MONTHLY_BUDGET = 5000;
-    
-    // Feature: Top platforms
-    const pCounts:Record<string,number>={};
-    let pTotal = 0;
-    
-    // Feature: Scheduled Posts
-    const scheduled:any[] = [];
-
-    list.forEach(c=>{
-      if(["running","approved","active","published"].includes(c.status))active++;
-      impressions+=c.analytics?.impressions||0;
-      clicks+=c.analytics?.clicks||0;
-      
-      const bParsed = parseFloat(String(c.budget).replace(/[^0-9.-]+/g,"")) || 0;
-      spent += (c.analytics?.adSpend || bParsed);
-
-      if(c.platforms){
-        c.platforms.forEach(p=>{
-          const key=p.toLowerCase();
-          pCounts[key]=(pCounts[key]||0)+1;
-          pTotal++;
-        });
-      }
-
-      if (c.status === "scheduled" || c.scheduledAt) {
-        scheduled.push({
-          dot: getPlatformColor(c.platforms?.[0]||""),
-          text: c.name,
-          sub: c.scheduledAt ? new Date(c.scheduledAt).toLocaleString() : "Scheduled",
-          icon: getPlatformIcon(c.platforms?.[0]||"")
-        });
-      } else if (["pending","in_review"].includes(c.status) || c.startDatePreference) {
-        scheduled.push({
-          dot: getPlatformColor(c.platforms?.[0]||""),
-          text: c.name,
-          sub: c.startDatePreference || "Pending Review",
-          icon: getPlatformIcon(c.platforms?.[0]||"")
-        });
-      }
-    });
-
-    setStats({active,impressions,clicks,spent});
     setCampaigns(list.slice(0,5));
 
-    // Calculate dynamic budget %
-    setBudgetPercent(Math.min(Math.round((spent/MONTHLY_BUDGET)*100),100));
-
-    // Calculate dynamic top platforms
-    const topPlats = Object.entries(pCounts).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([name,count])=>{
-      const pct = pTotal > 0 ? Math.round((count/pTotal)*100) : 0;
-      const properName = name.charAt(0).toUpperCase() + name.slice(1);
-      return {name:properName, val:pct+"%", col:getPlatformColor(name), ic:getPlatformIcon(name)};
-    });
-    setTopPlatforms(topPlats);
-
-    setScheduledPosts(scheduled.slice(0, 4));
-
-    let linkedAccsCount = 0;
-    try {
-      const storedAccs = JSON.parse(localStorage.getItem("linkedSocialAccounts") || "[]");
-      linkedAccsCount = storedAccs.length;
-    } catch(e) {}
-    
-    const dynamicAlerts = [];
-    if(linkedAccsCount === 0) {
-      dynamicAlerts.push({ type: "warn", icon: <AlertCircle size={18} color="#eab308"/>, title: "Action Required", text: "No social accounts connected yet." });
+    // Compute totalBudget from campaign list as fallback if backend returned 0
+    const computedBudget=list.reduce((sum:number,c:any)=>{
+      const raw=String(c.budget||c.adBudget||"0");
+      const n=parseFloat(raw.replace(/[^0-9.-]+/g,""))||0;
+      return sum+n;
+    },0);
+    if(computedBudget>0){
+      setStats(prev=>prev.totalBudget>0?prev:{...prev,totalBudget:computedBudget});
+      // Recompute budget percent with actual totalBudget
+      setStats(prev=>{
+        const tb=prev.totalBudget>0?prev.totalBudget:computedBudget;
+        const pct=tb>0?Math.min(Math.round((prev.spent/tb)*100),100):0;
+        setBudgetPercent(pct);
+        return{...prev,totalBudget:tb};
+      });
     }
-    const rejectedCount = list.filter(c=>c.status==="rejected").length;
-    if(rejectedCount > 0) {
-      dynamicAlerts.push({ type: "error", icon: <MessageCircle size={18} color="#ef4444"/>, title: `${rejectedCount} Rejected Campaign(s)`, text: "Review the feedback and update your campaigns." });
-    }
-    if(dynamicAlerts.length === 0) {
-       dynamicAlerts.push({ type: "info", icon: <CheckCircle2 size={18} color="#38bdf8"/>, title: "All Good", text: "Your workspace is healthy and active." });
-    }
-    setAlerts(dynamicAlerts);
-
-    // Generate dynamic activity log
-    const dActivity:any[] = [];
-    const sortedList = [...list].sort((a:any, b:any) => new Date(b.createdAt || b.paymentDate || 0).getTime() - new Date(a.createdAt || a.paymentDate || 0).getTime());
-    
-    sortedList.slice(0, 4).forEach(c => {
-      if (c.status === 'rejected') {
-        dActivity.push({dot:"#ef4444", text:`${c.name} needs revision`, sub:"Recent", icon:<XCircle size={13} color="#ef4444"/>});
-      } else if (["running","approved","active","published"].includes(c.status)) {
-        dActivity.push({dot:"#22c55e", text:`${c.name} approved & live`, sub:"Recent", icon:<CheckCircle2 size={13} color="#22c55e"/>});
-      } else if (c.status === 'scheduled') {
-        dActivity.push({dot:"#fbbf24", text:`${c.name} scheduled`, sub:"Recent", icon:<Calendar size={13} color="#fbbf24"/>});
-      } else if (c.status === 'pending' || c.status === 'in_review') {
-        dActivity.push({dot:"#a78bfa", text:`${c.name} pending review`, sub:"Recent", icon:<Clock size={13} color="#a78bfa"/>});
-      } else if (c.status === 'draft') {
-        dActivity.push({dot:"#94a3b8", text:`${c.name} saved as draft`, sub:"Recent", icon:<PenSquare size={13} color="#94a3b8"/>});
-      } else {
-        dActivity.push({dot:"#38bdf8", text:`${c.name} status updated`, sub:"Recent", icon:<BarChart3 size={13} color="#38bdf8"/>});
-      }
-    });
-    if(dActivity.length === 0) {
-      dActivity.push({dot:"#38bdf8", text:"Account ready", sub:"Just now", icon:<CheckCircle2 size={13} color="#38bdf8"/>});
-    }
-    setRecentActivity(dActivity);
   };
 
   const generateRealAIIdeas = async () => {
@@ -343,11 +330,12 @@ export default function UserDashboard(){
   const greeting=hour<12?"Good morning":hour<17?"Good afternoon":"Good evening";
   const userInitial=userName[0]?.toUpperCase()||"U";
 
+  const ctrVal=stats.impressions>0?((stats.clicks/stats.impressions)*100).toFixed(2)+"%":"0%";
   const kpis=[
-    {label:"Active Campaigns",val:stats.active,icon:<Activity size={18}/>,ibg:"rgba(34,197,94,0.12)",icol:"#22c55e",strip:"linear-gradient(90deg,#22c55e,transparent)",trend:"+2",tpos:true},
-    {label:"Total Impressions",val:fmt(stats.impressions),icon:<Eye size={18}/>,ibg:"rgba(167,139,250,0.12)",icol:"#a78bfa",strip:"linear-gradient(90deg,#a78bfa,transparent)",trend:"  12%",tpos:true},
-    {label:"Total Clicks",val:fmt(stats.clicks),icon:<MousePointer size={18}/>,ibg:"rgba(56,189,248,0.12)",icol:"#38bdf8",strip:"linear-gradient(90deg,#38bdf8,transparent)",trend:"  8%",tpos:true},
-    {label:"Ad Spend",val:`$${fmt(stats.spent)}`,icon:<DollarSign size={18}/>,ibg:"rgba(251,191,36,0.12)",icol:"#fbbf24",strip:"linear-gradient(90deg,#fbbf24,transparent)",trend:"On budget",tpos:true},
+    {label:"Total Posts",val:stats.totalPosts,icon:<Activity size={18}/>,ibg:"rgba(34,197,94,0.12)",icol:"#22c55e",strip:"linear-gradient(90deg,#22c55e,transparent)",trend:stats.active+" active",tpos:true},
+    {label:"Total Reach",val:fmt(stats.reach),icon:<Eye size={18}/>,ibg:"rgba(167,139,250,0.12)",icol:"#a78bfa",strip:"linear-gradient(90deg,#a78bfa,transparent)",trend:fmt(stats.impressions)+" impr.",tpos:true},
+    {label:"Total Clicks",val:fmt(stats.clicks),icon:<MousePointer size={18}/>,ibg:"rgba(56,189,248,0.12)",icol:"#38bdf8",strip:"linear-gradient(90deg,#38bdf8,transparent)",trend:"CTR "+ctrVal,tpos:true},
+    {label:"Engagement Rate",val:stats.engagementRate.toFixed(1)+"%",icon:<TrendingUp size={18}/>,ibg:"rgba(251,191,36,0.12)",icol:"#fbbf24",strip:"linear-gradient(90deg,#fbbf24,transparent)",trend:"Spend $"+fmt(stats.spent),tpos:true},
   ];
 
   const quickActions=[
@@ -372,9 +360,20 @@ export default function UserDashboard(){
             <motion.div initial={{opacity:0,y:-16}} animate={{opacity:1,y:0}} transition={{duration:0.45}} className="vxd-hero">
               <div>
                 <div className="vxd-greeting">{greeting}, <span>{userName}!</span></div>
-                <div className="vxd-sub">Here's your campaign command centre - everything in one place.</div>
+                <div className="vxd-sub">
+                  {lastSynced
+                    ?<><span style={{color:"#22c55e",fontSize:11,fontWeight:700}}>● LIVE</span>{" Last synced: "}{lastSynced.toLocaleTimeString()}</>
+                    :"Here's your campaign command centre — data syncing from platforms now."
+                  }
+                </div>
               </div>
               <div className="vxd-hero-btns">
+                <button className="vxd-btn-ghost" style={{position:"relative",overflow:"hidden"}} onClick={async()=>{await syncLiveData();loadData();}}>
+                  {syncing
+                    ?<><motion.span animate={{rotate:360}} transition={{duration:1,repeat:Infinity,ease:"linear"}} style={{display:"flex"}}><RefreshCw size={14}/></motion.span>Syncing…</>
+                    :<><RefreshCw size={14}/>Live Sync</>
+                  }
+                </button>
                 <button className="vxd-btn-ghost" onClick={()=>navigate("/create-post")}><PenSquare size={15}/> Create Post</button>
                 <button className="vxd-btn-pri" onClick={()=>navigate("/upload")}><Plus size={15}/> New Campaign</button>
               </div>
@@ -386,8 +385,8 @@ export default function UserDashboard(){
               <div style={{display:"flex",alignItems:"center",gap:18}}>
                 <div className="vxd-banner-ic"><Zap size={24} color="#fff"/></div>
                 <div>
-                  <div style={{fontWeight:800,fontSize:16,color:"#f1f5f9",marginBottom:4}}>AI Advisor: Campaign Optimization Active</div>
-                  <div style={{color:"#94a3b8",fontSize:14}}>Your current campaigns are operating at 94% efficiency. Connect more platforms to unlock advanced audience insights.</div>
+                  <div style={{fontWeight:800,fontSize:16,color:"#f1f5f9",marginBottom:4}}>AI Advisor: Campaign Intelligence</div>
+                  <div style={{color:"#94a3b8",fontSize:14}}>{stats.totalPosts>0?`You have ${stats.totalPosts} campaign${stats.totalPosts!==1?"s":""} with ${fmt(stats.reach)} total reach and ${stats.engagementRate.toFixed(1)}% engagement rate.`:"No campaigns yet — launch your first AI-powered campaign to see real insights here."}</div>
                 </div>
               </div>
               <button className="vxd-btn-pri" onClick={()=>navigate("/social")}>Optimize Campaigns <ArrowRight size={15}/></button>
@@ -486,13 +485,13 @@ export default function UserDashboard(){
                   <div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
                       <div style={{fontSize:24,fontWeight:900,color:"#f1f5f9"}}>${fmt(stats.spent)}</div>
-                      <div style={{fontSize:13,color:"#94a3b8",fontWeight:600}}>of $5,000</div>
+                      <div style={{fontSize:13,color:"#94a3b8",fontWeight:600}}>of ${fmt(stats.totalBudget)} total</div>
                     </div>
                     <div className="vxd-budget-bar">
                       <div className="vxd-budget-fill" style={{width:`${budgetPercent}%`}}/>
                     </div>
                     <div style={{fontSize:12,color:budgetPercent > 90 ? "#ef4444" : budgetPercent > 75 ? "#eab308" : "#22c55e",fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
-                      <AlertCircle size={12}/> {budgetPercent}% utilized
+                      <AlertCircle size={12}/> {budgetPercent}% of budget spent
                     </div>
                   </div>
                 </motion.div>
@@ -548,14 +547,20 @@ export default function UserDashboard(){
                   </div>
                   <button className="vxd-view-all" onClick={()=>navigate("/create-post")}><PenSquare size={13}/> Draft</button>
                 </div>
-                <div>
-                  {aiIdeas.map((idea, i) => (
-                    <div key={i} className="vxd-ai-idea">
-                      {idea.text}
-                      <div><span className="vxd-ai-idea-tag">{idea.tag}</span></div>
-                    </div>
-                  ))}
-                </div>
+                 <div>
+                   {aiIdeas.length===0?(
+                     <div style={{fontSize:13,color:"#475569",textAlign:"center",padding:"18px 0",lineHeight:1.6}}>
+                       <Sparkles size={22} style={{margin:"0 auto 10px",opacity:0.2}}/><br/>
+                       AI ideas will appear here.<br/>
+                       <span style={{fontSize:11}}>Add a Gemini API key to enable this feature.</span>
+                     </div>
+                   ):aiIdeas.map((idea, i) => (
+                     <div key={i} className="vxd-ai-idea">
+                       {idea.text}
+                       <div><span className="vxd-ai-idea-tag">{idea.tag}</span></div>
+                     </div>
+                   ))}
+                 </div>
               </motion.div>
 
               {/* Quick Actions */}

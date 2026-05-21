@@ -104,7 +104,7 @@ const campaignSchema = new mongoose.Schema(
     rejectionReason: { type: String, default: "" },
     adminMessage:    { type: String, default: "" },
 
-    // ── Analytics (seeded on approval) ───────────────────────────────────────
+    // ── Analytics (populated from real platform API calls) ───────────────────
     analytics: {
       impressions: { type: Number, default: 0 },
       reach:       { type: Number, default: 0 },
@@ -114,6 +114,7 @@ const campaignSchema = new mongoose.Schema(
       adSpend:     { type: Number, default: 0 },
       roas:        { type: Number, default: 0 },
     },
+    analyticsLastSynced: { type: Date, default: null },
   },
   { timestamps: true }
 );
