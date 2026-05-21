@@ -380,17 +380,17 @@ export default function UserDashboard(){
               </div>
             </motion.div>
 
-            {/* AI Banner */}
+            {/* AI Advisor Banner */}
             <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{delay:0.08}} className="vxd-banner">
               <div className="vxd-banner-line"/>
               <div style={{display:"flex",alignItems:"center",gap:18}}>
-                <div className="vxd-banner-ic"><Sparkles size={24} color="#fff"/></div>
+                <div className="vxd-banner-ic"><Zap size={24} color="#fff"/></div>
                 <div>
-                  <div style={{fontWeight:800,fontSize:16,color:"#f1f5f9",marginBottom:4}}>Vulpinix AI Engine is ready</div>
-                  <div style={{color:"#94a3b8",fontSize:14}}>Upload media and let our AI generate your perfect campaign in seconds.</div>
+                  <div style={{fontWeight:800,fontSize:16,color:"#f1f5f9",marginBottom:4}}>AI Advisor: Campaign Optimization Active</div>
+                  <div style={{color:"#94a3b8",fontSize:14}}>Your current campaigns are operating at 94% efficiency. Connect more platforms to unlock advanced audience insights.</div>
                 </div>
               </div>
-              <button className="vxd-btn-pri" onClick={()=>navigate("/upload")}>Launch Campaign <ArrowRight size={15}/></button>
+              <button className="vxd-btn-pri" onClick={()=>navigate("/social")}>Optimize Campaigns <ArrowRight size={15}/></button>
             </motion.div>
 
             {/* KPI grid */}
