@@ -179,6 +179,7 @@ export default function UserDashboard(){
     {text:"\"3 ways our product saves you time\"", tag:"#ProductivityHack"},
     {text:"\"Behind the scenes: How we build our services\"", tag:"#BuildInPublic"}
   ]);
+  const [recentActivity,setRecentActivity]=useState<any[]>([]);
 
   useEffect(()=>{
     if(localStorage.getItem("isAuthenticated")!=="true"){navigate("/auth",{replace:true});return;}
@@ -277,6 +278,28 @@ export default function UserDashboard(){
        dynamicAlerts.push({ type: "info", icon: <CheckCircle2 size={18} color="#38bdf8"/>, title: "All Good", text: "Your workspace is healthy and active." });
     }
     setAlerts(dynamicAlerts);
+
+    // Generate dynamic activity log
+    const dActivity:any[] = [];
+    const sortedList = [...list].sort((a:any, b:any) => new Date(b.createdAt || b.paymentDate || 0).getTime() - new Date(a.createdAt || a.paymentDate || 0).getTime());
+    
+    sortedList.slice(0, 4).forEach(c => {
+      if (c.status === 'rejected') {
+        dActivity.push({dot:"#ef4444", text:`${c.name} needs revision`, sub:"Recent", icon:<XCircle size={13} color="#ef4444"/>});
+      } else if (["running","approved","active","published"].includes(c.status)) {
+        dActivity.push({dot:"#22c55e", text:`${c.name} approved & live`, sub:"Recent", icon:<CheckCircle2 size={13} color="#22c55e"/>});
+      } else if (c.status === 'pending' || c.status === 'in_review') {
+        dActivity.push({dot:"#a78bfa", text:`${c.name} pending review`, sub:"Recent", icon:<Clock size={13} color="#a78bfa"/>});
+      } else if (c.status === 'draft') {
+        dActivity.push({dot:"#94a3b8", text:`${c.name} saved as draft`, sub:"Recent", icon:<PenSquare size={13} color="#94a3b8"/>});
+      } else {
+        dActivity.push({dot:"#38bdf8", text:`${c.name} status updated`, sub:"Recent", icon:<BarChart3 size={13} color="#38bdf8"/>});
+      }
+    });
+    if(dActivity.length === 0) {
+      dActivity.push({dot:"#38bdf8", text:"Account ready", sub:"Just now", icon:<CheckCircle2 size={13} color="#38bdf8"/>});
+    }
+    setRecentActivity(dActivity);
   };
 
   const generateRealAIIdeas = async () => {
@@ -322,13 +345,6 @@ export default function UserDashboard(){
     {label:"Social Accounts",icon:<Share2 size={16}/>,ibg:"rgba(34,197,94,0.12)",icol:"#22c55e",path:"/social"},
     {label:"View Analytics",icon:<TrendingUp size={16}/>,ibg:"rgba(251,191,36,0.12)",icol:"#fbbf24",path:"/dashboard/campaigns"},
     {label:"Settings",icon:<Settings size={16}/>,ibg:"rgba(148,163,184,0.12)",icol:"#94a3b8",path:"/settings"},
-  ];
-
-  const activity=[
-    {dot:"#a78bfa",text:"AI optimisation complete",sub:"2 hours ago",icon:<CheckCircle2 size={13} color="#22c55e"/>},
-    {dot:"#38bdf8",text:"New analytics report ready",sub:"Yesterday",icon:<BarChart3 size={13} color="#38bdf8"/>},
-    {dot:"#22c55e",text:"Campaign approved & live",sub:"2 days ago",icon:<CheckCircle2 size={13} color="#22c55e"/>},
-    {dot:"#ef4444",text:"Review feedback received",sub:"3 days ago",icon:<XCircle size={13} color="#ef4444"/>},
   ];
 
   return(
@@ -558,7 +574,7 @@ export default function UserDashboard(){
                     <div className="vxd-card-title">Recent Log</div>
                   </div>
                 </div>
-                {activity.slice(0, 3).map((a,i)=>(
+                {recentActivity.slice(0, 3).map((a,i)=>(
                   <div key={i} className="vxd-activity">
                     <div className="vxd-activity-dot" style={{background:a.dot,color:a.dot}}/>
                     <div style={{flex:1}}>
