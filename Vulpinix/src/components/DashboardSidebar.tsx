@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard, BarChart3, Upload, User,
   ChevronLeft, ChevronRight, LogOut,
-  Share2, Settings, Calendar
+  Share2, Settings, Calendar, MessageSquare
 } from "lucide-react";
 import { VulpinixLogo } from "./VulpinixLogo";
 
@@ -46,7 +46,8 @@ const SB = `
   }
   .vxsb-toggle:hover { background: rgba(167,139,250,0.15); color: #a78bfa; }
 
-  .vxsb-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+  .vxsb-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; overflow-x: hidden; }
+
 
   .vxsb-section-label {
     font-size: 10px; font-weight: 700; text-transform: uppercase;
@@ -101,13 +102,14 @@ const SB = `
 `;
 
 const NAV_ITEMS = [
-  { label: "Dashboard",       icon: <LayoutDashboard size={18} />, path: "/dashboard" },
-  { label: "Upload Campaign", icon: <Upload size={18} />,          path: "/upload" },
-  { label: "Scheduled Posts", icon: <Calendar size={18} />,        path: "/dashboard/scheduled" },
-  { label: "My Profile",      icon: <User size={18} />,            path: "/profile" },
-  { label: "My Analytics",    icon: <BarChart3 size={18} />,       path: "/dashboard/campaigns" },
-  { label: "Social Accounts", icon: <Share2 size={18} />,          path: "/social" },
-  { label: "Settings",        icon: <Settings size={18} />,        path: "/settings" },
+  { label: "Dashboard",       icon: <LayoutDashboard size={18} />, path: "/dashboard",            section: "main" },
+  { label: "Upload Campaign", icon: <Upload size={18} />,          path: "/upload",               section: "main" },
+  { label: "Scheduled Posts", icon: <Calendar size={18} />,        path: "/dashboard/scheduled",  section: "main" },
+  { label: "My Profile",      icon: <User size={18} />,            path: "/profile",              section: "main" },
+  { label: "My Analytics",    icon: <BarChart3 size={18} />,       path: "/dashboard/campaigns",  section: "main" },
+  { label: "Social Accounts", icon: <Share2 size={18} />,          path: "/social",               section: "main" },
+  { label: "Settings",        icon: <Settings size={18} />,        path: "/settings",             section: "main" },
+  { label: "Feedback",        icon: <MessageSquare size={18} />,   path: "/feedback",             section: "feedback" },
 ];
 
 interface Props {
@@ -142,7 +144,7 @@ export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props
         {/* Nav */}
         <div className="vxsb-nav">
           <div className="vxsb-section-label">Navigation</div>
-          {NAV_ITEMS.map(item => (
+          {NAV_ITEMS.filter(i => i.section === "main").map(item => (
             <div
               key={item.path + item.label}
               className={`vxsb-item ${location.pathname === item.path ? "active" : ""}`}
@@ -152,6 +154,17 @@ export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props
               <span className="vxsb-item-label">{item.label}</span>
             </div>
           ))}
+
+          {/* Feedback Section */}
+          <div className="vxsb-section-label" style={{ marginTop: 16 }}>Feedback</div>
+          <div
+            className={`vxsb-item ${location.pathname === "/feedback" ? "active" : ""}`}
+            onClick={() => navigate("/feedback")}
+            style={location.pathname !== "/feedback" ? { color: "#a78bfa" } : {}}
+          >
+            <span className="vxsb-item-icon"><MessageSquare size={18} /></span>
+            <span className="vxsb-item-label">Feedback</span>
+          </div>
         </div>
 
         {/* Bottom user area */}

@@ -23,6 +23,7 @@ import SocialAccountsPage from "./pages/SocialAccountsPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import SettingsPage from "./pages/SettingsPage";
 import ScheduledPostsPage from "./pages/ScheduledPostsPage";
+import FeedbackPage from "./pages/FeedbackPage";
 
 export const router = createBrowserRouter([
   {
@@ -124,6 +125,10 @@ export const router = createBrowserRouter([
       {
         path: "admin",
         Component: AdminDashboard,
+      },
+      {
+        path: "feedback",
+        Component: FeedbackPage,
       },
       {
         path: "*",
