@@ -9,6 +9,7 @@ import {
   X, Sparkles, Clock, CheckCircle2, Share2
 } from "lucide-react";
 import { DashboardSidebar } from "../components/DashboardSidebar";
+import { DashboardTopBar } from "../components/DashboardTopBar";
 import { getLinkedAccounts } from "./SocialAccountsPage";
 
 const PLATFORMS = [
@@ -31,72 +32,78 @@ const PRIVACY_OPTIONS = [
 ];
 
 const S = `
-  .vxcp-shell { display: flex; height: 100vh; background: var(--vx-bg-primary); overflow: hidden; }
-  .vxcp-page  { flex: 1; overflow-y: auto; padding: 40px 32px 100px; font-family: 'Inter', sans-serif; color: var(--vx-text-primary); position: relative; }
-  .vxcp-inner { max-width: 900px; margin: 0 auto; position: relative; z-index: 10; }
-  .vxcp-orb1  { position: fixed; top: -10%; right: -5%; width: 500px; height: 500px; background: radial-gradient(circle, rgba(167,139,250,0.1) 0%, transparent 70%); border-radius: 50%; pointer-events: none; }
-  .vxcp-orb2  { position: fixed; bottom: -15%; left: -8%; width: 600px; height: 600px; background: radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 70%); border-radius: 50%; pointer-events: none; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  .vxcp-shell{display:flex;height:100vh;background:#070b12;overflow:hidden;font-family:'Inter',sans-serif;}
+  .vxcp-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .vxcp-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:32px 36px 80px;}
+  .vxcp-scroll::-webkit-scrollbar{width:6px;}
+  .vxcp-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px;}
+  .vxcp-orb1{position:fixed;pointer-events:none;border-radius:50%;z-index:0;width:600px;height:600px;top:-160px;right:-120px;background:radial-gradient(circle,rgba(167,139,250,0.08) 0%,transparent 70%);}
+  .vxcp-orb2{position:fixed;pointer-events:none;border-radius:50%;z-index:0;width:500px;height:500px;bottom:-150px;left:-60px;background:radial-gradient(circle,rgba(56,189,248,0.06) 0%,transparent 70%);}
+  .vxcp-inner{max-width:1100px;margin:0 auto;position:relative;z-index:1;}
+  
+  .vxcp-hero{border-radius:26px;padding:30px 40px;margin-bottom:24px;background:linear-gradient(135deg,#0f1628,#111827,#0c1220);border:1px solid rgba(167,139,250,0.14);display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;position:relative;overflow:hidden;}
+  .vxcp-hero-line{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#a78bfa,#38bdf8,#a78bfa);background-size:200%;animation:shimmer 3s ease infinite;}
+  @keyframes shimmer{0%,100%{background-position:0%}50%{background-position:100%}}
+  .vxcp-hero-title{font-size:26px;font-weight:900;letter-spacing:-0.025em;color:#f1f5f9;margin-bottom:5px;}
+  .vxcp-hero-title span{background:linear-gradient(135deg,#c4b5fd,#67e8f9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .vxcp-hero-sub{color:#64748b;font-size:14px;}
 
-  .vxcp-back  { display: flex; align-items: center; gap: 8px; color: var(--vx-text-muted); font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 32px; transition: color 0.2s; width: fit-content; }
-  .vxcp-back:hover { color: var(--vx-text-primary); }
+  .vxcp-back-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);color:#64748b;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;}
+  .vxcp-back-btn:hover{background:rgba(255,255,255,0.08);color:#94a3b8;}
 
-  .vxcp-heading { font-size: 28px; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 6px; }
-  .vxcp-heading span { background: linear-gradient(135deg, #a78bfa, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .vxcp-sub   { color: var(--vx-text-muted); font-size: 15px; margin-bottom: 36px; }
+  .vxcp-grid{display:grid;grid-template-columns:1fr 340px;gap:24px;}
+  @media(max-width:900px){.vxcp-grid{grid-template-columns:1fr;}}
 
-  .vxcp-grid  { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+  .vxcp-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:24px;padding:28px;margin-bottom:20px;}
+  .vxcp-card-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
 
-  .vxcp-card  { background: var(--vx-bg-card); border: 1px solid var(--vx-border); border-radius: 24px; padding: 28px; margin-bottom: 20px; }
-  .vxcp-card-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--vx-text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .vxcp-platform-grid{display:flex;flex-wrap:wrap;gap:10px;}
+  .vxcp-platform-btn{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;color:#94a3b8;}
+  .vxcp-platform-btn.selected{background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.35);color:#f1f5f9;}
+  .vxcp-platform-btn:hover:not(.selected){background:rgba(255,255,255,0.06);color:#f1f5f9;}
 
-  .vxcp-platform-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-  .vxcp-platform-btn  { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--vx-border); background: rgba(255,255,255,0.02); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--vx-text-muted); }
-  .vxcp-platform-btn.selected { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.35); color: var(--vx-text-primary); }
-  .vxcp-platform-btn:hover { background: rgba(255,255,255,0.05); color: var(--vx-text-primary); }
+  .vxcp-textarea{width:100%;min-height:180px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:16px;font-size:15px;color:#f1f5f9;resize:vertical;font-family:'Inter',sans-serif;line-height:1.6;outline:none;transition:border-color 0.2s;box-sizing:border-box;}
+  .vxcp-textarea:focus{border-color:rgba(167,139,250,0.4);background:rgba(255,255,255,0.04);}
+  .vxcp-textarea::placeholder{color:#475569;}
 
-  .vxcp-textarea { width: 100%; min-height: 180px; background: rgba(255,255,255,0.02); border: 1px solid var(--vx-border); border-radius: 16px; padding: 16px; font-size: 15px; color: var(--vx-text-primary); resize: vertical; font-family: 'Inter', sans-serif; line-height: 1.6; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
-  .vxcp-textarea:focus { border-color: rgba(167,139,250,0.4); }
-  .vxcp-textarea::placeholder { color: var(--vx-text-muted); }
+  .vxcp-toolbar{display:flex;gap:8px;margin-top:12px;}
+  .vxcp-tool-btn{width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;cursor:pointer;color:#94a3b8;transition:all 0.2s;}
+  .vxcp-tool-btn:hover{background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.3);color:#a78bfa;}
 
-  .vxcp-toolbar { display: flex; gap: 8px; margin-top: 12px; }
-  .vxcp-tool-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--vx-border); background: rgba(255,255,255,0.02); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--vx-text-muted); transition: all 0.2s; }
-  .vxcp-tool-btn:hover { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.3); color: #a78bfa; }
+  .vxcp-char-count{font-size:12px;color:#64748b;text-align:right;margin-top:8px;}
+  .vxcp-char-count.warn{color:#eab308;}
+  .vxcp-char-count.danger{color:#ef4444;}
 
-  .vxcp-char-count { font-size: 12px; color: var(--vx-text-muted); text-align: right; margin-top: 8px; }
-  .vxcp-char-count.warn { color: #eab308; }
-  .vxcp-char-count.danger { color: #ef4444; }
+  .vxcp-media-drop{border:2px dashed rgba(255,255,255,0.1);border-radius:16px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:rgba(255,255,255,0.01);}
+  .vxcp-media-drop:hover{border-color:rgba(167,139,250,0.4);background:rgba(167,139,250,0.04);}
+  .vxcp-media-thumb{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;}
+  .vxcp-media-remove{position:absolute;top:6px;right:6px;width:22px;height:22px;background:rgba(0,0,0,0.7);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;backdrop-filter:blur(4px);}
 
-  .vxcp-media-drop { border: 2px dashed rgba(255,255,255,0.1); border-radius: 16px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
-  .vxcp-media-drop:hover { border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.04); }
-  .vxcp-media-thumb { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 1; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; }
-  .vxcp-media-remove { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; background: rgba(0,0,0,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #fff; }
+  .vxcp-privacy-btn{display:flex;align-items:center;gap:8px;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);font-size:13px;font-weight:600;cursor:pointer;width:100%;transition:all 0.2s;color:#f1f5f9;}
+  .vxcp-privacy-btn:hover{background:rgba(255,255,255,0.06);}
+  .vxcp-privacy-menu{border-radius:12px;border:1px solid rgba(255,255,255,0.09);background:#0f1628;overflow:hidden;margin-top:8px;}
+  .vxcp-privacy-opt{display:flex;align-items:center;gap:10px;padding:12px 16px;font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s;color:#94a3b8;}
+  .vxcp-privacy-opt:hover{background:rgba(255,255,255,0.04);color:#f1f5f9;}
+  .vxcp-privacy-opt.active{color:#a78bfa;background:rgba(167,139,250,0.08);}
 
-  .vxcp-privacy-btn { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--vx-border); background: rgba(255,255,255,0.02); font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.2s; color: var(--vx-text-primary); }
-  .vxcp-privacy-btn:hover { background: rgba(255,255,255,0.05); }
-  .vxcp-privacy-menu { border-radius: 12px; border: 1px solid var(--vx-border); background: var(--vx-bg-card); overflow: hidden; margin-top: 6px; }
-  .vxcp-privacy-opt  { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; color: var(--vx-text-primary); }
-  .vxcp-privacy-opt:hover { background: rgba(255,255,255,0.04); }
-  .vxcp-privacy-opt.active { color: #a78bfa; background: rgba(167,139,250,0.08); }
+  .vxcp-schedule-row{display:flex;gap:10px;}
+  .vxcp-schedule-input{flex:1;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.09);border-radius:12px;color:#f1f5f9;font-size:13px;outline:none;font-family:'Inter',sans-serif;}
+  .vxcp-schedule-input:focus{border-color:rgba(167,139,250,0.4);background:rgba(255,255,255,0.05);}
+  .vxcp-schedule-input::-webkit-calendar-picker-indicator{filter:invert(1);}
 
-  .vxcp-schedule-row { display: flex; gap: 10px; }
-  .vxcp-schedule-input { flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--vx-border); border-radius: 10px; color: var(--vx-text-primary); font-size: 13px; outline: none; font-family: 'Inter', sans-serif; }
-  .vxcp-schedule-input:focus { border-color: rgba(167,139,250,0.4); }
+  .vxcp-btn-primary{width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#a78bfa,#38bdf8);border:none;color:#fff;font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 24px rgba(167,139,250,0.25);transition:transform 0.2s,box-shadow 0.2s;margin-bottom:12px;}
+  .vxcp-btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 32px rgba(167,139,250,0.35);}
+  .vxcp-btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+  .vxcp-btn-secondary{width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.03);color:#f1f5f9;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background 0.2s;}
+  .vxcp-btn-secondary:hover{background:rgba(255,255,255,0.08);}
 
-  .vxcp-btn-primary { width: 100%; padding: 14px; border-radius: 14px; background: linear-gradient(135deg, #a78bfa, #38bdf8); border: none; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 8px 24px rgba(167,139,250,0.25); transition: transform 0.2s, box-shadow 0.2s; margin-bottom: 12px; }
-  .vxcp-btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(167,139,250,0.35); }
-  .vxcp-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .vxcp-btn-secondary { width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--vx-border); background: rgba(255,255,255,0.03); color: var(--vx-text-primary); font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; }
-  .vxcp-btn-secondary:hover { background: rgba(255,255,255,0.07); }
+  .vxcp-ai-btn{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(167,139,250,0.25);background:rgba(167,139,250,0.07);color:#a78bfa;font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;margin-bottom:20px;}
+  .vxcp-ai-btn:hover{background:rgba(167,139,250,0.14);}
 
-  .vxcp-ai-btn { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(167,139,250,0.25); background: rgba(167,139,250,0.07); color: #a78bfa; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; margin-bottom: 20px; }
-  .vxcp-ai-btn:hover { background: rgba(167,139,250,0.14); }
-
-  .vxcp-success { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 200; }
-  .vxcp-success-card { background: var(--vx-bg-card); border: 1px solid rgba(34,197,94,0.3); border-radius: 24px; padding: 48px 40px; text-align: center; max-width: 400px; }
-
-  @media (max-width: 900px) { .vxcp-grid { grid-template-columns: 1fr; } }
+  .vxcp-success{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:200;}
+  .vxcp-success-card{background:#0f1628;border:1px solid rgba(34,197,94,0.3);border-radius:24px;padding:48px 40px;text-align:center;max-width:400px;}
 `;
-
 export default function CreatePostPage() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -124,7 +131,7 @@ export default function CreatePostPage() {
     } catch {}
     const accounts = getLinkedAccounts();
     setLinkedAccounts(accounts);
-    // Don't auto-select any platform — let the user explicitly choose where to post
+    // Don't auto-select any platform â€” let the user explicitly choose where to post
     setSelectedPlatforms([]);
   }, [navigate]);
 
@@ -176,7 +183,7 @@ export default function CreatePostPage() {
 
       const authToken = localStorage.getItem("authToken");
 
-      console.log("🚀 SENDING CAMPAIGN:", {
+      console.log("ðŸš€ SENDING CAMPAIGN:", {
         platforms: selectedPlatforms,
         caption: caption.substring(0, 20) + "..."
       });
@@ -231,190 +238,195 @@ export default function CreatePostPage() {
       <style dangerouslySetInnerHTML={{ __html: S }} />
       <div className="vxcp-shell">
         <DashboardSidebar userName={userName} userInitial={userName[0]?.toUpperCase() || "U"} />
-        <div className="vxcp-page">
-          <div className="vxcp-orb1" /><div className="vxcp-orb2" />
-          <div className="vxcp-inner">
+        <div className="vxcp-main">
+          <DashboardTopBar userName={userName} userInitial={userName[0]?.toUpperCase() || "U"} />
+          <div className="vxcp-scroll">
+            <div className="vxcp-orb1" /><div className="vxcp-orb2" />
+            <div className="vxcp-inner">
 
-            <div className="vxcp-back" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft size={16} /> Back to Dashboard
-            </div>
-
-            <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-              <div className="vxcp-heading">Create a <span>Post</span></div>
-              <div className="vxcp-sub">Share a single post directly from your account, {userName}.</div>
-            </motion.div>
-
-            {linkedAccounts.length === 0 ? (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: "center", padding: "80px 40px", background: "var(--vx-bg-card)", border: "1px solid var(--vx-border)", borderRadius: 24 }}>
-                <div style={{ width: 72, height: 72, borderRadius: 20, background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
-                  <Lock size={32} color="#eab308" />
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>No Social Accounts Linked</div>
-                <div style={{ color: "var(--vx-text-muted)", fontSize: 15, maxWidth: 420, margin: "0 auto 32px", lineHeight: 1.6 }}>
-                  You need to connect at least one social media account before you can create and publish posts.
-                </div>
-                <button
-                  onClick={() => navigate("/social")}
-                  style={{ padding: "14px 28px", background: "linear-gradient(135deg,#a78bfa,#38bdf8)", border: "none", borderRadius: 14, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 10 }}
-                >
-                  <Share2 size={16} /> Connect Social Accounts
-                </button>
-              </motion.div>
-            ) : (
-              <div className="vxcp-grid">
+              <div className="vxcp-hero">
+                <div className="vxcp-hero-line"/>
                 <div>
-                {/* Platform selector */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="vxcp-card">
-                  <div className="vxcp-card-title">Post to <span style={{color:"#22c55e",fontSize:11}}> ({linkedAccounts.length} connected)</span></div>
-                  <div className="vxcp-platform-grid">
-                    {PLATFORMS.filter(p => linkedAccounts.includes(p.id)).map(p => (
-                      <button
-                        key={p.id}
-                        className={`vxcp-platform-btn ${selectedPlatforms.includes(p.id) ? "selected" : ""}`}
-                        onClick={() => togglePlatform(p.id)}
-                      >
-                        <span style={{ color: selectedPlatforms.includes(p.id) ? p.color : "inherit" }}>{p.icon}</span>
-                        {p.label}
-                        {selectedPlatforms.includes(p.id) && <span style={{ fontSize: 10, color: p.color, marginLeft: 2 }}>✓</span>}
-                      </button>
-                    ))}
-                  </div>
-                  {selectedPlatforms.length === 0 && (
-                    <div style={{ marginTop: 12, fontSize: 12, color: "#eab308", display: "flex", alignItems: "center", gap: 6 }}>
-                      ⚠️ Select at least one platform to publish to.
-                    </div>
-                  )}
-                </motion.div>
-
-                {/* Caption */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="vxcp-card">
-                  <div className="vxcp-card-title">Caption</div>
-                  <textarea
-                    className="vxcp-textarea"
-                    placeholder="What's on your mind? Write your post caption here…"
-                    value={caption}
-                    onChange={e => setCaption(e.target.value)}
-                    maxLength={charLimit + 100}
-                  />
-                  <div className="vxcp-toolbar">
-                    <div className="vxcp-tool-btn" onClick={() => fileRef.current?.click()} title="Add media">
-                      <ImageIcon size={16} />
-                    </div>
-                    <div className="vxcp-tool-btn" onClick={() => fileRef.current?.click()} title="Add video">
-                      <Video size={16} />
-                    </div>
-                    <div className="vxcp-tool-btn" title="Add emoji"><Smile size={16} /></div>
-                    <div className="vxcp-tool-btn" title="Add hashtag" onClick={() => setCaption(c => c + " #")}><Hash size={16} /></div>
-                    <div className="vxcp-tool-btn" title="Mention someone" onClick={() => setCaption(c => c + " @")}><AtSign size={16} /></div>
-                  </div>
-                  <div className={`vxcp-char-count ${charClass}`}>{charCount} / {charLimit}</div>
-                </motion.div>
-
-                {/* Media */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="vxcp-card">
-                  <div className="vxcp-card-title"><ImageIcon size={14} /> Media</div>
-                  <input ref={fileRef} type="file" accept={selectedPlatforms.includes("youtube") ? "image/*,video/*" : "image/*"} multiple style={{ display: "none" }} onChange={handleFileChange} />
-                  {mediaFiles.length === 0 ? (
-                    <div className="vxcp-media-drop" onClick={() => fileRef.current?.click()}>
-                      <ImageIcon size={32} style={{ margin: "0 auto 12px", opacity: 0.25 }} />
-                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
-                        {selectedPlatforms.includes("youtube") ? "Click to upload photos or videos" : "Click to upload photos"}
-                      </div>
-                      <div style={{ fontSize: 12, color: "var(--vx-text-muted)" }}>
-                        {selectedPlatforms.includes("youtube") ? "PNG, JPG, GIF, MP4 up to 50MB" : "PNG, JPG, GIF up to 50MB"}
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                      {mediaFiles.map((src, i) => (
-                        <div key={i} className="vxcp-media-thumb">
-                          {src.startsWith("data:video") ? (
-                            <video src={src} muted controls style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          ) : (
-                            <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          )}
-                          <div className="vxcp-media-remove" onClick={() => setMediaFiles(f => f.filter((_, j) => j !== i))}>
-                            <X size={12} />
-                          </div>
-                        </div>
-                      ))}
-                      <div className="vxcp-media-thumb" style={{ cursor: "pointer" }} onClick={() => fileRef.current?.click()}>
-                        <ImageIcon size={24} style={{ opacity: 0.25 }} />
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
+                  <div className="vxcp-hero-title">Create a <span>Post</span></div>
+                  <div className="vxcp-hero-sub">Share a single post directly from your account, {userName}.</div>
+                </div>
+                <div className="vxcp-back-btn" onClick={() => navigate("/dashboard")}>
+                  <ArrowLeft size={16} /> Back
+                </div>
               </div>
 
-              {/* RIGHT: Settings & Post */}
-              <div>
-                {/* AI Assist */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
-                  <button className="vxcp-ai-btn" onClick={() => {
-                    const suggestions = [
-                      "🚀 Excited to share something new today! Stay tuned for what's coming. #Innovation #Launch",
-                      "✨ Every great achievement starts with a single step. What's yours today? #Motivation #Growth",
-                      "💡 The best time to start was yesterday. The second best time is now. #Entrepreneurship",
-                    ];
-                    setCaption(suggestions[Math.floor(Math.random() * suggestions.length)]);
-                  }}>
-                    <Sparkles size={15} /> Generate Caption with AI
+              {linkedAccounts.length === 0 ? (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: "center", padding: "80px 40px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 24 }}>
+                  <div style={{ width: 72, height: 72, borderRadius: 20, background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+                    <Lock size={32} color="#eab308" />
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 12, color: "#f1f5f9" }}>No Social Accounts Linked</div>
+                  <div style={{ color: "#94a3b8", fontSize: 15, maxWidth: 420, margin: "0 auto 32px", lineHeight: 1.6 }}>
+                    You need to connect at least one social media account before you can create and publish posts.
+                  </div>
+                  <button
+                    onClick={() => navigate("/social")}
+                    className="vxcp-btn-primary" style={{ width: "auto", display: "inline-flex" }}
+                  >
+                    <Share2 size={16} /> Connect Social Accounts
                   </button>
                 </motion.div>
-
-                {/* Privacy */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="vxcp-card">
-                  <div className="vxcp-card-title">Audience</div>
-                  <div style={{ position: "relative" }}>
-                    <button className="vxcp-privacy-btn" onClick={() => setShowPrivacyMenu(m => !m)}>
-                      {selectedPrivacy.icon}
-                      {selectedPrivacy.label}
-                      <ChevronDown size={14} style={{ marginLeft: "auto", opacity: 0.5 }} />
-                    </button>
-                    {showPrivacyMenu && (
-                      <div className="vxcp-privacy-menu">
-                        {PRIVACY_OPTIONS.map(opt => (
-                          <div key={opt.id} className={`vxcp-privacy-opt ${privacy === opt.id ? "active" : ""}`} onClick={() => { setPrivacy(opt.id); setShowPrivacyMenu(false); }}>
-                            {opt.icon} {opt.label}
-                            {privacy === opt.id && <CheckCircle2 size={14} style={{ marginLeft: "auto" }} />}
-                          </div>
+              ) : (
+                <div className="vxcp-grid">
+                  <div>
+                    {/* Platform selector */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="vxcp-card">
+                      <div className="vxcp-card-title">Post to <span style={{color:"#22c55e",fontSize:11}}> ({linkedAccounts.length} connected)</span></div>
+                      <div className="vxcp-platform-grid">
+                        {PLATFORMS.filter(p => linkedAccounts.includes(p.id)).map(p => (
+                          <button
+                            key={p.id}
+                            className={`vxcp-platform-btn ${selectedPlatforms.includes(p.id) ? "selected" : ""}`}
+                            onClick={() => togglePlatform(p.id)}
+                          >
+                            <span style={{ color: selectedPlatforms.includes(p.id) ? p.color : "inherit" }}>{p.icon}</span>
+                            {p.label}
+                            {selectedPlatforms.includes(p.id) && <span style={{ fontSize: 10, color: p.color, marginLeft: 2 }}>o"</span>}
+                          </button>
                         ))}
                       </div>
-                    )}
-                  </div>
-                </motion.div>
+                      {selectedPlatforms.length === 0 && (
+                        <div style={{ marginTop: 12, fontSize: 12, color: "#eab308", display: "flex", alignItems: "center", gap: 6 }}>
+                          s,? Select at least one platform to publish to.
+                        </div>
+                      )}
+                    </motion.div>
 
-                {/* Schedule */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className="vxcp-card">
-                  <div className="vxcp-card-title"><Clock size={14} /> Schedule (optional)</div>
-                  <div className="vxcp-schedule-row">
-                    <input type="date" className="vxcp-schedule-input" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
-                    <input type="time" className="vxcp-schedule-input" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
-                  </div>
-                  {scheduleDate && <div style={{ fontSize: 12, color: "var(--vx-text-muted)", marginTop: 10 }}>Will post on {scheduleDate} at {scheduleTime || "00:00"}</div>}
-                </motion.div>
+                    {/* Caption */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="vxcp-card">
+                      <div className="vxcp-card-title">Caption</div>
+                      <textarea
+                        className="vxcp-textarea"
+                        placeholder="What's on your mind? Write your post caption here?"
+                        value={caption}
+                        onChange={e => setCaption(e.target.value)}
+                        maxLength={charLimit + 100}
+                      />
+                      <div className="vxcp-toolbar">
+                        <div className="vxcp-tool-btn" onClick={() => fileRef.current?.click()} title="Add media">
+                          <ImageIcon size={16} />
+                        </div>
+                        <div className="vxcp-tool-btn" onClick={() => fileRef.current?.click()} title="Add video">
+                          <Video size={16} />
+                        </div>
+                        <div className="vxcp-tool-btn" title="Add emoji"><Smile size={16} /></div>
+                        <div className="vxcp-tool-btn" title="Add hashtag" onClick={() => setCaption(c => c + " #")}><Hash size={16} /></div>
+                        <div className="vxcp-tool-btn" title="Mention someone" onClick={() => setCaption(c => c + " @")}><AtSign size={16} /></div>
+                      </div>
+                      <div className={`vxcp-char-count ${charClass}`}>{charCount} / {charLimit}</div>
+                    </motion.div>
 
-                {/* Publish buttons */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}>
-                  <button
-                    className="vxcp-btn-primary"
-                    onClick={handlePost}
-                    disabled={posting || !caption.trim() || selectedPlatforms.length === 0}
-                    title={selectedPlatforms.length === 0 ? "Select at least one platform" : ""}
-                  >
-                    {posting ? (
-                      <><span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} /> Posting…</>
-                    ) : (
-                      <><Send size={16} /> {scheduleDate ? "Schedule Post" : "Publish Now"}</>
-                    )}
-                  </button>
-                  <button className="vxcp-btn-secondary" onClick={() => navigate("/dashboard")}>
-                    Cancel
-                  </button>
-                </motion.div>
-              </div>
+                    {/* Media */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="vxcp-card">
+                      <div className="vxcp-card-title"><ImageIcon size={14} /> Media</div>
+                      <input ref={fileRef} type="file" accept={selectedPlatforms.includes("youtube") ? "image/*,video/*" : "image/*"} multiple style={{ display: "none" }} onChange={handleFileChange} />
+                      {mediaFiles.length === 0 ? (
+                        <div className="vxcp-media-drop" onClick={() => fileRef.current?.click()}>
+                          <ImageIcon size={32} style={{ margin: "0 auto 12px", opacity: 0.25 }} color="#94a3b8" />
+                          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: "#f1f5f9" }}>
+                            {selectedPlatforms.includes("youtube") ? "Click to upload photos or videos" : "Click to upload photos"}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#64748b" }}>
+                            {selectedPlatforms.includes("youtube") ? "PNG, JPG, GIF, MP4 up to 50MB" : "PNG, JPG, GIF up to 50MB"}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                          {mediaFiles.map((src, i) => (
+                            <div key={i} className="vxcp-media-thumb">
+                              {src.startsWith("data:video") ? (
+                                <video src={src} muted controls style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              ) : (
+                                <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              )}
+                              <div className="vxcp-media-remove" onClick={() => setMediaFiles(f => f.filter((_, j) => j !== i))}>
+                                <X size={12} />
+                              </div>
+                            </div>
+                          ))}
+                          <div className="vxcp-media-thumb" style={{ cursor: "pointer" }} onClick={() => fileRef.current?.click()}>
+                            <ImageIcon size={24} style={{ opacity: 0.25 }} color="#94a3b8" />
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  </div>
+
+                  {/* RIGHT: Settings & Post */}
+                  <div>
+                    {/* AI Assist */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+                      <button className="vxcp-ai-btn" onClick={() => {
+                        const suggestions = [
+                          "dYs? Excited to share something new today! Stay tuned for what's coming. #Innovation #Launch",
+                          "o\" Every great achievement starts with a single step. What's yours today? #Motivation #Growth",
+                          "dY' The best time to start was yesterday. The second best time is now. #Entrepreneurship",
+                        ];
+                        setCaption(suggestions[Math.floor(Math.random() * suggestions.length)]);
+                      }}>
+                        <Sparkles size={15} /> Generate Caption with AI
+                      </button>
+                    </motion.div>
+
+                    {/* Privacy */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} className="vxcp-card">
+                      <div className="vxcp-card-title">Audience</div>
+                      <div style={{ position: "relative" }}>
+                        <button className="vxcp-privacy-btn" onClick={() => setShowPrivacyMenu(m => !m)}>
+                          {selectedPrivacy.icon}
+                          {selectedPrivacy.label}
+                          <ChevronDown size={14} style={{ marginLeft: "auto", opacity: 0.5 }} />
+                        </button>
+                        {showPrivacyMenu && (
+                          <div className="vxcp-privacy-menu">
+                            {PRIVACY_OPTIONS.map(opt => (
+                              <div key={opt.id} className={`vxcp-privacy-opt ${privacy === opt.id ? "active" : ""}`} onClick={() => { setPrivacy(opt.id); setShowPrivacyMenu(false); }}>
+                                {opt.icon} {opt.label}
+                                {privacy === opt.id && <CheckCircle2 size={14} style={{ marginLeft: "auto" }} />}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+
+                    {/* Schedule */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className="vxcp-card">
+                      <div className="vxcp-card-title"><Clock size={14} /> Schedule (optional)</div>
+                      <div className="vxcp-schedule-row">
+                        <input type="date" className="vxcp-schedule-input" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
+                        <input type="time" className="vxcp-schedule-input" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
+                      </div>
+                      {scheduleDate && <div style={{ fontSize: 12, color: "#64748b", marginTop: 10 }}>Will post on {scheduleDate} at {scheduleTime || "00:00"}</div>}
+                    </motion.div>
+
+                    {/* Publish buttons */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}>
+                      <button
+                        className="vxcp-btn-primary"
+                        onClick={handlePost}
+                        disabled={posting || !caption.trim() || selectedPlatforms.length === 0}
+                        title={selectedPlatforms.length === 0 ? "Select at least one platform" : ""}
+                      >
+                        {posting ? (
+                          <><span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} /> Posting?</>
+                        ) : (
+                          <><Send size={16} /> {scheduleDate ? "Schedule Post" : "Publish Now"}</>
+                        )}
+                      </button>
+                      <button className="vxcp-btn-secondary" onClick={() => navigate("/dashboard")}>
+                        Cancel
+                      </button>
+                    </motion.div>
+                  </div>
+                </div>
+              )}
             </div>
-            )}
           </div>
         </div>
 
@@ -429,8 +441,8 @@ export default function CreatePostPage() {
               style={{ maxWidth: 440, width: "100%", boxSizing: "border-box" }}
             >
               <CheckCircle2 size={56} color="#22c55e" style={{ margin: "0 auto 20px" }} />
-              <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Post Processed! 🎉</div>
-              <div style={{ color: "var(--vx-text-muted)", fontSize: 14, marginBottom: 24 }}>
+              <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, color: "#f1f5f9" }}>Post Processed! dYZ%</div>
+              <div style={{ color: "#94a3b8", fontSize: 14, marginBottom: 24 }}>
                 Your post has been submitted and processed.
               </div>
 
@@ -440,27 +452,27 @@ export default function CreatePostPage() {
                   marginBottom: "24px",
                   padding: "16px",
                   background: "rgba(255, 255, 255, 0.02)",
-                  border: "1px solid var(--vx-border)",
+                  border: "1px solid rgba(255,255,255,0.07)",
                   borderRadius: "16px",
                   textAlign: "left"
                 }}>
-                  <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--vx-text-muted)", marginBottom: "12px" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: "12px" }}>
                     Instant Publishing Status
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {Object.entries(publishResults).map(([platform, res]) => (
                       <div key={platform} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontSize: "13px", fontWeight: 600, textTransform: "capitalize", color: "var(--vx-text-primary)" }}>
+                          <span style={{ fontSize: "13px", fontWeight: 600, textTransform: "capitalize", color: "#f1f5f9" }}>
                             {platform}
                           </span>
                           {res.status === "success" ? (
                             <span style={{ fontSize: "11px", fontWeight: 700, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>
-                              ✓ Success
+                              o" Success
                             </span>
                           ) : (
                             <span style={{ fontSize: "11px", fontWeight: 700, color: "#ef4444", display: "flex", alignItems: "center", gap: 4 }}>
-                              ✗ Failed
+                              o- Failed
                             </span>
                           )}
                         </div>
@@ -481,12 +493,13 @@ export default function CreatePostPage() {
                   width: "100%",
                   padding: "14px",
                   borderRadius: "12px",
-                  background: "var(--vx-text-primary)",
-                  color: "var(--vx-bg-primary)",
+                  background: "#f1f5f9",
+                  color: "#0f1628",
                   border: "none",
                   fontWeight: 700,
                   fontSize: "14px",
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  transition: "background 0.2s"
                 }}
               >
                 Go to Dashboard
