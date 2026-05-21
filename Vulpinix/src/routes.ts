@@ -22,6 +22,7 @@ import CreatePostPage from "./pages/CreatePostPage";
 import SocialAccountsPage from "./pages/SocialAccountsPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import SettingsPage from "./pages/SettingsPage";
+import ScheduledPostsPage from "./pages/ScheduledPostsPage";
 
 export const router = createBrowserRouter([
   {
@@ -95,6 +96,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard",
         Component: UserDashboard,
+      },
+      {
+        path: "dashboard/scheduled",
+        Component: ScheduledPostsPage,
       },
       {
         path: "create-post",

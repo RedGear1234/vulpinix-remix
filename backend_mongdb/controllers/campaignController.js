@@ -916,4 +916,79 @@ const getCampaignById = async (req, res) => {
   }
 };
 
-module.exports = { createCampaign, getUserCampaigns, getCampaignById, publishCampaign };
+/**
+ * PUT /api/campaign/:id
+ * Updates/reschedules a campaign.
+ */
+const updateCampaign = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.email || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized." });
+    }
+
+    const campaign = await Campaign.findOne({
+      _id: id,
+      userId: { $regex: new RegExp(`^${userId}$`, "i") }
+    });
+
+    if (!campaign) {
+      return res.status(404).json({ success: false, message: "Campaign not found." });
+    }
+
+    // Only allow updating scheduled/pending/draft campaigns
+    if (campaign.status === "published" || campaign.status === "running") {
+      return res.status(400).json({ success: false, message: "Cannot edit an already running or published campaign." });
+    }
+
+    const { campaignName, scheduledAt, platforms, budget } = req.body;
+    if (campaignName) campaign.campaignName = campaignName;
+    if (scheduledAt !== undefined) {
+      campaign.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+      if (scheduledAt) {
+        campaign.status = "scheduled";
+      } else {
+        campaign.status = "pending";
+      }
+    }
+    if (platforms) campaign.platforms = platforms;
+    if (budget) campaign.budget = budget;
+
+    await campaign.save();
+    return res.json({ success: true, message: "Campaign updated successfully.", campaign });
+  } catch (err) {
+    console.error("updateCampaign error:", err);
+    return res.status(500).json({ success: false, message: "Server error updating campaign." });
+  }
+};
+
+/**
+ * DELETE /api/campaign/:id
+ * Deletes/cancels a campaign.
+ */
+const deleteCampaign = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.email || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized." });
+    }
+
+    const result = await Campaign.deleteOne({
+      _id: id,
+      userId: { $regex: new RegExp(`^${userId}$`, "i") }
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: "Campaign not found." });
+    }
+
+    return res.json({ success: true, message: "Campaign deleted/cancelled successfully." });
+  } catch (err) {
+    console.error("deleteCampaign error:", err);
+    return res.status(500).json({ success: false, message: "Server error deleting campaign." });
+  }
+};
+
+module.exports = { createCampaign, getUserCampaigns, getCampaignById, updateCampaign, deleteCampaign, publishCampaign };
