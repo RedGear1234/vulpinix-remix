@@ -15,79 +15,27 @@ const issueUserToken = (email, name) => {
  * Creates a new campaign. Supports both authenticated users and guest (no token).
  * For guest users, a JWT is issued on the fly from the payment email.
  */
-const createCampaign = async (req, res) => {
+
+/**
+ * Helper function to publish a campaign/post to its selected social platforms.
+ * Used for both instant publishing and scheduled background jobs.
+ */
+const publishCampaign = async (campaign) => {
+  let publishResults = {};
   try {
     const {
-      // User identity
-      userId, userName, userEmail, userPhone,
-      // Business info
-      businessName, businessGoal, businessCategory,
-      // Campaign basics
-      campaignName, objective, budget, budgetType, currency,
-      duration, estimatedReach, startDatePreference,
-      // Platform(s)
-      platform, platforms,
-      // Ad creative
-      adContentDescription, adCaption, adCopyText, callToAction,
-      creativeFiles, adImage, adVideo,
-      // Targeting
-      targeting, language,
-      // Social handles
-      socialHandles,
-      // Content / links
-      content, links,
-      // Payment
-      payment, paymentAmount, paymentStatus, paymentId, transactionId, paymentDate,
-    } = req.body;
-
-    if (!campaignName || !budget || !platforms || platforms.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "campaignName, budget, and at least one platform are required.",
-      });
-    }
+      platforms,
+      adImage,
+      adVideo,
+      userEmail,
+      userId,
+      campaignName,
+      adCaption,
+      adCopyText
+    } = campaign;
 
     const effectiveUserId = userId || userEmail || "anonymous";
 
-    const campaign = new Campaign({
-      userId:           effectiveUserId,
-      userName:         userName         || "",
-      userEmail:        userEmail        || "",
-      userPhone:        userPhone        || "",
-      businessName:     businessName     || userName || "",
-      businessGoal:     businessGoal     || "",
-      businessCategory: businessCategory || "",
-      campaignName,
-      objective:        objective        || "brand_awareness",
-      budget,
-      budgetType:       budgetType       || "Daily",
-      currency:         currency         || "INR",
-      duration:         duration         || "",
-      estimatedReach:   estimatedReach   || "",
-      startDatePreference: startDatePreference || "",
-      platform:         platform         || (platforms && platforms[0]) || "",
-      platforms,
-      adContentDescription: adContentDescription || "",
-      adCaption:        adCaption        || "",
-      adCopyText:       adCopyText       || "",
-      callToAction:     callToAction     || "",
-      creativeFiles:    creativeFiles    || [],
-      adImage:          adImage          || "",
-      targeting:        targeting        || {},
-      language:         language         || ["English"],
-      socialHandles:    socialHandles    || {},
-      content:          content          || {},
-      links:            links            || {},
-      payment:          payment          || {},
-      paymentAmount:    paymentAmount    || "",
-      paymentStatus:    paymentStatus    || "paid",
-      paymentId:        paymentId        || "",
-      transactionId:    transactionId    || "",
-      paymentDate:      paymentDate      ? new Date(paymentDate) : new Date(),
-      status:           "pending",
-    });
-
-    let publishResults = {};
     // --- INSTANT PUBLISHING LOGIC (META) ---
     try {
       const platformsLower = platforms ? platforms.map(p => p.toLowerCase()) : [];
@@ -758,6 +706,99 @@ const createCampaign = async (req, res) => {
       console.error("❌ Instant publishing failed:", publishErr.response?.data || publishErr.message);
     }
     // --- END INSTANT PUBLISHING LOGIC ---
+  } catch (err) {
+    console.error("❌ publishCampaign error:", err);
+  }
+  return publishResults;
+};
+
+const createCampaign = async (req, res) => {
+  try {
+    const {
+      // User identity
+      userId, userName, userEmail, userPhone,
+      // Business info
+      businessName, businessGoal, businessCategory,
+      // Campaign basics
+      campaignName, objective, budget, budgetType, currency,
+      duration, estimatedReach, startDatePreference,
+      // Platform(s)
+      platform, platforms,
+      // Ad creative
+      adContentDescription, adCaption, adCopyText, callToAction,
+      creativeFiles, adImage, adVideo, scheduledAt,
+      // Targeting
+      targeting, language,
+      // Social handles
+      socialHandles,
+      // Content / links
+      content, links,
+      // Payment
+      payment, paymentAmount, paymentStatus, paymentId, transactionId, paymentDate,
+    } = req.body;
+
+    if (!campaignName || !budget || !platforms || platforms.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "campaignName, budget, and at least one platform are required.",
+      });
+    }
+
+    const effectiveUserId = userId || userEmail || "anonymous";
+
+    const campaign = new Campaign({
+      userId:           effectiveUserId,
+      userName:         userName         || "",
+      userEmail:        userEmail        || "",
+      userPhone:        userPhone        || "",
+      businessName:     businessName     || userName || "",
+      businessGoal:     businessGoal     || "",
+      businessCategory: businessCategory || "",
+      campaignName,
+      objective:        objective        || "brand_awareness",
+      budget,
+      budgetType:       budgetType       || "Daily",
+      currency:         currency         || "INR",
+      duration:         duration         || "",
+      estimatedReach:   estimatedReach   || "",
+      startDatePreference: startDatePreference || "",
+      platform:         platform         || (platforms && platforms[0]) || "",
+      platforms,
+      adContentDescription: adContentDescription || "",
+      adCaption:        adCaption        || "",
+      adCopyText:       adCopyText       || "",
+      callToAction:     callToAction     || "",
+      creativeFiles:    creativeFiles    || [],
+      adImage:          adImage          || "",
+      adVideo:          adVideo          || "",
+      scheduledAt:      scheduledAt      ? new Date(scheduledAt) : null,
+      targeting:        targeting        || {},
+      language:         language         || ["English"],
+      socialHandles:    socialHandles    || {},
+      content:          content          || {},
+      links:            links            || {},
+      payment:          payment          || {},
+      paymentAmount:    paymentAmount    || "",
+      paymentStatus:    paymentStatus    || "paid",
+      paymentId:        paymentId        || "",
+      transactionId:    transactionId    || "",
+      paymentDate:      paymentDate      ? new Date(paymentDate) : new Date(),
+      status:           scheduledAt      ? "scheduled" : "pending",
+    });
+
+    let publishResults = {};
+    try {
+      if (scheduledAt) {
+        campaign.status = "scheduled";
+        await campaign.save();
+        console.log(`⏰ [SCHEDULED] Campaign "${campaign.campaignName}" scheduled for ${campaign.scheduledAt}`);
+      } else {
+        await campaign.save();
+        publishResults = await publishCampaign(campaign);
+      }
+    } catch (dbErr) {
+      console.error("❌ Failed to save campaign / publish:", dbErr);
+    }
 
     // Issue a user token so the dashboard can fetch campaigns via API
     const token = issueUserToken(userEmail || effectiveUserId, userName || "User");
@@ -817,6 +858,7 @@ const getUserCampaigns = async (req, res) => {
       rejectionReason: c.rejectionReason || "",
       analytics: c.analytics,
       adImage: c.adImage,
+      scheduledAt: c.scheduledAt,
     }));
 
     return res.json({ success: true, campaigns: normalized });
@@ -864,6 +906,7 @@ const getCampaignById = async (req, res) => {
       rejectionReason: campaign.rejectionReason || "",
       analytics: campaign.analytics,
       adImage: campaign.adImage,
+      scheduledAt: campaign.scheduledAt,
     };
 
     return res.json({ success: true, campaign: normalized });
@@ -873,4 +916,4 @@ const getCampaignById = async (req, res) => {
   }
 };
 
-module.exports = { createCampaign, getUserCampaigns, getCampaignById };
+module.exports = { createCampaign, getUserCampaigns, getCampaignById, publishCampaign };

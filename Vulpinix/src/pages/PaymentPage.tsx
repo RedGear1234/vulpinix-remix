@@ -93,6 +93,12 @@ export default function PaymentPage() {
       const savedAdImage = localStorage.getItem("adPreviewImage") || "";
 
       // Construct payload for backend
+      // @ts-ignore
+      const scheduledAt = campaignData.scheduleDate 
+        // @ts-ignore
+        ? new Date(`${campaignData.scheduleDate}T${campaignData.scheduleTime || "00:00"}:00`).toISOString()
+        : null;
+
       const payload = {
         userId: userInfo.email,
         userName: userInfo.name,
@@ -107,6 +113,7 @@ export default function PaymentPage() {
         estimatedReach: campaignData.estimatedReach,
         adCaption: adCreative.caption || "",
         adImage: savedAdImage, // This is base64
+        scheduledAt,
         payment: {
           amount: campaignData.totalAmount,
           method: selectedMethod,
@@ -138,7 +145,7 @@ export default function PaymentPage() {
         const newCampaign = {
           id: data.campaign.id,
           ...payload,
-          status: "pending",
+          status: scheduledAt ? "scheduled" : "pending",
           dateSubmitted: new Date().toISOString().split("T")[0],
           analytics: { impressions: 0, reach: 0, clicks: 0, ctr: 0, conversions: 0, adSpend: 0, roas: 0 }
         };

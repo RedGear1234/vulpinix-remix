@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -82,10 +82,12 @@ const S = `
 
   /* Schedule inputs */
   .vxup-date-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
-  .vxup-lbl{display:block;font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:7px;}
-  .vxup-input{width:100%;padding:11px 14px;border-radius:13px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);color:#e2e8f0;font-size:14px;outline:none;font-family:'Inter',sans-serif;transition:border-color 0.2s;box-sizing:border-box;}
-  .vxup-input:focus{border-color:rgba(167,139,250,0.4);}
-  input[type="date"]::-webkit-calendar-picker-indicator,input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(0.4);}
+  .vxup-lbl{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:7px;}
+  .vxup-input{width:100%;padding:12px 16px;border-radius:14px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.07);color:#e2e8f0;font-size:14px;outline:none;font-family:'Inter',sans-serif;transition:all 0.25s;box-sizing:border-box;}
+  .vxup-input:hover{background:rgba(255,255,255,0.035);border-color:rgba(255,255,255,0.12);}
+  .vxup-input:focus{background:rgba(255,255,255,0.04);border-color:rgba(167,139,250,0.45);box-shadow:0 0 0 1px rgba(167,139,250,0.25);}
+  input[type="date"]::-webkit-calendar-picker-indicator,input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(0.95);opacity:0.85;cursor:pointer;transition:all 0.2s;}
+  input[type="date"]::-webkit-calendar-picker-indicator:hover,input[type="time"]::-webkit-calendar-picker-indicator:hover{opacity:1;filter:invert(1);}
 
   /* Buttons */
   .vxup-btn-pri{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:14px;background:linear-gradient(135deg,#a78bfa,#38bdf8);border:none;color:#fff;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 6px 20px rgba(167,139,250,0.28);transition:all 0.2s;font-family:'Inter',sans-serif;width:100%;}
@@ -139,6 +141,11 @@ export default function UploadPage() {
   const [platforms, setPlatforms] = useState<Platform[]>(PLATFORMS);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis>({ caption:"", hashtags:[] });
   const [reachNum, setReachNum] = useState(0);
+
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const now = new Date();
+  const currentMinTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const minTime = scheduleDate === todayStr ? currentMinTime : undefined;
 
   useEffect(()=>{
     if(localStorage.getItem("isAuthenticated")!=="true"){navigate("/auth",{replace:true});return;}
@@ -195,7 +202,54 @@ export default function UploadPage() {
 
   const handleLaunch=()=>{
     if(!uploadedFile){toast.error("Please upload a file first");return;}
-    localStorage.setItem("adCreativeData",JSON.stringify({caption:aiAnalysis.caption,hashtags:aiAnalysis.hashtags,platforms:platforms.filter(p=>p.enabled).map(p=>p.name)}));
+    localStorage.setItem("adCreativeData",JSON.stringify({
+      caption:aiAnalysis.caption,
+      hashtags:aiAnalysis.hashtags,
+      platforms:platforms.filter(p=>p.enabled).map(p=>p.name),
+      scheduleDate: "",
+      scheduleTime: ""
+    }));
+    navigate("/create-ad");
+  };
+
+  const handleDateChange = (val: string) => {
+    const today = new Date().toLocaleDateString("en-CA");
+    if (val && val < today) {
+      toast.error("Cannot select a date in the past");
+      setScheduleDate(today);
+    } else {
+      setScheduleDate(val);
+    }
+  };
+
+  const handleTimeChange = (val: string) => {
+    const today = new Date().toLocaleDateString("en-CA");
+    if (scheduleDate === today && val) {
+      const now = new Date();
+      const currentMinTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      if (val < currentMinTime) {
+        toast.error("Cannot select a time in the past");
+        setScheduleTime(currentMinTime);
+        return;
+      }
+    }
+    setScheduleTime(val);
+  };
+
+  const handleScheduleCampaign=()=>{
+    if(!uploadedFile){toast.error("Please upload a file first");return;}
+    if(!scheduleDate){toast.error("Please select a date to schedule");return;}
+    const now = new Date();
+    const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime || "00:00"}:00`);
+    if(scheduledDateTime <= now){toast.error("Schedule date and time must be in the future");return;}
+    localStorage.setItem("adCreativeData",JSON.stringify({
+      caption:aiAnalysis.caption,
+      hashtags:aiAnalysis.hashtags,
+      platforms:platforms.filter(p=>p.enabled).map(p=>p.name),
+      scheduleDate,
+      scheduleTime: scheduleTime || "00:00"
+    }));
+    toast.success(`Campaign scheduled for ${scheduleDate} at ${scheduleTime || "00:00"}. Proceeding to targeting...`);
     navigate("/create-ad");
   };
 
@@ -384,28 +438,46 @@ export default function UploadPage() {
                   </motion.div>
 
                   {/* Schedule & Launch */}
-                  <motion.div initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{delay:0.30}} className="vxup-card">
+                  <motion.div initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{delay:0.30}} className="vxup-card" style={{borderLeft: "4px solid #f472b6", background: "rgba(255,255,255,0.035)", boxShadow: "0 10px 30px rgba(0,0,0,0.15)"}}>
                     <div className="vxup-card-hd">
                       <div className="vxup-card-hd-l">
                         <div className="vxup-card-ic" style={{background:"rgba(244,114,182,0.12)",color:"#f472b6"}}><Calendar size={17}/></div>
                         <div>
                           <div className="vxup-card-title">Schedule</div>
-                          <div className="vxup-card-sub">Post now or set a time</div>
+                          <div className="vxup-card-sub">Post now or set a future time</div>
                         </div>
                       </div>
                     </div>
                     <div className="vxup-date-grid">
                       <div>
                         <label className="vxup-lbl"><Calendar size={10} style={{display:"inline",marginRight:4}}/>Date</label>
-                        <input type="date" className="vxup-input" value={scheduleDate} onChange={e=>setScheduleDate(e.target.value)}/>
+                        <input type="date" className="vxup-input" min={todayStr} value={scheduleDate} onChange={e=>handleDateChange(e.target.value)}/>
                       </div>
                       <div>
                         <label className="vxup-lbl"><Clock size={10} style={{display:"inline",marginRight:4}}/>Time</label>
-                        <input type="time" className="vxup-input" value={scheduleTime} onChange={e=>setScheduleTime(e.target.value)}/>
+                        <input type="time" className="vxup-input" min={minTime} value={scheduleTime} onChange={e=>handleTimeChange(e.target.value)}/>
                       </div>
                     </div>
+                    {scheduleDate && (
+                      <div style={{
+                        fontSize: "13px",
+                        color: "#f472b6",
+                        marginTop: "-8px",
+                        marginBottom: "20px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        background: "rgba(244,114,182,0.06)",
+                        padding: "12px 16px",
+                        borderRadius: "12px",
+                        border: "1px dashed rgba(244,114,182,0.22)"
+                      }}>
+                        <Clock size={14} style={{ color: "#f472b6" }} />
+                        <span>Scheduled for: <strong style={{ color: "#f1f5f9" }}>{scheduleDate}</strong> at <strong style={{ color: "#f1f5f9" }}>{scheduleTime || "00:00"}</strong></span>
+                      </div>
+                    )}
                     <div style={{display:"flex",gap:12}}>
-                      <button className="vxup-btn-ghost" onClick={()=>toast.info("Scheduling coming soon!")}><Clock size={14}/> Schedule</button>
+                      <button className="vxup-btn-ghost" onClick={handleScheduleCampaign}><Clock size={14}/> Schedule</button>
                       <button className="vxup-btn-pri" onClick={handleLaunch}><Zap size={14}/> Publish Now <ArrowRight size={14}/></button>
                     </div>
                   </motion.div>

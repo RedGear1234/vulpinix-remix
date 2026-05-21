@@ -9,7 +9,10 @@ app.use(cors());
 app.use(express.json({ limit: "20mb" })); // allow base64 image uploads
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-connectDB();
+connectDB().then(() => {
+  const { startScheduler } = require("./config/scheduler");
+  startScheduler();
+});
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use("/api/campaign", require("./API routes/campaignRoutes"));

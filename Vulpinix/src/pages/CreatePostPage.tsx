@@ -88,9 +88,11 @@ const S = `
   .vxcp-privacy-opt.active{color:#a78bfa;background:rgba(167,139,250,0.08);}
 
   .vxcp-schedule-row{display:flex;gap:10px;}
-  .vxcp-schedule-input{flex:1;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.09);border-radius:12px;color:#f1f5f9;font-size:13px;outline:none;font-family:'Inter',sans-serif;}
-  .vxcp-schedule-input:focus{border-color:rgba(167,139,250,0.4);background:rgba(255,255,255,0.05);}
-  .vxcp-schedule-input::-webkit-calendar-picker-indicator{filter:invert(1);}
+  .vxcp-schedule-input{flex:1;padding:12px 16px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.07);border-radius:14px;color:#f1f5f9;font-size:14px;outline:none;font-family:'Inter',sans-serif;transition:all 0.25s;}
+  .vxcp-schedule-input:hover{background:rgba(255,255,255,0.035);border-color:rgba(255,255,255,0.12);}
+  .vxcp-schedule-input:focus{border-color:rgba(167,139,250,0.45);background:rgba(255,255,255,0.04);box-shadow:0 0 0 1px rgba(167,139,250,0.25);}
+  .vxcp-schedule-input::-webkit-calendar-picker-indicator{filter:invert(0.95);opacity:0.85;cursor:pointer;transition:all 0.2s;}
+  .vxcp-schedule-input::-webkit-calendar-picker-indicator:hover{opacity:1;filter:invert(1);}
 
   .vxcp-btn-primary{width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#a78bfa,#38bdf8);border:none;color:#fff;font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 24px rgba(167,139,250,0.25);transition:transform 0.2s,box-shadow 0.2s;margin-bottom:12px;}
   .vxcp-btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 32px rgba(167,139,250,0.35);}
@@ -120,6 +122,35 @@ export default function CreatePostPage() {
   const [publishResults, setPublishResults] = useState<Record<string, { status: string; error?: string; id?: string }>>({});
 
   const [linkedAccounts, setLinkedAccounts] = useState<string[]>([]);
+
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const now = new Date();
+  const currentMinTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const minTime = scheduleDate === todayStr ? currentMinTime : undefined;
+
+  const handleDateChange = (val: string) => {
+    const today = new Date().toLocaleDateString("en-CA");
+    if (val && val < today) {
+      alert("Cannot select a date in the past");
+      setScheduleDate(today);
+    } else {
+      setScheduleDate(val);
+    }
+  };
+
+  const handleTimeChange = (val: string) => {
+    const today = new Date().toLocaleDateString("en-CA");
+    if (scheduleDate === today && val) {
+      const now = new Date();
+      const currentMinTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      if (val < currentMinTime) {
+        alert("Cannot select a time in the past");
+        setScheduleTime(currentMinTime);
+        return;
+      }
+    }
+    setScheduleTime(val);
+  };
 
   useEffect(() => {
     if (localStorage.getItem("isAuthenticated") !== "true") {
@@ -173,6 +204,16 @@ export default function CreatePostPage() {
     setPosting(true);
     
     try {
+      if (scheduleDate) {
+        const now = new Date();
+        const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime || "00:00"}:00`);
+        if (scheduledDateTime <= now) {
+          alert("Schedule date and time must be in the future.");
+          setPosting(false);
+          return;
+        }
+      }
+
       let userEmail = "";
       let userNameFull = "";
       try {
@@ -183,9 +224,14 @@ export default function CreatePostPage() {
 
       const authToken = localStorage.getItem("authToken");
 
+      const scheduledAt = scheduleDate 
+        ? new Date(`${scheduleDate}T${scheduleTime || "00:00"}:00`).toISOString()
+        : null;
+
       console.log("ðŸš€ SENDING CAMPAIGN:", {
         platforms: selectedPlatforms,
-        caption: caption.substring(0, 20) + "..."
+        caption: caption.substring(0, 20) + "...",
+        scheduledAt
       });
 
       const response = await fetch(`${API_BASE}/api/campaign/create`, {
@@ -204,6 +250,7 @@ export default function CreatePostPage() {
           adCaption: caption,
           adImage: mediaFiles.find(f => f.startsWith("data:image")) || "", // Pass base64 image
           adVideo: mediaFiles.find(f => f.startsWith("data:video")) || "", // Pass base64 video
+          scheduledAt
         })
       });
 
@@ -396,13 +443,29 @@ export default function CreatePostPage() {
                     </motion.div>
 
                     {/* Schedule */}
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className="vxcp-card">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className="vxcp-card" style={{borderLeft: "4px solid #a78bfa", background: "rgba(255,255,255,0.035)", boxShadow: "0 10px 30px rgba(0,0,0,0.15)"}}>
                       <div className="vxcp-card-title"><Clock size={14} /> Schedule (optional)</div>
                       <div className="vxcp-schedule-row">
-                        <input type="date" className="vxcp-schedule-input" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
-                        <input type="time" className="vxcp-schedule-input" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
+                        <input type="date" className="vxcp-schedule-input" min={todayStr} value={scheduleDate} onChange={e => handleDateChange(e.target.value)} />
+                        <input type="time" className="vxcp-schedule-input" min={minTime} value={scheduleTime} onChange={e => handleTimeChange(e.target.value)} />
                       </div>
-                      {scheduleDate && <div style={{ fontSize: 12, color: "#64748b", marginTop: 10 }}>Will post on {scheduleDate} at {scheduleTime || "00:00"}</div>}
+                      {scheduleDate && (
+                        <div style={{
+                          fontSize: "13px",
+                          color: "#a78bfa",
+                          marginTop: "12px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          background: "rgba(167,139,250,0.06)",
+                          padding: "10px 14px",
+                          borderRadius: "12px",
+                          border: "1px dashed rgba(167,139,250,0.22)"
+                        }}>
+                          <Clock size={14} style={{ color: "#a78bfa" }} />
+                          <span>Scheduled for: <strong style={{ color: "#f1f5f9" }}>{scheduleDate}</strong> at <strong style={{ color: "#f1f5f9" }}>{scheduleTime || "00:00"}</strong></span>
+                        </div>
+                      )}
                     </motion.div>
 
                     {/* Publish buttons */}
@@ -441,9 +504,9 @@ export default function CreatePostPage() {
               style={{ maxWidth: 440, width: "100%", boxSizing: "border-box" }}
             >
               <CheckCircle2 size={56} color="#22c55e" style={{ margin: "0 auto 20px" }} />
-              <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, color: "#f1f5f9" }}>Post Processed! dYZ%</div>
+              <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, color: "#f1f5f9" }}>{scheduleDate ? "Post Scheduled!" : "Post Processed! 🎉"}</div>
               <div style={{ color: "#94a3b8", fontSize: 14, marginBottom: 24 }}>
-                Your post has been submitted and processed.
+                {scheduleDate ? `Your post has been successfully scheduled for ${scheduleDate} at ${scheduleTime || "00:00"}.` : "Your post has been submitted and processed."}
               </div>
 
               {/* Publish Results Panel */}

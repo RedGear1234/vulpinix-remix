@@ -116,10 +116,14 @@ export default function CreateAdPage() {
     const totalAmount = budgetType === "daily" ? budget * campaignDuration : budget;
     const savedCreative = localStorage.getItem("adCreativeData");
     let platforms = ["Instagram", "Facebook", "YouTube", "Pinterest"];
+    let scheduleDate = "";
+    let scheduleTime = "";
     if (savedCreative) {
       try {
         const creativeData = JSON.parse(savedCreative);
         platforms = creativeData.platforms || platforms;
+        scheduleDate = creativeData.scheduleDate || "";
+        scheduleTime = creativeData.scheduleTime || "";
       } catch {}
     }
     
@@ -135,7 +139,9 @@ export default function CreateAdPage() {
                  locationType === "india" ? ["India"] : 
                  customLocations,
       audience: selectedAudiences.map(a => a.name),
-      languages: selectedLanguages.map(l => l.name)
+      languages: selectedLanguages.map(l => l.name),
+      scheduleDate,
+      scheduleTime
     };
     
     localStorage.setItem("campaignData", JSON.stringify(campaignData));

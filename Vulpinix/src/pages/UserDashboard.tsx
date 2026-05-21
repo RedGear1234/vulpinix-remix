@@ -124,6 +124,7 @@ const S = `
 interface Campaign {
   id:string; name:string; platforms:string[]; budget:string; status:string;
   startDatePreference?:string;
+  scheduledAt?:string;
   analytics?:{impressions:number;reach:number;clicks:number;adSpend:number;};
 }
 
@@ -150,6 +151,7 @@ function getPlatformColor(p:string){
 function statusStyle(s:string):{bg:string;col:string;label:string}{
   switch(s){
     case "running":case "approved":case "active":case "published":return{bg:"rgba(34,197,94,0.10)",col:"#22c55e",label:"Active"};
+    case "scheduled":return{bg:"rgba(167,139,250,0.10)",col:"#a78bfa",label:"Scheduled"};
     case "pending":case "in_review":case "review":return{bg:"rgba(234,179,8,0.10)",col:"#eab308",label:"In Review"};
     case "completed":return{bg:"rgba(56,189,248,0.10)",col:"#38bdf8",label:"Completed"};
     case "rejected":return{bg:"rgba(239,68,68,0.10)",col:"#ef4444",label:"Rejected"};
@@ -234,7 +236,14 @@ export default function UserDashboard(){
         });
       }
 
-      if(["pending","in_review"].includes(c.status) || c.startDatePreference) {
+      if (c.status === "scheduled" || c.scheduledAt) {
+        scheduled.push({
+          dot: getPlatformColor(c.platforms?.[0]||""),
+          text: c.name,
+          sub: c.scheduledAt ? new Date(c.scheduledAt).toLocaleString() : "Scheduled",
+          icon: getPlatformIcon(c.platforms?.[0]||"")
+        });
+      } else if (["pending","in_review"].includes(c.status) || c.startDatePreference) {
         scheduled.push({
           dot: getPlatformColor(c.platforms?.[0]||""),
           text: c.name,
@@ -288,6 +297,8 @@ export default function UserDashboard(){
         dActivity.push({dot:"#ef4444", text:`${c.name} needs revision`, sub:"Recent", icon:<XCircle size={13} color="#ef4444"/>});
       } else if (["running","approved","active","published"].includes(c.status)) {
         dActivity.push({dot:"#22c55e", text:`${c.name} approved & live`, sub:"Recent", icon:<CheckCircle2 size={13} color="#22c55e"/>});
+      } else if (c.status === 'scheduled') {
+        dActivity.push({dot:"#fbbf24", text:`${c.name} scheduled`, sub:"Recent", icon:<Calendar size={13} color="#fbbf24"/>});
       } else if (c.status === 'pending' || c.status === 'in_review') {
         dActivity.push({dot:"#a78bfa", text:`${c.name} pending review`, sub:"Recent", icon:<Clock size={13} color="#a78bfa"/>});
       } else if (c.status === 'draft') {

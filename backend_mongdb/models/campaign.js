@@ -29,6 +29,7 @@ const campaignSchema = new mongoose.Schema(
     adCopyText:           { type: String, default: "" },
     callToAction:         { type: String, default: "" },
     adImage:              { type: String, default: "" }, // base64 or URL
+    adVideo:              { type: String, default: "" }, // base64 or URL
     creativeFiles: [
       {
         url:      { type: String, default: "" },
@@ -93,9 +94,12 @@ const campaignSchema = new mongoose.Schema(
     // ── Status Lifecycle ──────────────────────────────────────────────────────
     status: {
       type: String,
-      enum: ["pending", "in_review", "approved", "running", "completed", "rejected", "published"],
+      enum: ["pending", "in_review", "approved", "running", "completed", "rejected", "published", "scheduled"],
       default: "pending",
     },
+
+    scheduledAt: { type: Date, default: null },
+    publishResults: { type: mongoose.Schema.Types.Mixed, default: {} },
 
     rejectionReason: { type: String, default: "" },
     adminMessage:    { type: String, default: "" },
