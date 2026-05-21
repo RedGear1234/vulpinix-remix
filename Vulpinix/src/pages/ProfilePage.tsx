@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   User, Phone, MapPin, Building2, Edit2, Save, X, Clock,
-  CheckCircle2, TrendingUp, Eye, MousePointer, DollarSign, Calendar,
+  TrendingUp, Eye, MousePointer, DollarSign, Calendar,
   Instagram, Facebook, Youtube, Linkedin, Twitter, Globe,
   Link as LinkIcon, Sparkles, AlertCircle, BarChart3, History,
   Camera, RefreshCw, ArrowRight, Zap
@@ -267,7 +267,7 @@ export default function ProfilePage(){
                     </div>
                     <button className="vxp-sync-btn" onClick={fetchCampaigns}>
                       <motion.span animate={isLoadingCampaigns?{rotate:360}:{rotate:0}} transition={{duration:1,repeat:Infinity,ease:"linear"}} style={{display:"flex"}}><RefreshCw size={11}/></motion.span>
-                      {isLoadingCampaigns?"Syncing…":"Sync"}
+                      {isLoadingCampaigns?"Syncingâ€¦":"Sync"}
                     </button>
                   </div>
                   {adsInReview.length===0?<div className="vxp-empty"><Clock size={32} style={{margin:"0 auto 10px",opacity:0.15}}/><div style={{fontSize:13}}>No ads in review</div></div>:

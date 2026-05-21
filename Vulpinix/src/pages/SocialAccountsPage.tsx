@@ -1,11 +1,11 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckCircle2, Link2, Unlink, ExternalLink, AlertCircle,
+  CheckCircle2, Link2, Unlink, ExternalLink,
   Sparkles, Users, TrendingUp, RefreshCw, Zap, Shield,
-  ArrowRight, BarChart3, Eye, MousePointer, Heart,
-  MessageCircle, Share2, Calendar, Clock, ChevronRight
+  ArrowRight, BarChart3, Eye, Heart,
+  MessageCircle, Calendar, Clock, ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardSidebar } from "../components/DashboardSidebar";
