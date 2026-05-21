@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard, BarChart3, Upload, User,
   ChevronLeft, ChevronRight, LogOut,
-  Sparkles, Share2, Settings, Calendar
+  Share2, Settings, Calendar
 } from "lucide-react";
 import { VulpinixLogo } from "./VulpinixLogo";
 
@@ -98,20 +98,6 @@ const SB = `
   .vxsb-user-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .vxsb-user-role { font-size: 11px; color: #64748b; }
   .collapsed .vxsb-user-info { display: none; }
-
-  .vxsb-ai-badge {
-    margin: 12px;
-    padding: 12px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(167,139,250,0.1), rgba(56,189,248,0.08));
-    border: 1px solid rgba(167,139,250,0.2);
-    cursor: pointer;
-    transition: opacity 0.3s;
-    overflow: hidden;
-  }
-  .collapsed .vxsb-ai-badge { opacity: 0; pointer-events: none; }
-  .vxsb-ai-badge-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-  .vxsb-ai-badge-sub { font-size: 11px; color: #94a3b8; line-height: 1.4; }
 `;
 
 const NAV_ITEMS = [
@@ -151,14 +137,6 @@ export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props
           <button className="vxsb-toggle" onClick={() => setExpanded(e => !e)}>
             {expanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
           </button>
-        </div>
-
-        {/* AI Badge */}
-        <div className="vxsb-ai-badge" onClick={() => navigate("/upload")}>
-          <div className="vxsb-ai-badge-title">
-            <Sparkles size={13} color="#a78bfa" /> Vulpinix AI Ready
-          </div>
-          <div className="vxsb-ai-badge-sub">Launch your next AI-powered campaign now.</div>
         </div>
 
         {/* Nav */}
