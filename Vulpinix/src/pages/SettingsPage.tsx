@@ -239,61 +239,82 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (localStorage.getItem("isAuthenticated") !== "true") { navigate("/auth",{replace:true}); return; }
+
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const res = await fetch("http://localhost:5000/api/users/settings", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.settings) {
+            const s = data.settings;
+            // Merge with local storage
+            const localS = JSON.parse(localStorage.getItem("vxSettings")||"{}");
+            const mergedS = { ...localS, ...s };
+            localStorage.setItem("vxSettings", JSON.stringify(mergedS));
+
+            if (mergedS.workspaceName) setWorkspaceName(mergedS.workspaceName);
+            if (mergedS.workspaceSlug) setWorkspaceSlug(mergedS.workspaceSlug);
+            if (mergedS.workspaceWebsite) setWorkspaceWebsite(mergedS.workspaceWebsite);
+            if (mergedS.workspaceIndustry) setWorkspaceIndustry(mergedS.workspaceIndustry);
+            if (mergedS.workspaceLogo) setWorkspaceLogo(mergedS.workspaceLogo);
+            if (mergedS.workspaceTimezone) setWorkspaceTimezone(mergedS.workspaceTimezone);
+            if (mergedS.workspaceCurrency) setWorkspaceCurrency(mergedS.workspaceCurrency);
+            
+            if (mergedS.theme)      setTheme(mergedS.theme);
+            if (mergedS.accent)     setAccent(mergedS.accent);
+            if (mergedS.language)   setLanguage(mergedS.language);
+            if (mergedS.timezone)   setTimezone(mergedS.timezone);
+            if (mergedS.compactMode  !== undefined) setCompactMode(mergedS.compactMode);
+            if (mergedS.animations   !== undefined) setAnimations(mergedS.animations);
+            if (mergedS.soundFx      !== undefined) setSoundFx(mergedS.soundFx);
+            if (mergedS.notifEmail   !== undefined) setNotifEmail(mergedS.notifEmail);
+            if (mergedS.notifPush    !== undefined) setNotifPush(mergedS.notifPush);
+            if (mergedS.notifSMS     !== undefined) setNotifSMS(mergedS.notifSMS);
+            if (mergedS.notifCampaign!== undefined) setNotifCampaign(mergedS.notifCampaign);
+            if (mergedS.notifAnalytics!==undefined) setNotifAnalytics(mergedS.notifAnalytics);
+            if (mergedS.notifBilling !== undefined) setNotifBilling(mergedS.notifBilling);
+            if (mergedS.notifUpdates !== undefined) setNotifUpdates(mergedS.notifUpdates);
+            if (mergedS.notifMarketing!==undefined) setNotifMarketing(mergedS.notifMarketing);
+            if (mergedS.profileVisible    !==undefined) setProfileVisible(mergedS.profileVisible);
+            if (mergedS.analyticsTracking !==undefined) setAnalyticsTracking(mergedS.analyticsTracking);
+            if (mergedS.activityStatus    !==undefined) setActivityStatus(mergedS.activityStatus);
+            if (mergedS.twoFactor         !==undefined) setTwoFactor(mergedS.twoFactor);
+            if (mergedS.sessionAlerts     !==undefined) setSessionAlerts(mergedS.sessionAlerts);
+
+            if (mergedS.brandPrimary) setBrandPrimary(mergedS.brandPrimary);
+            if (mergedS.brandSecondary) setBrandSecondary(mergedS.brandSecondary);
+            if (mergedS.brandTypography) setBrandTypography(mergedS.brandTypography);
+            if (mergedS.aiCreativity) setAiCreativity(mergedS.aiCreativity);
+            if (mergedS.aiModel) setAiModel(mergedS.aiModel);
+            if (mergedS.aiImageGen) setAiImageGen(mergedS.aiImageGen);
+            if (mergedS.aiAutoCaption !== undefined) setAiAutoCaption(mergedS.aiAutoCaption);
+            if (mergedS.aiMultiLang !== undefined) setAiMultiLang(mergedS.aiMultiLang);
+            if (mergedS.brandTone) setBrandTone(mergedS.brandTone);
+            if (mergedS.brandMission) setBrandMission(mergedS.brandMission);
+            if (mergedS.brandAudience) setBrandAudience(mergedS.brandAudience);
+            if (mergedS.brandPainPoints) setBrandPainPoints(mergedS.brandPainPoints);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync settings from DB", err);
+      }
+    };
+    fetchUserData();
+
     try {
       const u = JSON.parse(localStorage.getItem("userInfo")||"{}");
       setName(u.name||""); setEmail(u.email||""); setPhone(u.phone||"");
       setCompany(u.company||""); setWebsite(u.website||"");
     } catch {}
-    try {
-      const s = JSON.parse(localStorage.getItem("vxSettings")||"{}");
-      if (s.workspaceName) setWorkspaceName(s.workspaceName);
-      if (s.workspaceSlug) setWorkspaceSlug(s.workspaceSlug);
-      if (s.workspaceWebsite) setWorkspaceWebsite(s.workspaceWebsite);
-      if (s.workspaceIndustry) setWorkspaceIndustry(s.workspaceIndustry);
-      if (s.workspaceLogo) setWorkspaceLogo(s.workspaceLogo);
-      if (s.workspaceTimezone) setWorkspaceTimezone(s.workspaceTimezone);
-      if (s.workspaceCurrency) setWorkspaceCurrency(s.workspaceCurrency);
-      
-      if (s.theme)      setTheme(s.theme);
-      if (s.accent)     setAccent(s.accent);
-      if (s.language)   setLanguage(s.language);
-      if (s.timezone)   setTimezone(s.timezone);
-      if (s.compactMode  !== undefined) setCompactMode(s.compactMode);
-      if (s.animations   !== undefined) setAnimations(s.animations);
-      if (s.soundFx      !== undefined) setSoundFx(s.soundFx);
-      if (s.notifEmail   !== undefined) setNotifEmail(s.notifEmail);
-      if (s.notifPush    !== undefined) setNotifPush(s.notifPush);
-      if (s.notifSMS     !== undefined) setNotifSMS(s.notifSMS);
-      if (s.notifCampaign!== undefined) setNotifCampaign(s.notifCampaign);
-      if (s.notifAnalytics!==undefined) setNotifAnalytics(s.notifAnalytics);
-      if (s.notifBilling !== undefined) setNotifBilling(s.notifBilling);
-      if (s.notifUpdates !== undefined) setNotifUpdates(s.notifUpdates);
-      if (s.notifMarketing!==undefined) setNotifMarketing(s.notifMarketing);
-      if (s.profileVisible    !==undefined) setProfileVisible(s.profileVisible);
-      if (s.analyticsTracking !==undefined) setAnalyticsTracking(s.analyticsTracking);
-      if (s.activityStatus    !==undefined) setActivityStatus(s.activityStatus);
-      if (s.twoFactor         !==undefined) setTwoFactor(s.twoFactor);
-      if (s.sessionAlerts     !==undefined) setSessionAlerts(s.sessionAlerts);
-
-      if (s.brandPrimary) setBrandPrimary(s.brandPrimary);
-      if (s.brandSecondary) setBrandSecondary(s.brandSecondary);
-      if (s.brandTypography) setBrandTypography(s.brandTypography);
-      if (s.aiCreativity) setAiCreativity(s.aiCreativity);
-      if (s.aiModel) setAiModel(s.aiModel);
-      if (s.aiImageGen) setAiImageGen(s.aiImageGen);
-      if (s.aiAutoCaption !== undefined) setAiAutoCaption(s.aiAutoCaption);
-      if (s.aiMultiLang !== undefined) setAiMultiLang(s.aiMultiLang);
-      if (s.brandTone) setBrandTone(s.brandTone);
-      if (s.brandMission) setBrandMission(s.brandMission);
-      if (s.brandAudience) setBrandAudience(s.brandAudience);
-      if (s.brandPainPoints) setBrandPainPoints(s.brandPainPoints);
-    } catch {}
   }, [navigate]);
 
-  const handleSave = () => {
-    const u = JSON.parse(localStorage.getItem("userInfo")||"{}");
-    localStorage.setItem("userInfo", JSON.stringify({...u, name, email, phone, company, website}));
-    localStorage.setItem("vxSettings", JSON.stringify({
+  const handleSave = async () => {
+    const sObj = {
       theme, accent, language, timezone, compactMode, animations, soundFx,
       notifEmail, notifPush, notifSMS, notifCampaign, notifAnalytics, notifBilling, notifUpdates, notifMarketing,
       profileVisible, analyticsTracking, activityStatus, twoFactor, sessionAlerts,
@@ -302,15 +323,53 @@ export default function SettingsPage() {
       brandPrimary, brandSecondary, brandTypography,
       aiCreativity, aiModel, aiImageGen, aiAutoCaption, aiMultiLang,
       brandTone, brandMission, brandAudience, brandPainPoints
-    }));
+    };
+
+    const u = JSON.parse(localStorage.getItem("userInfo")||"{}");
+    localStorage.setItem("userInfo", JSON.stringify({...u, name, email, phone, company, website}));
+    localStorage.setItem("vxSettings", JSON.stringify(sObj));
+
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        // Sync profile changes
+        fetch("http://localhost:5000/api/users/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ phone, company, website })
+        });
+        
+        // Sync settings
+        await fetch("http://localhost:5000/api/users/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ settings: sObj })
+        });
+      }
+    } catch (err) {
+      console.error("Failed to sync settings", err);
+    }
+
     setSaved(true); toast.success("Settings saved!"); setTimeout(()=>setSaved(false), 2500);
   };
 
-  const handleSettingToggle = (setter: React.Dispatch<React.SetStateAction<boolean>>, key: string, value: boolean, label: string) => {
+  const handleSettingToggle = async (setter: React.Dispatch<React.SetStateAction<boolean>>, key: string, value: boolean, label: string) => {
     setter(value);
     const s = JSON.parse(localStorage.getItem("vxSettings")||"{}");
     s[key] = value;
     localStorage.setItem("vxSettings", JSON.stringify(s));
+    
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        await fetch("http://localhost:5000/api/users/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ settings: { [key]: value } })
+        });
+      }
+    } catch (err) {}
+
     toast.success(`${label} updated`);
   };
 

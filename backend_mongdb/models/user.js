@@ -23,9 +23,10 @@ const userSchema = new mongoose.Schema(
       linkedin: { accessToken: String, linkedinId: String, linkedinName: String },
       youtube: { accessToken: String, refreshToken: String, channelId: String, channelTitle: String },
       pinterest: { accessToken: String, refreshToken: String, username: String }
-    }
+    },
+    settings: { type: mongoose.Schema.Types.Mixed, default: {} }
   },
-  { timestamps: true }
+  { timestamps: true, minimize: false }
 );
 
 // Compare password helper

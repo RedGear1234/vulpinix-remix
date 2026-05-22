@@ -170,4 +170,41 @@ const updateProfile = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, googleAuth, updateProfile };
+// ── Settings (Get and Update) ──────────────────────────────────────────────────
+const getSettings = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    res.json({ success: true, settings: user.settings || {} });
+  } catch (err) {
+    console.error("getSettings error:", err);
+    res.status(500).json({ success: false, message: "Server error getting settings" });
+  }
+};
+
+const updateSettings = async (req, res) => {
+  try {
+    const { settings } = req.body;
+    if (!settings || typeof settings !== "object") {
+      return res.status(400).json({ success: false, message: "Invalid settings data" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    // Merge settings
+    user.settings = { ...user.settings, ...settings };
+    
+    // Using markModified since Mixed type changes aren't tracked automatically
+    user.markModified("settings");
+    await user.save();
+
+    res.json({ success: true, message: "Settings updated successfully", settings: user.settings });
+  } catch (err) {
+    console.error("updateSettings error:", err);
+    res.status(500).json({ success: false, message: "Server error updating settings" });
+  }
+};
+
+module.exports = { registerUser, loginUser, googleAuth, updateProfile, getSettings, updateSettings };
