@@ -1,19 +1,267 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  Bot, Send, Image as ImageIcon, Loader2,
-  Download, PenSquare, BarChart2, Lightbulb, Hash, Zap
+  Send, Image as ImageIcon, Loader2,
+  Download, PenSquare, BarChart2, Lightbulb, Hash, Zap,
+  Plus, Clock, Trash2, ChevronLeft, RefreshCw, MessageSquare
 } from 'lucide-react';
+
+// Vulpinix fox SVG — used in place of Bot icon
+function VulpinixIcon({ size = 24, color = '#fff' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="15,20 45,85 55,60 35,20" fill={color} />
+      <polygon points="85,20 55,85 45,60 65,20" fill={color} />
+      <polygon points="40,25 60,25 50,50" fill={color} opacity="0.5" />
+    </svg>
+  );
+}
 
 const S = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+  /* ── Root layout ─────────────────────────────────── */
   .vai-root {
     display: flex;
-    flex-direction: column;
     height: 100%;
     min-height: 0;
     font-family: 'Inter', sans-serif;
     position: relative;
+    overflow: hidden;
+  }
+
+  /* ── History Sidebar ─────────────────────────────── */
+  .vai-history-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.18);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width 0.3s cubic-bezier(.4,0,.2,1), opacity 0.3s;
+  }
+  .vai-history-sidebar.collapsed {
+    width: 0;
+    opacity: 0;
+    border-right: none;
+    pointer-events: none;
+  }
+
+  .vai-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 14px 10px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .vai-history-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .vai-new-chat-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    border: none;
+    border-radius: 9px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    box-shadow: 0 3px 10px rgba(124,58,237,0.3);
+  }
+  .vai-new-chat-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(124,58,237,0.45);
+  }
+
+  .vai-history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .vai-history-list::-webkit-scrollbar { width: 4px; }
+  .vai-history-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+  .vai-history-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    gap: 10px;
+    color: #334155;
+    font-size: 12px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .vai-history-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+    border: 1px solid transparent;
+    min-width: 0;
+    position: relative;
+    group: true;
+  }
+  .vai-history-item:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.06);
+  }
+  .vai-history-item.active {
+    background: rgba(124,58,237,0.1);
+    border-color: rgba(124,58,237,0.2);
+  }
+  .vai-history-item-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: #475569;
+  }
+  .vai-history-item.active .vai-history-item-icon {
+    background: rgba(124,58,237,0.15);
+    color: #a78bfa;
+  }
+  .vai-history-item-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .vai-history-item-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #cbd5e1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .vai-history-item.active .vai-history-item-title {
+    color: #e2e8f0;
+  }
+  .vai-history-item-time {
+    font-size: 10px;
+    color: #334155;
+    margin-top: 2px;
+  }
+  .vai-history-delete {
+    opacity: 0;
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(239,68,68,0.1);
+    color: #ef4444;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .vai-history-item:hover .vai-history-delete { opacity: 1; }
+  .vai-history-delete:hover { background: rgba(239,68,68,0.25); }
+
+  /* ── Chat column ─────────────────────────────────── */
+  .vai-chat-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  /* ── Chat toolbar ────────────────────────────────── */
+  .vai-chat-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.1);
+  }
+  .vai-toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 9px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+    font-family: 'Inter', sans-serif;
+  }
+  .vai-toolbar-btn:hover {
+    background: rgba(255,255,255,0.07);
+    color: #94a3b8;
+    border-color: rgba(255,255,255,0.13);
+  }
+  .vai-toolbar-btn.active {
+    background: rgba(124,58,237,0.1);
+    border-color: rgba(124,58,237,0.25);
+    color: #a78bfa;
+  }
+  .vai-refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 9px;
+    border: none;
+    background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(37,99,235,0.15));
+    color: #a78bfa;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid rgba(124,58,237,0.2);
+    margin-left: auto;
+  }
+  .vai-refresh-btn:hover {
+    background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(37,99,235,0.25));
+    border-color: rgba(124,58,237,0.4);
+    color: #c4b5fd;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(124,58,237,0.2);
+  }
+  .vai-refresh-btn:hover .vai-refresh-icon { animation: spin360 0.5s ease; }
+  @keyframes spin360 {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .vai-refresh-icon { display: flex; align-items: center; }
+  .vai-conv-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
   }
 
   /* ── Messages Area ──────────────────────────────── */
@@ -21,7 +269,7 @@ const S = `
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 32px 24px 12px;
+    padding: 24px 24px 12px;
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -44,12 +292,12 @@ const S = `
   .vai-empty::-webkit-scrollbar { width: 0; }
   .vai-empty-avatar {
     width: 72px; height: 72px;
-    border-radius: 22px;
-    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    border-radius: 5px;
+    background: linear-gradient(135deg, #547f44ff, #2563eb);
     display: flex; align-items: center; justify-content: center;
     margin: 0 auto 20px;
     box-shadow: 0 0 0 8px rgba(124,58,237,0.1), 0 12px 30px rgba(124,58,237,0.3);
-    animation: vai-float 4s ease-in-out infinite;
+    // animation: vai-float 4s ease-in-out infinite;
   }
   @keyframes vai-float {
     0%,100% { transform: translateY(0); }
@@ -310,16 +558,65 @@ interface Message {
   imageUrl?: string;
 }
 
+interface Conversation {
+  id: string;
+  title: string;
+  createdAt: number;
+  messages: Message[];
+}
+
 interface Props {
   userInitial?: string;
 }
 
+const STORAGE_KEY = 'vulpinix_ai_conversations';
+const MAX_HISTORY = 30;
+
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function getTitle(messages: Message[]): string {
+  const first = messages.find(m => m.role === 'user');
+  if (!first) return 'New conversation';
+  return first.text.length > 38 ? first.text.slice(0, 38) + '…' : first.text;
+}
+
+function loadConversations(): Conversation[] {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveConversations(convs: Conversation[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(convs.slice(0, MAX_HISTORY)));
+  } catch {}
+}
+
 export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
+  const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Persist conversations to localStorage whenever they change
+  useEffect(() => {
+    saveConversations(conversations);
+  }, [conversations]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -332,6 +629,57 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
     if (ta) {
       ta.style.height = 'auto';
       ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+    }
+  };
+
+  // Save current conversation to history
+  const persistCurrentConversation = (msgs: Message[], currentId: string | null) => {
+    if (msgs.length === 0) return currentId;
+    const id = currentId || Date.now().toString();
+    setConversations(prev => {
+      const existing = prev.findIndex(c => c.id === id);
+      const conv: Conversation = {
+        id,
+        title: getTitle(msgs),
+        createdAt: existing >= 0 ? prev[existing].createdAt : Date.now(),
+        messages: msgs,
+      };
+      if (existing >= 0) {
+        const updated = [...prev];
+        updated[existing] = conv;
+        return updated;
+      }
+      return [conv, ...prev];
+    });
+    return id;
+  };
+
+  const startNewChat = () => {
+    // Save current conversation before clearing
+    if (messages.length > 0) {
+      persistCurrentConversation(messages, activeId);
+    }
+    setMessages([]);
+    setActiveId(null);
+    setInput('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+  };
+
+  const loadConversation = (conv: Conversation) => {
+    // Save current first
+    if (messages.length > 0 && activeId !== conv.id) {
+      persistCurrentConversation(messages, activeId);
+    }
+    setMessages(conv.messages);
+    setActiveId(conv.id);
+  };
+
+  const deleteConversation = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setConversations(prev => prev.filter(c => c.id !== id));
+    if (activeId === id) {
+      setMessages([]);
+      setActiveId(null);
     }
   };
 
@@ -407,7 +755,8 @@ Be concise, use emojis naturally, use **bold** for key phrases. Sound like a cle
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
     const userMsg: Message = { id: Date.now().toString(), role: 'user', text };
-    setMessages(prev => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setIsTyping(true);
 
     const raw = await generateAIResponse(text);
@@ -419,8 +768,13 @@ Be concise, use emojis naturally, use **bold** for key phrases. Sound like a cle
       imageUrl: parsed.imageUrl
     };
 
-    setMessages(prev => [...prev, botMsg]);
+    const finalMessages = [...newMessages, botMsg];
+    setMessages(finalMessages);
     setIsTyping(false);
+
+    // Auto-persist after each exchange
+    const newId = persistCurrentConversation(finalMessages, activeId);
+    if (!activeId) setActiveId(newId ?? null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -435,77 +789,161 @@ Be concise, use emojis naturally, use **bold** for key phrases. Sound like a cle
       i % 2 === 1 ? <strong key={i} className="vai-bold">{part}</strong> : part
     );
 
+  const activeConv = conversations.find(c => c.id === activeId);
+
   return (
     <div className="vai-root">
       <style dangerouslySetInnerHTML={{ __html: S }} />
 
-      {/* Messages or empty state */}
-      {messages.length === 0 && !isTyping ? (
-        <div className="vai-empty">
-          <div className="vai-caps">
-            {CAPABILITIES.map((cap, i) => (
-              <div key={i} className="vai-cap" onClick={() => handleSend(cap.text)}>
-                <div className="vai-cap-icon" style={{ background: cap.iconBg }}>{cap.icon}</div>
-                <div className="vai-cap-label">{cap.label}</div>
-                <div className="vai-cap-desc">{cap.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="vai-messages">
-          {messages.map(msg => (
-            <div key={msg.id} className={`vai-msg-row vai-${msg.role}`}>
-              <div className={`vai-msg-avatar ${msg.role === 'bot' ? 'bot-av' : 'user-av'}`}>
-                {msg.role === 'bot' ? <Bot size={17} /> : userInitial}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {msg.text && (
-                  <div className="vai-bubble">{renderText(msg.text)}</div>
-                )}
-                {msg.imageUrl && (
-                  <div className="vai-img-card">
-                    <img src={msg.imageUrl} alt="AI Generated" />
-                    <button className="vai-img-save" onClick={() => window.open(msg.imageUrl, '_blank')}>
-                      <Download size={11} /> Save Image
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          {isTyping && (
-            <div className="vai-msg-row vai-bot">
-              <div className="vai-msg-avatar bot-av"><Bot size={17} /></div>
-              <div className="vai-thinking">
-                <div className="vai-thinking-dots">
-                  <span /><span /><span />
-                </div>
-                <span>Thinking…</span>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      )}
-
-      {/* Input */}
-      <div className="vai-input-section">
-        <div className="vai-input-card">
-          <textarea
-            ref={textareaRef}
-            className="vai-textarea"
-            placeholder="Ask Vulpinix AI anything…"
-            value={input}
-            rows={1}
-            onChange={e => { setInput(e.target.value); autoResizeTextarea(); }}
-            onKeyDown={handleKeyDown}
-          />
-          <button className="vai-send" disabled={!input.trim() || isTyping} onClick={() => handleSend()}>
-            {isTyping ? <Loader2 size={18} className="lucide-spin" /> : <Send size={17} />}
+      {/* ── History Sidebar ── */}
+      <div className={`vai-history-sidebar${historyOpen ? '' : ' collapsed'}`}>
+        <div className="vai-history-header">
+          <span className="vai-history-title">History</span>
+          <button className="vai-new-chat-btn" onClick={startNewChat}>
+            <Plus size={13} /> New Chat
           </button>
         </div>
-        <div className="vai-input-hint">Press Enter to send · Shift+Enter for new line</div>
+
+        <div className="vai-history-list">
+          {conversations.length === 0 ? (
+            <div className="vai-history-empty">
+              <MessageSquare size={28} color="#1e293b" />
+              <span>No conversations yet.<br />Start chatting to see your history here.</span>
+            </div>
+          ) : (
+            conversations.map(conv => (
+              <div
+                key={conv.id}
+                className={`vai-history-item${conv.id === activeId ? ' active' : ''}`}
+                onClick={() => loadConversation(conv)}
+              >
+                <div className="vai-history-item-icon">
+                  <MessageSquare size={13} />
+                </div>
+                <div className="vai-history-item-info">
+                  <div className="vai-history-item-title">{conv.title}</div>
+                  <div className="vai-history-item-time">
+                    <Clock size={9} style={{ display: 'inline', marginRight: 3 }} />
+                    {timeAgo(conv.createdAt)}
+                  </div>
+                </div>
+                <button
+                  className="vai-history-delete"
+                  onClick={(e) => deleteConversation(e, conv.id)}
+                  title="Delete conversation"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ── Chat Column ── */}
+      <div className="vai-chat-col">
+
+        {/* Toolbar */}
+        <div className="vai-chat-toolbar">
+          <button
+            className={`vai-toolbar-btn${historyOpen ? ' active' : ''}`}
+            onClick={() => setHistoryOpen(p => !p)}
+            title="Toggle history"
+          >
+            <ChevronLeft size={13} style={{ transform: historyOpen ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s' }} />
+            History
+          </button>
+
+          {activeConv && (
+            <span className="vai-conv-name">{activeConv.title}</span>
+          )}
+
+          <button
+            className="vai-refresh-btn"
+            onClick={startNewChat}
+            title="Start a new conversation"
+          >
+            <span className="vai-refresh-icon"><RefreshCw size={13} /></span>
+            New Chat
+          </button>
+        </div>
+
+        {/* Messages or empty state */}
+        {messages.length === 0 && !isTyping ? (
+          <div className="vai-empty">
+            <div className="vai-empty-avatar">
+              <VulpinixIcon size={60} color="#fff" />
+            </div>
+            <div className="vai-empty-title">Vulpinix AI Agent</div>
+            <div className="vai-empty-sub">
+              Your AI marketing co-pilot. Ask me anything or pick a quick action below.
+            </div>
+            <div className="vai-caps">
+              {CAPABILITIES.map((cap, i) => (
+                <div key={i} className="vai-cap" onClick={() => handleSend(cap.text)}>
+                  <div className="vai-cap-icon" style={{ background: cap.iconBg }}>{cap.icon}</div>
+                  <div className="vai-cap-label">{cap.label}</div>
+                  <div className="vai-cap-desc">{cap.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="vai-messages">
+            {messages.map(msg => (
+              <div key={msg.id} className={`vai-msg-row vai-${msg.role}`}>
+                <div className={`vai-msg-avatar ${msg.role === 'bot' ? 'bot-av' : 'user-av'}`}>
+                  {msg.role === 'bot' ? <VulpinixIcon size={18} color="#fff" /> : userInitial}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {msg.text && (
+                    <div className="vai-bubble">{renderText(msg.text)}</div>
+                  )}
+                  {msg.imageUrl && (
+                    <div className="vai-img-card">
+                      <img src={msg.imageUrl} alt="AI Generated" />
+                      <button className="vai-img-save" onClick={() => window.open(msg.imageUrl, '_blank')}>
+                        <Download size={11} /> Save Image
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {isTyping && (
+              <div className="vai-msg-row vai-bot">
+                <div className="vai-msg-avatar bot-av"><VulpinixIcon size={18} color="#fff" /></div>
+                <div className="vai-thinking">
+                  <div className="vai-thinking-dots">
+                    <span /><span /><span />
+                  </div>
+                  <span>Thinking…</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+
+        {/* Input */}
+        <div className="vai-input-section">
+          <div className="vai-input-card">
+            <textarea
+              ref={textareaRef}
+              className="vai-textarea"
+              placeholder="Ask Vulpinix AI anything…"
+              value={input}
+              rows={1}
+              onChange={e => { setInput(e.target.value); autoResizeTextarea(); }}
+              onKeyDown={handleKeyDown}
+            />
+            <button className="vai-send" disabled={!input.trim() || isTyping} onClick={() => handleSend()}>
+              {isTyping ? <Loader2 size={18} className="lucide-spin" /> : <Send size={17} />}
+            </button>
+          </div>
+          <div className="vai-input-hint">Press Enter to send · Shift+Enter for new line</div>
+        </div>
+
       </div>
     </div>
   );

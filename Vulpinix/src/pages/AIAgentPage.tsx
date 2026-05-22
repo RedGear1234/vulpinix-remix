@@ -4,7 +4,18 @@ import { DashboardSidebar } from "../components/DashboardSidebar";
 import { DashboardTopBar } from "../components/DashboardTopBar";
 import { VulpinixAIAgent } from "../components/VulpinixAIAgent";
 import { motion } from "framer-motion";
-import { Sparkles, Zap, Bot } from "lucide-react";
+import { Sparkles, Zap } from "lucide-react";
+
+function VulpinixIcon({ size = 24, color = '#fff' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="15,20 45,85 55,60 35,20" fill={color} />
+      <polygon points="85,20 55,85 45,60 65,20" fill={color} />
+      <polygon points="40,25 60,25 50,50" fill={color} opacity="0.5" />
+    </svg>
+  );
+}
+
 
 const S = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -67,7 +78,8 @@ const S = `
   .vxai-header-icon {
     width: 38px; height: 38px;
     border-radius: 11px;
-    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    // background: linear-gradient(135deg, #7c3aed, #2563eb);
+    background-color: #2e6bed;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 4px 14px rgba(124,58,237,0.3);
     flex-shrink: 0;
@@ -163,13 +175,13 @@ export default function AIAgentPage() {
           >
             <div className="vxai-header-left">
               <div className="vxai-header-icon">
-                <Bot size={19} color="#fff" />
+                <VulpinixIcon size={20} color="#fff" />
               </div>
-              <div>
+              <div className="flex flex-col">
                 <div className="vxai-header-title">Vulpinix AI Agent</div>
                 <div className="vxai-header-sub">
                   <span className="vxai-status-dot" />
-                  Online · Marketing Intelligence
+                  Online · Marketing Intelligence 
                 </div>
               </div>
             </div>
