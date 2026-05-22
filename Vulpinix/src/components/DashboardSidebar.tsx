@@ -2,7 +2,8 @@ import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard, BarChart3, Upload, User,
   LogOut, Share2, Settings, Calendar,
-  MessageSquare, Sparkles, PenSquare, ChevronRight
+  MessageSquare, Sparkles, PenSquare, ChevronRight,
+  Building2, Briefcase, Mic2, Bot, Crown, CreditCard, Code2, Bell
 } from "lucide-react";
 import { VulpinixLogo } from "./VulpinixLogo";
 
@@ -185,6 +186,97 @@ const SB = `
     margin: 4px 0 20px;
   }
 
+  /* ── Settings Sub-Sidebar ───────────────────────────────── */
+  .vxsb-sub {
+    width: 210px;
+    height: 100vh;
+    flex-shrink: 0;
+    background: #080c18;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: vxsb-sub-slide 0.22s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes vxsb-sub-slide {
+    from { opacity: 0; transform: translateX(-14px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .vxsb-sub-hd {
+    padding: 22px 16px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    flex-shrink: 0;
+  }
+  .vxsb-sub-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #2d3748;
+  }
+  .vxsb-sub-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px 10px;
+  }
+  .vxsb-sub-body::-webkit-scrollbar { width: 0; }
+  .vxsb-sub-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 11px;
+    border-radius: 11px;
+    cursor: pointer;
+    transition: all 0.18s;
+    border: 1px solid transparent;
+    margin-bottom: 2px;
+    color: #4a5568;
+    font-size: 13px;
+    font-weight: 500;
+    position: relative;
+  }
+  .vxsb-sub-item:hover {
+    color: #a0aec0;
+    background: rgba(255,255,255,0.04);
+  }
+  .vxsb-sub-item.is-active {
+    color: #e9d5ff;
+    background: rgba(139,92,246,0.12);
+    border-color: rgba(139,92,246,0.18);
+  }
+  .vxsb-sub-item.is-active::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 22%; bottom: 22%;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: linear-gradient(180deg, #a78bfa, #60a5fa);
+  }
+  .vxsb-sub-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.03);
+    color: #374151;
+    transition: all 0.18s;
+  }
+  .vxsb-sub-item:hover .vxsb-sub-icon {
+    background: rgba(255,255,255,0.06);
+    color: #6b7280;
+  }
+  .vxsb-sub-item.is-active .vxsb-sub-icon {
+    background: rgba(139,92,246,0.18);
+    color: #c4b5fd;
+  }
+  .vxsb-sub-sep {
+    height: 1px;
+    background: rgba(255,255,255,0.04);
+    margin: 6px 4px;
+  }
+
   /* ── Footer ──────────────────────────────────────────── */
   .vxsb-footer {
     padding: 14px 14px 18px;
@@ -284,6 +376,20 @@ const MAIN_NAV = [
   { label: "Settings",        icon: <Settings size={18} />,        path: "/settings" },
 ];
 
+const SETTINGS_NAV = [
+  { label: "Profile",        icon: <User size={14} />,        path: "/settings/profile" },
+  { label: "Workspace",      icon: <Building2 size={14} />,   path: "/settings/workspace" },
+  { label: "Brand Kit",      icon: <Briefcase size={14} />,   path: "/settings/brand-kit" },
+  { label: "Brand Persona",  icon: <Mic2 size={14} />,        path: "/settings/brand-persona" },
+  { label: "AI Profile",     icon: <Bot size={14} />,         path: "/settings/ai-profile" },
+  null,
+  { label: "Notifications",  icon: <Bell size={14} />,        path: "/settings/notifications" },
+  { label: "Subscription",   icon: <Crown size={14} />,       path: "/settings/subscription" },
+  { label: "Billing",        icon: <CreditCard size={14} />,  path: "/settings/billing" },
+  null,
+  { label: "API",            icon: <Code2 size={14} />,       path: "/settings/api" },
+];
+
 interface Props {
   userName?: string;
   userInitial?: string;
@@ -294,6 +400,9 @@ export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
+  const isSettings = location.pathname.startsWith("/settings");
+  const isSettingsActive = (path: string) => location.pathname === path ||
+    (path === "/settings/profile" && location.pathname === "/settings");
 
   const handleLogout = () => {
     localStorage.clear();
@@ -378,6 +487,30 @@ export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props
         </div>
 
       </div>
+
+      {/* Settings Sub-Sidebar */}
+      {isSettings && (
+        <div className="vxsb-sub">
+          <div className="vxsb-sub-hd">
+            <div className="vxsb-sub-title">Settings</div>
+          </div>
+          <div className="vxsb-sub-body">
+            {SETTINGS_NAV.map((item, i) => {
+              if (!item) return <div key={`sep-${i}`} className="vxsb-sub-sep" />;
+              return (
+                <div
+                  key={item.path}
+                  className={`vxsb-sub-item ${isSettingsActive(item.path) ? "is-active" : ""}`}
+                  onClick={() => navigate(item.path)}
+                >
+                  <div className="vxsb-sub-icon">{item.icon}</div>
+                  {item.label}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </>
   );
 }

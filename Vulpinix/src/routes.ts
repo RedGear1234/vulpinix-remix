@@ -128,6 +128,10 @@ export const router = createBrowserRouter([
         Component: SettingsPage,
       },
       {
+        path: "settings/:tab",
+        Component: SettingsPage,
+      },
+      {
         path: "admin",
         Component: AdminDashboard,
       },

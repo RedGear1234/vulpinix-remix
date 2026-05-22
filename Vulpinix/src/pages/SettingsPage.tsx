@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Settings, User, Bell, Shield, Palette, Trash2,
   Sun, Moon, Monitor, Eye, EyeOff, Save, ChevronRight,
   Mail, Phone, Lock, AlertTriangle, Check, Smartphone,
-  Volume2, VolumeX, Globe, Zap, LogOut, X
+  Globe, Zap, LogOut, X, Building2, Users, Upload, CheckCircle2, CreditCard, Bot, Sparkles, Type, MessageSquare, Target, ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardSidebar } from "../components/DashboardSidebar";
@@ -96,13 +96,7 @@ const S = `
   @media(max-width:640px){.vxst-scroll{padding:20px 16px 80px;}.vxst-hero{padding:24px 20px;}.vxst-hero-title{font-size:22px;}.vxst-theme-btns{flex-direction:column;}}
 `;
 
-const TABS = [
-  { id:"account",        label:"Account",        icon:<User          size={14}/> },
-  { id:"notifications",  label:"Notifications",  icon:<Bell          size={14}/> },
-  { id:"privacy",        label:"Privacy",         icon:<Shield        size={14}/> },
-  { id:"appearance",     label:"Appearance",      icon:<Palette       size={14}/> },
-  { id:"danger",         label:"Danger Zone",     icon:<AlertTriangle size={14}/> },
-];
+// Using Sub-Sidebar instead of top tabs
 
 const ACCENTS = ["#a78bfa","#38bdf8","#22c55e","#f472b6","#fb923c","#eab308","#e11d48","#06b6d4"];
 
@@ -115,9 +109,72 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   );
 }
 
+function CustomSelect({ options, value, onChange, style }: any) {
+  const [open, setOpen] = useState(false);
+  const selectedOption = options.find((o: any) => o.value === value) || options[0];
+  
+  return (
+    <div style={{position: "relative", ...style}}>
+      <div 
+        className="vxst-input" 
+        style={{display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", userSelect: "none"}}
+        onClick={() => setOpen(!open)}
+      >
+        <span>{selectedOption?.label}</span>
+        <ChevronDown size={14} style={{color: "#64748b", transform: open ? "rotate(180deg)" : "none", transition: "0.2s"}}/>
+      </div>
+      <AnimatePresence>
+        {open && (
+          <>
+            <div style={{position:"fixed",inset:0,zIndex:99}} onClick={()=>setOpen(false)}/>
+            <motion.div
+              initial={{opacity:0,y:4,scale:0.98}}
+              animate={{opacity:1,y:0,scale:1}}
+              exit={{opacity:0,y:4,scale:0.98}}
+              transition={{duration:0.15}}
+              style={{
+                position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:100,
+                background:"#0f172a", border:"1px solid rgba(255,255,255,0.1)", borderRadius:12,
+                padding:6, boxShadow:"0 12px 32px rgba(0,0,0,0.4)", display:"flex", flexDirection:"column", gap:2,
+                maxHeight: 250, overflowY: "auto"
+              }}
+            >
+              {options.map((o: any) => (
+                <div 
+                  key={o.value}
+                  onClick={() => { onChange(o.value); setOpen(false); }}
+                  style={{
+                    padding: "8px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13, userSelect: "none",
+                    background: o.value === value ? "rgba(167,139,250,0.15)" : "transparent",
+                    color: o.value === value ? "#d8b4fe" : "#cbd5e1",
+                    transition: "all 0.1s"
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = o.value === value ? "rgba(167,139,250,0.15)" : "rgba(255,255,255,0.05)"}
+                  onMouseLeave={e => e.currentTarget.style.background = o.value === value ? "rgba(167,139,250,0.15)" : "transparent"}
+                >
+                  {o.label}
+                </div>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("account");
+  const { tab = "profile" } = useParams();
+  
+  // Map sub-sidebar paths to internal sections
+  const getActiveSection = () => {
+    if (tab === "profile") return "account";
+    if (tab === "notifications") return "notifications";
+    return tab;
+  };
+  
+  const activeTab = getActiveSection();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -130,6 +187,14 @@ export default function SettingsPage() {
   const [currentPass, setCurrentPass] = useState("");
   const [newPass, setNewPass]         = useState("");
   const [confirmPass, setConfirmPass] = useState("");
+
+  const [workspaceName, setWorkspaceName] = useState("My Workspace");
+  const [workspaceSlug, setWorkspaceSlug] = useState("my-workspace");
+  const [workspaceWebsite, setWorkspaceWebsite] = useState("https://");
+  const [workspaceIndustry, setWorkspaceIndustry] = useState("agency");
+  const [workspaceLogo, setWorkspaceLogo] = useState<string | null>(null);
+  const [workspaceTimezone, setWorkspaceTimezone] = useState("America/New_York");
+  const [workspaceCurrency, setWorkspaceCurrency] = useState("USD");
 
   const [notifEmail,     setNotifEmail]     = useState(true);
   const [notifPush,      setNotifPush]      = useState(true);
@@ -154,6 +219,24 @@ export default function SettingsPage() {
   const [animations,  setAnimations]  = useState(true);
   const [soundFx,     setSoundFx]     = useState(false);
 
+  // Brand Kit
+  const [brandPrimary, setBrandPrimary] = useState("#A78BFA");
+  const [brandSecondary, setBrandSecondary] = useState("#38BDF8");
+  const [brandTypography, setBrandTypography] = useState("inter");
+
+  // AI Profile
+  const [aiCreativity, setAiCreativity] = useState("balanced");
+  const [aiModel, setAiModel] = useState("gpt4o");
+  const [aiImageGen, setAiImageGen] = useState("midjourney");
+  const [aiAutoCaption, setAiAutoCaption] = useState(true);
+  const [aiMultiLang, setAiMultiLang] = useState(false);
+
+  // Brand Persona
+  const [brandTone, setBrandTone] = useState("friendly");
+  const [brandMission, setBrandMission] = useState("Vulpinix is an advanced AI-powered social media management tool designed to help brands automate their workflow with cutting-edge creativity.");
+  const [brandAudience, setBrandAudience] = useState("Marketing Professionals, Agency Owners, Social Media Managers");
+  const [brandPainPoints, setBrandPainPoints] = useState("Lack of time for social media consistency, creative burnout, poor analytics tracking.");
+
   useEffect(() => {
     if (localStorage.getItem("isAuthenticated") !== "true") { navigate("/auth",{replace:true}); return; }
     try {
@@ -163,6 +246,14 @@ export default function SettingsPage() {
     } catch {}
     try {
       const s = JSON.parse(localStorage.getItem("vxSettings")||"{}");
+      if (s.workspaceName) setWorkspaceName(s.workspaceName);
+      if (s.workspaceSlug) setWorkspaceSlug(s.workspaceSlug);
+      if (s.workspaceWebsite) setWorkspaceWebsite(s.workspaceWebsite);
+      if (s.workspaceIndustry) setWorkspaceIndustry(s.workspaceIndustry);
+      if (s.workspaceLogo) setWorkspaceLogo(s.workspaceLogo);
+      if (s.workspaceTimezone) setWorkspaceTimezone(s.workspaceTimezone);
+      if (s.workspaceCurrency) setWorkspaceCurrency(s.workspaceCurrency);
+      
       if (s.theme)      setTheme(s.theme);
       if (s.accent)     setAccent(s.accent);
       if (s.language)   setLanguage(s.language);
@@ -183,6 +274,19 @@ export default function SettingsPage() {
       if (s.activityStatus    !==undefined) setActivityStatus(s.activityStatus);
       if (s.twoFactor         !==undefined) setTwoFactor(s.twoFactor);
       if (s.sessionAlerts     !==undefined) setSessionAlerts(s.sessionAlerts);
+
+      if (s.brandPrimary) setBrandPrimary(s.brandPrimary);
+      if (s.brandSecondary) setBrandSecondary(s.brandSecondary);
+      if (s.brandTypography) setBrandTypography(s.brandTypography);
+      if (s.aiCreativity) setAiCreativity(s.aiCreativity);
+      if (s.aiModel) setAiModel(s.aiModel);
+      if (s.aiImageGen) setAiImageGen(s.aiImageGen);
+      if (s.aiAutoCaption !== undefined) setAiAutoCaption(s.aiAutoCaption);
+      if (s.aiMultiLang !== undefined) setAiMultiLang(s.aiMultiLang);
+      if (s.brandTone) setBrandTone(s.brandTone);
+      if (s.brandMission) setBrandMission(s.brandMission);
+      if (s.brandAudience) setBrandAudience(s.brandAudience);
+      if (s.brandPainPoints) setBrandPainPoints(s.brandPainPoints);
     } catch {}
   }, [navigate]);
 
@@ -193,8 +297,21 @@ export default function SettingsPage() {
       theme, accent, language, timezone, compactMode, animations, soundFx,
       notifEmail, notifPush, notifSMS, notifCampaign, notifAnalytics, notifBilling, notifUpdates, notifMarketing,
       profileVisible, analyticsTracking, activityStatus, twoFactor, sessionAlerts,
+      workspaceName, workspaceSlug, workspaceWebsite, workspaceIndustry, workspaceLogo,
+      workspaceTimezone, workspaceCurrency,
+      brandPrimary, brandSecondary, brandTypography,
+      aiCreativity, aiModel, aiImageGen, aiAutoCaption, aiMultiLang,
+      brandTone, brandMission, brandAudience, brandPainPoints
     }));
     setSaved(true); toast.success("Settings saved!"); setTimeout(()=>setSaved(false), 2500);
+  };
+
+  const handleSettingToggle = (setter: React.Dispatch<React.SetStateAction<boolean>>, key: string, value: boolean, label: string) => {
+    setter(value);
+    const s = JSON.parse(localStorage.getItem("vxSettings")||"{}");
+    s[key] = value;
+    localStorage.setItem("vxSettings", JSON.stringify(s));
+    toast.success(`${label} updated`);
   };
 
   const handleChangePassword = () => {
@@ -226,8 +343,27 @@ export default function SettingsPage() {
             <motion.div {...FV} transition={{duration:0.45}} className="vxst-hero">
               <div className="vxst-hero-line"/>
               <div>
-                <div className="vxst-hero-title">Account <span>Settings</span></div>
-                <div className="vxst-hero-sub">Manage your preferences, privacy, notifications and security.</div>
+                <div className="vxst-hero-title">
+                  {activeTab === "notifications" ? "Notifications" :
+                   activeTab === "workspace" ? "Workspace" :
+                   activeTab === "subscription" ? "Subscription":
+                   activeTab === "billing" ? "Billing" :
+                   activeTab === "ai-profile" ? "AI Profile" :
+                   activeTab === "brand-kit" ? "Brand Kit" :
+                   activeTab === "brand-persona" ? "Brand Persona" :
+                   activeTab === "danger" ? "Danger Zone" : "Profile"}
+                  {activeTab !== "subscription" && activeTab !== "billing" && activeTab !== "brand-kit" && activeTab !== "brand-persona" && <span> Settings</span>}
+                </div>
+                <div className="vxst-hero-sub">
+                  {activeTab === "notifications" ? "Choose how and when you receive updates." :
+                   activeTab === "workspace" ? "Manage your workspace identity and core settings." :
+                   activeTab === "subscription" ? "Manage your pricing plans and billing cycle." :
+                   activeTab === "billing" ? "Manage payment methods and download invoices." :
+                   activeTab === "ai-profile" ? "Configure how the Vulpinix AI behaves and generates content." :
+                   activeTab === "brand-kit" ? "Manage your visual brand assets, typography, and color palettes." :
+                   activeTab === "brand-persona" ? "Define your brand's unique tone of voice and target audience." :
+                   activeTab === "danger" ? "Irreversible actions. Proceed with caution." : "Manage your personal preferences and security."}
+                </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <div className="vxst-plan-badge"><Zap size={11}/> Free Plan</div>
@@ -235,13 +371,7 @@ export default function SettingsPage() {
               </div>
             </motion.div>
 
-            <motion.div {...FV} transition={{delay:0.08}} className="vxst-tabs">
-              {TABS.map(t => (
-                <button key={t.id} className={`vxst-tab ${activeTab===t.id?"active":""}`} onClick={()=>setActiveTab(t.id)}>
-                  {t.icon} {t.label}
-                </button>
-              ))}
-            </motion.div>
+            {/* Tabs removed in favor of sub-sidebar */}
 
             <AnimatePresence mode="wait">
 
@@ -259,18 +389,13 @@ export default function SettingsPage() {
                       {[
                         {lbl:"Full Name",k:"name",ph:"Your full name",val:name,set:setName,type:"text"},
                         {lbl:"Email Address",k:"email",ph:"your@email.com",val:email,set:setEmail,type:"email"},
-                        {lbl:"Phone",k:"phone",ph:"+91 XXXXX XXXXX",val:phone,set:setPhone,type:"text"},
-                        {lbl:"Company",k:"company",ph:"Your company",val:company,set:setCompany,type:"text"},
+                        {lbl:"Phone",k:"phone",ph:"+91 XXXXX XXXXX",val:phone,set:setPhone,type:"text",gridCol:"1/-1"},
                       ].map(f=>(
-                        <div key={f.k}>
+                        <div key={f.k} style={{gridColumn:f.gridCol}}>
                           <label className="vxst-lbl">{f.lbl}</label>
                           <input className="vxst-input" type={f.type} placeholder={f.ph} value={f.val} onChange={e=>f.set(e.target.value)}/>
                         </div>
                       ))}
-                      <div style={{gridColumn:"1/-1"}}>
-                        <label className="vxst-lbl">Website</label>
-                        <input className="vxst-input" placeholder="https://yourwebsite.com" value={website} onChange={e=>setWebsite(e.target.value)}/>
-                      </div>
                     </div>
                     <div className="vxst-save-row">
                       <button className="vxst-btn-pri" onClick={handleSave}>{saved?<><Check size={14}/>Saved!</>:<><Save size={14}/>Save Changes</>}</button>
@@ -300,23 +425,6 @@ export default function SettingsPage() {
                       <button className="vxst-btn-pri" onClick={handleChangePassword}><Lock size={14}/> Update Password</button>
                     </div>
                   </div>
-
-                  <div className="vxst-card">
-                    <div className="vxst-card-hd">
-                      <div className="vxst-card-hd-l">
-                        <div className="vxst-card-ic" style={{background:"rgba(251,191,36,0.12)",color:"#fbbf24"}}><Zap size={17}/></div>
-                        <div><div className="vxst-card-title">Subscription Plan</div><div className="vxst-card-sub">Manage your current plan and billing</div></div>
-                      </div>
-                      <div className="vxst-plan-badge"><Zap size={11}/> Free Plan</div>
-                    </div>
-                    <div style={{padding:"16px 20px",borderRadius:14,background:"rgba(167,139,250,0.06)",border:"1px solid rgba(167,139,250,0.15)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
-                      <div>
-                        <div style={{fontSize:15,fontWeight:800,color:"#e2e8f0",marginBottom:4}}>Upgrade to Pro</div>
-                        <div style={{fontSize:13,color:"#475569",lineHeight:1.6}}>Unlock unlimited campaigns, advanced analytics, AI generation & priority support.</div>
-                      </div>
-                      <button className="vxst-btn-pri" onClick={()=>toast.info("Upgrade flow coming soon!")}><Zap size={14}/> Upgrade Now</button>
-                    </div>
-                  </div>
                 </motion.div>
               )}
 
@@ -331,9 +439,9 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     {[
-                      {icon:<Mail size={15}/>,title:"Email Notifications",sub:"Receive updates via email",val:notifEmail,set:setNotifEmail},
-                      {icon:<Smartphone size={15}/>,title:"Push Notifications",sub:"Browser push alerts",val:notifPush,set:setNotifPush},
-                      {icon:<Phone size={15}/>,title:"SMS Notifications",sub:"Text message alerts (charges may apply)",val:notifSMS,set:setNotifSMS},
+                      {icon:<Mail size={15}/>,title:"Email Notifications",sub:"Receive updates via email",val:notifEmail,set:(v:boolean)=>handleSettingToggle(setNotifEmail,"notifEmail",v,"Email preferences")},
+                      {icon:<Smartphone size={15}/>,title:"Push Notifications",sub:"Browser push alerts",val:notifPush,set:(v:boolean)=>handleSettingToggle(setNotifPush,"notifPush",v,"Push preferences")},
+                      {icon:<Phone size={15}/>,title:"SMS Notifications",sub:"Text message alerts (charges may apply)",val:notifSMS,set:(v:boolean)=>handleSettingToggle(setNotifSMS,"notifSMS",v,"SMS preferences")},
                     ].map((r,i)=>(
                       <div key={i} className="vxst-row">
                         <div style={{display:"flex",alignItems:"center",gap:12,flex:1}}>
@@ -352,11 +460,11 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     {[
-                      {title:"Campaign Updates",sub:"When your campaign status changes",val:notifCampaign,set:setNotifCampaign},
-                      {title:"Analytics Reports",sub:"Weekly performance summaries and milestones",val:notifAnalytics,set:setNotifAnalytics},
-                      {title:"Billing & Payments",sub:"Invoices, payment confirmations and plan changes",val:notifBilling,set:setNotifBilling},
-                      {title:"Product Updates",sub:"New features, improvements and announcements",val:notifUpdates,set:setNotifUpdates},
-                      {title:"Marketing & Promotions",sub:"Special offers and promotional campaigns",val:notifMarketing,set:setNotifMarketing},
+                      {title:"Campaign Updates",sub:"When your campaign status changes",val:notifCampaign,set:(v:boolean)=>handleSettingToggle(setNotifCampaign,"notifCampaign",v,"Campaign alerts")},
+                      {title:"Analytics Reports",sub:"Weekly performance summaries and milestones",val:notifAnalytics,set:(v:boolean)=>handleSettingToggle(setNotifAnalytics,"notifAnalytics",v,"Analytics reports")},
+                      {title:"Billing & Payments",sub:"Invoices, payment confirmations and plan changes",val:notifBilling,set:(v:boolean)=>handleSettingToggle(setNotifBilling,"notifBilling",v,"Billing alerts")},
+                      {title:"Product Updates",sub:"New features, improvements and announcements",val:notifUpdates,set:(v:boolean)=>handleSettingToggle(setNotifUpdates,"notifUpdates",v,"Product updates")},
+                      {title:"Marketing & Promotions",sub:"Special offers and promotional campaigns",val:notifMarketing,set:(v:boolean)=>handleSettingToggle(setNotifMarketing,"notifMarketing",v,"Marketing emails")},
                     ].map((r,i)=>(
                       <div key={i} className="vxst-row">
                         <div className="vxst-row-l"><div className="vxst-row-title">{r.title}</div><div className="vxst-row-sub">{r.sub}</div></div>
@@ -449,28 +557,28 @@ export default function SettingsPage() {
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
                       <div>
                         <label className="vxst-lbl">Language</label>
-                        <select className="vxst-select" value={language} onChange={e=>setLanguage(e.target.value)}>
-                          <option value="en">English</option>
-                          <option value="hi">Hindi</option>
-                          <option value="es">Spanish</option>
-                          <option value="fr">French</option>
-                          <option value="de">German</option>
-                          <option value="ja">Japanese</option>
-                          <option value="zh">Chinese</option>
-                        </select>
+                        <CustomSelect style={{width:"100%"}} value={language} onChange={(v: string) => setLanguage(v)} options={[
+                          {value:"en", label:"English"},
+                          {value:"hi", label:"Hindi"},
+                          {value:"es", label:"Spanish"},
+                          {value:"fr", label:"French"},
+                          {value:"de", label:"German"},
+                          {value:"ja", label:"Japanese"},
+                          {value:"zh", label:"Chinese"}
+                        ]} />
                       </div>
                       <div>
                         <label className="vxst-lbl">Timezone</label>
-                        <select className="vxst-select" value={timezone} onChange={e=>setTimezone(e.target.value)}>
-                          <option value="Asia/Kolkata">India (IST)</option>
-                          <option value="America/New_York">New York (EST)</option>
-                          <option value="America/Los_Angeles">Los Angeles (PST)</option>
-                          <option value="Europe/London">London (GMT)</option>
-                          <option value="Europe/Paris">Paris (CET)</option>
-                          <option value="Asia/Tokyo">Tokyo (JST)</option>
-                          <option value="Asia/Dubai">Dubai (GST)</option>
-                          <option value="Australia/Sydney">Sydney (AEST)</option>
-                        </select>
+                        <CustomSelect style={{width:"100%"}} value={timezone} onChange={(v: string) => setTimezone(v)} options={[
+                          {value:"Asia/Kolkata", label:"India (IST)"},
+                          {value:"America/New_York", label:"New York (EST)"},
+                          {value:"America/Los_Angeles", label:"Los Angeles (PST)"},
+                          {value:"Europe/London", label:"London (GMT)"},
+                          {value:"Europe/Paris", label:"Paris (CET)"},
+                          {value:"Asia/Tokyo", label:"Tokyo (JST)"},
+                          {value:"Asia/Dubai", label:"Dubai (GST)"},
+                          {value:"Australia/Sydney", label:"Sydney (AEST)"}
+                        ]} />
                       </div>
                     </div>
                   </div>
@@ -496,8 +604,465 @@ export default function SettingsPage() {
                 </motion.div>
               )}
 
-              {/* ── DANGER ── */}
-              {activeTab==="danger" && (
+              {/* ── WORKSPACE ── */}
+              {activeTab === "workspace" && (
+                <motion.div key="workspace" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(167,139,250,0.12)",color:"#a78bfa"}}><Building2 size={17}/></div>
+                        <div><div className="vxst-card-title">Workspace Details</div><div className="vxst-card-sub">Manage your workspace identity and core settings</div></div>
+                      </div>
+                    </div>
+                    
+                    <div style={{display:"flex",gap:24,marginBottom:24,flexWrap:"wrap"}}>
+                      <div style={{display:"flex",flexDirection:"column",gap:12,alignItems:"center"}}>
+                        <div style={{width:80,height:80,borderRadius:18,background:"linear-gradient(135deg, rgba(167,139,250,0.15), rgba(56,189,248,0.1))",border:"1px dashed rgba(167,139,250,0.4)",display:"flex",alignItems:"center",justifyContent:"center",color:"#a78bfa",overflow:"hidden"}}>
+                          {workspaceLogo ? <img src={workspaceLogo} alt="Workspace Logo" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : <Building2 size={32}/>}
+                        </div>
+                        <label className="vxst-btn-ghost" style={{padding:"6px 12px",fontSize:12,cursor:"pointer"}}>
+                          <input type="file" accept="image/*" style={{display:"none"}} onChange={(e) => { 
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                if (event.target?.result) {
+                                  setWorkspaceLogo(event.target.result as string);
+                                  toast.success("Logo updated successfully!"); 
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }} />
+                          <Upload size={13}/> Upload Logo
+                        </label>
+                      </div>
+                      <div style={{flex:1,minWidth:200,display:"flex",flexDirection:"column",gap:14}}>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                          <div>
+                            <label className="vxst-lbl">Workspace Name</label>
+                            <input className="vxst-input" value={workspaceName} onChange={e=>setWorkspaceName(e.target.value)} placeholder="e.g. Acme Corp"/>
+                          </div>
+                          <div>
+                            <label className="vxst-lbl">Workspace Slug</label>
+                            <div style={{display:"flex",alignItems:"center",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:13,overflow:"hidden"}}>
+                              <div style={{padding:"0 12px",fontSize:13,color:"#64748b",background:"rgba(255,255,255,0.04)",borderRight:"1px solid rgba(255,255,255,0.05)",height:"100%",display:"flex",alignItems:"center"}}>vulpinix.com/</div>
+                              <input className="vxst-input" style={{border:"none",borderRadius:0,background:"transparent"}} value={workspaceSlug} onChange={e=>setWorkspaceSlug(e.target.value)} placeholder="my-workspace"/>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                          <div>
+                            <label className="vxst-lbl">Website URL</label>
+                            <input className="vxst-input" value={workspaceWebsite} onChange={e=>setWorkspaceWebsite(e.target.value)} placeholder="https://yourwebsite.com"/>
+                          </div>
+                          <div>
+                            <label className="vxst-lbl">Industry</label>
+                        <CustomSelect style={{width:"100%"}} value={workspaceIndustry} onChange={(v: string) => setWorkspaceIndustry(v)} options={[
+                          {value:"agency", label:"Marketing Agency"},
+                          {value:"ecommerce", label:"E-Commerce"},
+                          {value:"saas", label:"SaaS / Technology"},
+                          {value:"creator", label:"Creator / Influencer"},
+                          {value:"local", label:"Local Business"},
+                          {value:"other", label:"Other"}
+                        ]} />
+                      </div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                      <div>
+                        <label className="vxst-lbl">Default Timezone</label>
+                        <CustomSelect style={{width:"100%"}} value={workspaceTimezone} onChange={(v: string) => setWorkspaceTimezone(v)} options={[
+                          {value:"America/New_York", label:"New York (EST)"},
+                          {value:"America/Los_Angeles", label:"Los Angeles (PST)"},
+                          {value:"Europe/London", label:"London (GMT)"},
+                          {value:"Europe/Paris", label:"Paris (CET)"},
+                          {value:"Asia/Kolkata", label:"India (IST)"},
+                          {value:"Asia/Tokyo", label:"Tokyo (JST)"},
+                          {value:"Australia/Sydney", label:"Sydney (AEST)"}
+                        ]} />
+                      </div>
+                      <div>
+                        <label className="vxst-lbl">Default Currency</label>
+                        <CustomSelect style={{width:"100%"}} value={workspaceCurrency} onChange={(v: string) => setWorkspaceCurrency(v)} options={[
+                          {value:"USD", label:"USD ($)"},
+                          {value:"EUR", label:"EUR (€)"},
+                          {value:"GBP", label:"GBP (£)"},
+                          {value:"INR", label:"INR (₹)"},
+                          {value:"AUD", label:"AUD (A$)"},
+                          {value:"CAD", label:"CAD (C$)"}
+                        ]} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="vxst-save-row">
+                      <button className="vxst-btn-pri" onClick={handleSave}>{saved?<><Check size={14}/>Saved!</>:<><Save size={14}/>Save Changes</>}</button>
+                    </div>
+                  </div>
+
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(56,189,248,0.12)",color:"#38bdf8"}}><Users size={17}/></div>
+                        <div><div className="vxst-card-title">Team Members</div><div className="vxst-card-sub">Manage who has access to this workspace</div></div>
+                      </div>
+                      <button className="vxst-btn-ghost"><User size={14}/> Invite Member</button>
+                    </div>
+                    
+                    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                      {[
+                        {name:userName,email:email||"user@example.com",role:"Owner",initial:userInitial},
+                        {name:"Sarah Jenkins",email:"sarah@example.com",role:"Editor",initial:"S"},
+                        {name:"Mike Ross",email:"mike@example.com",role:"Viewer",initial:"M"}
+                      ].map((member, i) => (
+                        <div key={i} className="vxst-row" style={{padding:"10px 0",borderBottom: i === 2 ? "none" : undefined}}>
+                          <div style={{display:"flex",alignItems:"center",gap:12,flex:1}}>
+                            <div style={{width:36,height:36,borderRadius:10,background:"rgba(167,139,250,0.15)",color:"#c4b5fd",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{member.initial}</div>
+                            <div className="vxst-row-l">
+                              <div className="vxst-row-title">{member.name} {i === 0 && <span style={{fontSize:10,background:"rgba(167,139,250,0.2)",color:"#d8b4fe",padding:"2px 6px",borderRadius:4,marginLeft:6}}>You</span>}</div>
+                              <div className="vxst-row-sub">{member.email}</div>
+                            </div>
+                          </div>
+                          <div style={{fontSize:13,fontWeight:600,color:"#64748b",background:"rgba(255,255,255,0.04)",padding:"4px 10px",borderRadius:8}}>{member.role}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="vxst-danger-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(239,68,68,0.12)",color:"#ef4444"}}><AlertTriangle size={17}/></div>
+                        <div><div className="vxst-card-title" style={{color:"#ef4444"}}>Workspace Danger Zone</div><div className="vxst-card-sub">Irreversible actions for this workspace.</div></div>
+                      </div>
+                    </div>
+                    
+                    <div style={{padding:"20px",borderRadius:16,background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.18)"}}>
+                      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
+                        <div>
+                          <div style={{fontSize:15,fontWeight:800,color:"#ef4444",marginBottom:5}}>Delete Workspace</div>
+                          <div style={{fontSize:13,color:"#64748b",lineHeight:1.6,maxWidth:380}}>Permanently delete this workspace, all its campaigns, analytics data, and connected accounts. <strong style={{color:"#94a3b8"}}>This cannot be undone.</strong></div>
+                        </div>
+                        <button className="vxst-btn-danger" onClick={()=>toast.info("Delete Workspace confirmation coming soon")}><Trash2 size={14}/> Delete Workspace</button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── SUBSCRIPTION ── */}
+              {activeTab === "subscription" && (
+                <motion.div key="subscription" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
+                  <div className="vxst-card" style={{border:"none",background:"transparent",padding:0,boxShadow:"none"}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:24}}>
+                      
+                      {/* FREE PLAN */}
+                      <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:24,padding:32,display:"flex",flexDirection:"column",position:"relative",overflow:"hidden"}}>
+                        <div style={{fontSize:18,fontWeight:700,color:"#e2e8f0",marginBottom:12}}>Starter</div>
+                        <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:24}}>
+                          <span style={{fontSize:42,fontWeight:800,color:"#fff"}}>$0</span>
+                          <span style={{color:"#64748b",fontWeight:500}}>/ month</span>
+                        </div>
+                        <div style={{fontSize:14,color:"#94a3b8",marginBottom:32,lineHeight:1.5}}>Essential tools for individuals just getting started.</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:16,flex:1,marginBottom:32}}>
+                          {["3 Active Campaigns","Basic Analytics","Community Support","1 Connected Account"].map((f,i)=>(
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:12,fontSize:14,color:"#cbd5e1"}}>
+                              <CheckCircle2 size={16} color="#64748b"/> {f}
+                            </div>
+                          ))}
+                        </div>
+                        <button className="vxst-btn-ghost" style={{width:"100%",padding:14,justifyContent:"center",border:"1px solid rgba(255,255,255,0.1)"}} disabled>Current Plan</button>
+                      </div>
+
+                      {/* PRO PLAN */}
+                      <div style={{background:"linear-gradient(180deg, rgba(167,139,250,0.1) 0%, rgba(167,139,250,0.02) 100%)",border:"1px solid rgba(167,139,250,0.3)",borderRadius:24,padding:32,display:"flex",flexDirection:"column",position:"relative",overflow:"hidden",boxShadow:"0 12px 32px rgba(167,139,250,0.08)"}}>
+                        <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:"linear-gradient(90deg, #a78bfa, #38bdf8)"}}/>
+                        <div style={{position:"absolute",top:24,right:24,background:"rgba(167,139,250,0.2)",color:"#d8b4fe",fontSize:11,fontWeight:800,padding:"4px 10px",borderRadius:20,textTransform:"uppercase",letterSpacing:1}}>Most Popular</div>
+                        
+                        <div style={{fontSize:18,fontWeight:700,color:"#a78bfa",marginBottom:12}}>Professional</div>
+                        <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:24}}>
+                          <span style={{fontSize:42,fontWeight:800,color:"#fff"}}>$29</span>
+                          <span style={{color:"#64748b",fontWeight:500}}>/ month</span>
+                        </div>
+                        <div style={{fontSize:14,color:"#94a3b8",marginBottom:32,lineHeight:1.5}}>Advanced analytics & AI tools for growing brands.</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:16,flex:1,marginBottom:32}}>
+                          {["Unlimited Campaigns","Advanced AI Generation","Premium Analytics","Priority 24/7 Support","Custom Branding"].map((f,i)=>(
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:12,fontSize:14,color:"#e2e8f0"}}>
+                              <CheckCircle2 size={16} color="#a78bfa"/> {f}
+                            </div>
+                          ))}
+                        </div>
+                        <button className="vxst-btn-pri" style={{width:"100%",padding:14,justifyContent:"center"}} onClick={()=>toast.info("Upgrade flow coming soon")}><Zap size={15}/> Upgrade to Pro</button>
+                      </div>
+
+                      {/* AGENCY PLAN */}
+                      <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:24,padding:32,display:"flex",flexDirection:"column",position:"relative",overflow:"hidden"}}>
+                        <div style={{fontSize:18,fontWeight:700,color:"#e2e8f0",marginBottom:12}}>Agency</div>
+                        <div style={{display:"flex",alignItems:"baseline",gap:4,marginBottom:24}}>
+                          <span style={{fontSize:42,fontWeight:800,color:"#fff"}}>$99</span>
+                          <span style={{color:"#64748b",fontWeight:500}}>/ month</span>
+                        </div>
+                        <div style={{fontSize:14,color:"#94a3b8",marginBottom:32,lineHeight:1.5}}>Maximum power and custom solutions for large teams.</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:16,flex:1,marginBottom:32}}>
+                          {["Everything in Professional","Multiple Workspaces","White-label Reports","Dedicated Success Manager","Custom API Access"].map((f,i)=>(
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:12,fontSize:14,color:"#cbd5e1"}}>
+                              <CheckCircle2 size={16} color="#38bdf8"/> {f}
+                            </div>
+                          ))}
+                        </div>
+                        <button className="vxst-btn-ghost" style={{width:"100%",padding:14,justifyContent:"center",border:"1px solid rgba(255,255,255,0.1)"}} onClick={()=>toast.info("Contact sales coming soon")}>Contact Sales</button>
+                      </div>
+
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── BILLING ── */}
+              {activeTab === "billing" && (
+                <motion.div key="billing" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(167,139,250,0.12)",color:"#a78bfa"}}><CreditCard size={17}/></div>
+                        <div><div className="vxst-card-title">Payment Methods</div><div className="vxst-card-sub">Securely manage your saved credit cards</div></div>
+                      </div>
+                      <button className="vxst-btn-pri" onClick={()=>toast.info("Add payment method coming soon!")}><CreditCard size={14}/> Add Method</button>
+                    </div>
+                    
+                    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                      <div className="vxst-row" style={{padding:"14px",border:"1px solid rgba(167,139,250,0.3)",background:"rgba(167,139,250,0.05)",borderRadius:12}}>
+                        <div style={{display:"flex",alignItems:"center",gap:16,flex:1}}>
+                          <div style={{width:48,height:32,borderRadius:6,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",color:"#1e293b",fontWeight:800,fontSize:14,boxShadow:"0 2px 5px rgba(0,0,0,0.1)"}}>VISA</div>
+                          <div className="vxst-row-l">
+                            <div className="vxst-row-title">Visa ending in 4242 <span style={{marginLeft:8,fontSize:10,background:"rgba(167,139,250,0.2)",color:"#d8b4fe",padding:"2px 8px",borderRadius:4,textTransform:"uppercase",fontWeight:800}}>Default</span></div>
+                            <div className="vxst-row-sub">Expires 12/2028</div>
+                          </div>
+                        </div>
+                        <button className="vxst-btn-ghost" style={{color:"#ef4444"}} onClick={()=>toast.error("Cannot remove default payment method.")}><Trash2 size={14}/> Remove</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(56,189,248,0.12)",color:"#38bdf8"}}><CheckCircle2 size={17}/></div>
+                        <div><div className="vxst-card-title">Billing History</div><div className="vxst-card-sub">Download past invoices and receipts</div></div>
+                      </div>
+                    </div>
+                    
+                    <div style={{display:"flex",flexDirection:"column"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:16,padding:"0 16px 12px",fontSize:12,fontWeight:700,color:"#64748b",borderBottom:"1px solid rgba(255,255,255,0.05)",textTransform:"uppercase",letterSpacing:0.5}}>
+                        <div>Date</div>
+                        <div>Amount</div>
+                        <div>Status</div>
+                        <div>Invoice</div>
+                      </div>
+                      {[
+                        {date:"Oct 01, 2026",amount:"$29.00",status:"Paid"},
+                        {date:"Sep 01, 2026",amount:"$29.00",status:"Paid"},
+                        {date:"Aug 01, 2026",amount:"$29.00",status:"Paid"}
+                      ].map((inv, i) => (
+                        <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:16,padding:"16px",alignItems:"center",borderBottom: i===2 ? "none" : "1px solid rgba(255,255,255,0.03)"}}>
+                          <div style={{fontSize:14,color:"#e2e8f0",fontWeight:500}}>{inv.date}</div>
+                          <div style={{fontSize:14,color:"#cbd5e1"}}>{inv.amount}</div>
+                          <div><span style={{fontSize:12,background:"rgba(34,197,94,0.15)",color:"#4ade80",padding:"4px 10px",borderRadius:20,fontWeight:700}}>{inv.status}</span></div>
+                          <button className="vxst-btn-ghost" style={{padding:"6px 12px",fontSize:12}} onClick={()=>toast.success("Downloading invoice...")}>Download</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── AI PROFILE ── */}
+              {activeTab === "ai-profile" && (
+                <motion.div key="ai-profile" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(251,191,36,0.12)",color:"#fbbf24"}}><Bot size={17}/></div>
+                        <div><div className="vxst-card-title">AI Engine Settings</div><div className="vxst-card-sub">Fine-tune the Vulpinix agent to match your brand's voice</div></div>
+                      </div>
+                    </div>
+                    
+                    <div style={{display:"flex",flexDirection:"column",gap:24}}>
+                      <div className="vxst-row">
+                        <div className="vxst-row-l">
+                          <div className="vxst-row-title">Creativity Level</div>
+                          <div className="vxst-row-sub">How wild and creative should the AI be when generating posts?</div>
+                        </div>
+                        <CustomSelect style={{width:200}} value={aiCreativity} onChange={setAiCreativity} options={[
+                          {value:"strict", label:"Strict & Professional"},
+                          {value:"balanced", label:"Balanced"},
+                          {value:"creative", label:"Highly Creative"},
+                          {value:"wild", label:"Wild & Out of the Box"}
+                        ]} />
+                      </div>
+
+                      <div className="vxst-row">
+                        <div className="vxst-row-l">
+                          <div className="vxst-row-title">Default Generation Model</div>
+                          <div className="vxst-row-sub">Select the core LLM used for text generation.</div>
+                        </div>
+                        <CustomSelect style={{width:200}} value={aiModel} onChange={setAiModel} options={[
+                          {value:"gpt4o", label:"GPT-4o (Recommended)"},
+                          {value:"claude", label:"Claude 3.5 Sonnet"},
+                          {value:"gemini", label:"Gemini 1.5 Pro"}
+                        ]} />
+                      </div>
+
+                      <div className="vxst-row">
+                        <div className="vxst-row-l">
+                          <div className="vxst-row-title">Image Generator</div>
+                          <div className="vxst-row-sub">Select the model used for creating graphics.</div>
+                        </div>
+                        <CustomSelect style={{width:200}} value={aiImageGen} onChange={setAiImageGen} options={[
+                          {value:"midjourney", label:"Midjourney v6 (High Quality)"},
+                          {value:"dalle3", label:"DALL-E 3 (Fast)"}
+                        ]} />
+                      </div>
+                      
+                      <div className="vxst-row" style={{borderBottom:"none",paddingBottom:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:12,flex:1}}>
+                          <div style={{width:34,height:34,borderRadius:10,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fde68a",flexShrink:0}}><Sparkles size={15}/></div>
+                          <div className="vxst-row-l"><div className="vxst-row-title">Auto-Generate Captions</div><div className="vxst-row-sub">Automatically write smart captions when you upload a raw image.</div></div>
+                        </div>
+                        <Toggle checked={aiAutoCaption} onChange={(v)=>handleSettingToggle(setAiAutoCaption, "aiAutoCaption", v, "Auto-caption")}/>
+                      </div>
+                      <div className="vxst-row" style={{borderBottom:"none",paddingBottom:0,paddingTop:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:12,flex:1}}>
+                          <div style={{width:34,height:34,borderRadius:10,background:"rgba(56,189,248,0.08)",border:"1px solid rgba(56,189,248,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#bae6fd",flexShrink:0}}><Globe size={15}/></div>
+                          <div className="vxst-row-l"><div className="vxst-row-title">Multi-Language Support</div><div className="vxst-row-sub">Allow AI to output translated variants for international audiences.</div></div>
+                        </div>
+                        <Toggle checked={aiMultiLang} onChange={(v)=>handleSettingToggle(setAiMultiLang, "aiMultiLang", v, "Multi-language support")}/>
+                      </div>
+                    </div>
+                    
+                    <div className="vxst-save-row" style={{marginTop:24}}><button className="vxst-btn-pri" onClick={handleSave}>{saved?<><Check size={14}/>Saved!</>:<><Save size={14}/>Save AI Preferences</>}</button></div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── BRAND KIT ── */}
+              {activeTab === "brand-kit" && (
+                <motion.div key="brand-kit" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(236,72,153,0.12)",color:"#ec4899"}}><Palette size={17}/></div>
+                        <div><div className="vxst-card-title">Brand Colors</div><div className="vxst-card-sub">Define the primary and secondary colors for your campaigns</div></div>
+                      </div>
+                    </div>
+                    
+                    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+                      <div className="vxst-row" style={{borderBottom:"none",paddingBottom:0}}>
+                        <div className="vxst-row-l">
+                          <div className="vxst-row-title">Primary Brand Color</div>
+                          <div className="vxst-row-sub">Used for main buttons, highlights, and primary actions.</div>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:12}}>
+                          <label style={{cursor:"pointer", display:"block", position:"relative"}}>
+                            <div style={{width:32,height:32,borderRadius:8,background:brandPrimary,border:"1px solid rgba(255,255,255,0.1)",boxShadow:`0 2px 8px ${brandPrimary}4d`}}/>
+                            <input type="color" value={brandPrimary} onChange={e=>setBrandPrimary(e.target.value)} style={{opacity:0,position:"absolute",inset:0,width:"100%",height:"100%",cursor:"pointer"}} />
+                          </label>
+                          <input className="vxst-input" style={{width:100,fontFamily:"monospace"}} value={brandPrimary} onChange={e=>setBrandPrimary(e.target.value)} />
+                        </div>
+                      </div>
+
+                      <div className="vxst-row" style={{borderBottom:"none",paddingBottom:0,paddingTop:0}}>
+                        <div className="vxst-row-l">
+                          <div className="vxst-row-title">Secondary / Accent Color</div>
+                          <div className="vxst-row-sub">Used for secondary elements and complementary backgrounds.</div>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:12}}>
+                          <label style={{cursor:"pointer", display:"block", position:"relative"}}>
+                            <div style={{width:32,height:32,borderRadius:8,background:brandSecondary,border:"1px solid rgba(255,255,255,0.1)",boxShadow:`0 2px 8px ${brandSecondary}4d`}}/>
+                            <input type="color" value={brandSecondary} onChange={e=>setBrandSecondary(e.target.value)} style={{opacity:0,position:"absolute",inset:0,width:"100%",height:"100%",cursor:"pointer"}} />
+                          </label>
+                          <input className="vxst-input" style={{width:100,fontFamily:"monospace"}} value={brandSecondary} onChange={e=>setBrandSecondary(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(16,185,129,0.12)",color:"#10b981"}}><Type size={17}/></div>
+                        <div><div className="vxst-card-title">Typography</div><div className="vxst-card-sub">Choose your brand's official font styles</div></div>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+                      <div className="vxst-row" style={{borderBottom:"none",paddingBottom:0}}>
+                        <div className="vxst-row-l"><div className="vxst-row-title">Primary Font Family</div></div>
+                        <CustomSelect style={{width:200}} value={brandTypography} onChange={setBrandTypography} options={[
+                          {value:"inter", label:"Inter (Default)"},
+                          {value:"roboto", label:"Roboto"},
+                          {value:"poppins", label:"Poppins"},
+                          {value:"montserrat", label:"Montserrat"}
+                        ]} />
+                      </div>
+                    </div>
+                    <div className="vxst-save-row" style={{marginTop:24}}><button className="vxst-btn-pri" onClick={handleSave}>{saved?<><Check size={14}/>Saved!</>:<><Save size={14}/>Save Brand Kit</>}</button></div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── BRAND PERSONA ── */}
+              {activeTab === "brand-persona" && (
+                <motion.div key="brand-persona" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(249,115,22,0.12)",color:"#f97316"}}><MessageSquare size={17}/></div>
+                        <div><div className="vxst-card-title">Brand Tone & Voice</div><div className="vxst-card-sub">How your brand sounds to your audience</div></div>
+                      </div>
+                    </div>
+                    
+                    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+                      <div>
+                        <label className="vxst-lbl">Core Brand Tone</label>
+                        <CustomSelect value={brandTone} onChange={setBrandTone} options={[
+                          {value:"professional", label:"Professional & Corporate"},
+                          {value:"friendly", label:"Friendly & Conversational"},
+                          {value:"humorous", label:"Humorous & Witty"},
+                          {value:"authoritative", label:"Authoritative & Educational"},
+                          {value:"luxury", label:"Luxury & Exclusive"}
+                        ]} />
+                      </div>
+                      <div>
+                        <label className="vxst-lbl">Brand Mission / Elevator Pitch</label>
+                        <textarea className="vxst-input" rows={4} placeholder="Describe what your brand does and its core values. The AI will use this to understand your positioning..." value={brandMission} onChange={e=>setBrandMission(e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(139,92,246,0.12)",color:"#8b5cf6"}}><Target size={17}/></div>
+                        <div><div className="vxst-card-title">Target Audience</div><div className="vxst-card-sub">Who is your brand speaking to?</div></div>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+                      <div>
+                        <label className="vxst-lbl">Primary Audience Demographics</label>
+                        <input className="vxst-input" placeholder="e.g., Millennials, Tech Entrepreneurs, Fitness Enthusiasts..." value={brandAudience} onChange={e=>setBrandAudience(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="vxst-lbl">Audience Pain Points</label>
+                        <textarea className="vxst-input" rows={3} placeholder="What problems are you solving for them?" value={brandPainPoints} onChange={e=>setBrandPainPoints(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="vxst-save-row" style={{marginTop:24}}><button className="vxst-btn-pri" onClick={handleSave}>{saved?<><Check size={14}/>Saved!</>:<><Save size={14}/>Save Persona</>}</button></div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── OTHER SECTIONS (DANGER, API, ETC) ── */}
+              {["danger", "api"].includes(activeTab) && (
                 <motion.div key="danger" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
                   <div className="vxst-danger-card">
                     <div className="vxst-card-hd">
