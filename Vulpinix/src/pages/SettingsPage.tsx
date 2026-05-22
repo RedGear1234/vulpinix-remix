@@ -242,9 +242,28 @@ export default function SettingsPage() {
 
     const fetchUserData = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("authToken");
         if (!token) return;
 
+        // Fetch Profile
+        try {
+          const profileRes = await fetch("http://localhost:5000/api/users/profile", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (profileRes.ok) {
+            const pData = await profileRes.json();
+            if (pData.success && pData.user) {
+              const u = pData.user;
+              localStorage.setItem("userInfo", JSON.stringify(u));
+              setName(u.name||""); setEmail(u.email||""); setPhone(u.phone||"");
+              setCompany(u.company||""); setWebsite(u.website||"");
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch profile", err);
+        }
+
+        // Fetch Settings
         const res = await fetch("http://localhost:5000/api/users/settings", {
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -306,10 +325,13 @@ export default function SettingsPage() {
     };
     fetchUserData();
 
+    // Fallback to local user info if fetch fails or is pending
     try {
-      const u = JSON.parse(localStorage.getItem("userInfo")||"{}");
-      setName(u.name||""); setEmail(u.email||""); setPhone(u.phone||"");
-      setCompany(u.company||""); setWebsite(u.website||"");
+      if (!name) {
+        const u = JSON.parse(localStorage.getItem("userInfo")||"{}");
+        setName(u.name||""); setEmail(u.email||""); setPhone(u.phone||"");
+        setCompany(u.company||""); setWebsite(u.website||"");
+      }
     } catch {}
   }, [navigate]);
 
@@ -330,7 +352,7 @@ export default function SettingsPage() {
     localStorage.setItem("vxSettings", JSON.stringify(sObj));
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
       if (token) {
         // Sync profile changes
         fetch("http://localhost:5000/api/users/profile", {
@@ -360,7 +382,7 @@ export default function SettingsPage() {
     localStorage.setItem("vxSettings", JSON.stringify(s));
     
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
       if (token) {
         await fetch("http://localhost:5000/api/users/settings", {
           method: "PATCH",

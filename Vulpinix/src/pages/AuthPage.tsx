@@ -74,6 +74,7 @@ export default function AuthPage() {
 
       localStorage.setItem("authToken", data.token);
       localStorage.setItem("userInfo", JSON.stringify(data.user));
+      if (data.settings) localStorage.setItem("vxSettings", JSON.stringify(data.settings));
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("authProvider", "google");
       localStorage.setItem("socialLinks", JSON.stringify({ instagram: "", facebook: "", youtube: "", twitter: "", linkedin: "" }));
@@ -121,6 +122,7 @@ export default function AuthPage() {
       localStorage.setItem("authToken", data.token);
       localStorage.setItem("userEmail", data.user.email);
       localStorage.setItem("userInfo", JSON.stringify(data.user));
+      if (data.settings) localStorage.setItem("vxSettings", JSON.stringify(data.settings));
       localStorage.setItem("socialLinks", JSON.stringify({ instagram: "", facebook: "", youtube: "", twitter: "", linkedin: "" }));
       toast.success("Welcome back!", { description: "Successfully logged in." });
       if (data.user.onboardingCompleted) navigate("/upload");
@@ -147,6 +149,7 @@ export default function AuthPage() {
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("authToken", data.token);
       localStorage.setItem("userInfo", JSON.stringify(data.user));
+      if (data.settings) localStorage.setItem("vxSettings", JSON.stringify(data.settings));
       localStorage.setItem("socialLinks", JSON.stringify({ instagram: "", facebook: "", youtube: "", twitter: "", linkedin: "" }));
       toast.success("Account Created! 🎉", { description: "Welcome to VULPINIX AI" });
       navigate("/onboarding");

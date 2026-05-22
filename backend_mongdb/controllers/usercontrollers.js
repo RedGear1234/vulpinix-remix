@@ -30,7 +30,21 @@ const registerUser = async (req, res) => {
       success: true,
       message: "Account created successfully",
       token,
-      user: { id: user._id, name: user.name, email: user.email, googleId: user.googleId, onboardingCompleted: user.onboardingCompleted },
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email, 
+        googleId: user.googleId, 
+        onboardingCompleted: user.onboardingCompleted,
+        phone: user.phone || "",
+        company: user.company || "",
+        industry: user.industry || "",
+        location: user.location || "",
+        website: user.website || "",
+        businessType: user.businessType || "",
+        picture: user.picture || ""
+      },
+      settings: user.settings || {}
     });
   } catch (err) {
     console.error("Register error full:", err.stack || err);
@@ -58,7 +72,21 @@ const loginUser = async (req, res) => {
       success: true,
       message: "Logged in successfully",
       token,
-      user: { id: user._id, name: user.name, email: user.email, googleId: user.googleId, onboardingCompleted: user.onboardingCompleted },
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email, 
+        googleId: user.googleId, 
+        onboardingCompleted: user.onboardingCompleted,
+        phone: user.phone || "",
+        company: user.company || "",
+        industry: user.industry || "",
+        location: user.location || "",
+        website: user.website || "",
+        businessType: user.businessType || "",
+        picture: user.picture || ""
+      },
+      settings: user.settings || {}
     });
   } catch (err) {
     console.error("Login error:", err);
@@ -121,8 +149,15 @@ const googleAuth = async (req, res) => {
         name: user.name,
         email: user.email,
         onboardingCompleted: user.onboardingCompleted,
-        picture: user.picture
+        picture: user.picture || "",
+        phone: user.phone || "",
+        company: user.company || "",
+        industry: user.industry || "",
+        location: user.location || "",
+        website: user.website || "",
+        businessType: user.businessType || ""
       },
+      settings: user.settings || {}
     });
   } catch (err) {
     console.error("Google auth error:", err);
@@ -170,6 +205,34 @@ const updateProfile = async (req, res) => {
   }
 };
 
+// ── Get Profile ────────────────────────────────────────────────────────────────
+const getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || "",
+        company: user.company || "",
+        industry: user.industry || "",
+        location: user.location || "",
+        website: user.website || "",
+        businessType: user.businessType || "",
+        onboardingCompleted: user.onboardingCompleted,
+        picture: user.picture || ""
+      }
+    });
+  } catch (err) {
+    console.error("getProfile error:", err);
+    res.status(500).json({ success: false, message: "Server error getting profile" });
+  }
+};
+
 // ── Settings (Get and Update) ──────────────────────────────────────────────────
 const getSettings = async (req, res) => {
   try {
@@ -207,4 +270,4 @@ const updateSettings = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, googleAuth, updateProfile, getSettings, updateSettings };
+module.exports = { registerUser, loginUser, googleAuth, updateProfile, getProfile, getSettings, updateSettings };
