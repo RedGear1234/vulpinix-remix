@@ -32,7 +32,7 @@ const S = `
   .vxd-hero-btns{display:flex;gap:10px;flex-wrap:wrap;}
 
   /* Buttons */
-  .vxd-btn-pri{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:14px;background:linear-gradient(135deg,#a78bfa,#38bdf8);border:none;color:#fff;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 6px 20px rgba(167,139,250,0.28);transition:all 0.2s;font-family:'Inter',sans-serif;}
+  .vxd-btn-pri{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:14px;background:linear-gradient(135deg,#a78bfa,#38bdf8);border:none;color:#fff;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 6px 20px rgba(65, 26, 182, 0.28);transition:all 0.2s;font-family:'Inter',sans-serif;}
   .vxd-btn-pri:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(167,139,250,0.4);}
   .vxd-btn-ghost{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:13px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);color:#e2e8f0;font-weight:700;font-size:14px;cursor:pointer;transition:all 0.2s;font-family:'Inter',sans-serif;}
   .vxd-btn-ghost:hover{background:rgba(255,255,255,0.08);color:#f8fafc;}
@@ -412,7 +412,8 @@ export default function UserDashboard(){
                   <div style={{color:"#94a3b8",fontSize:14}}>{stats.totalPosts>0?`You have ${stats.totalPosts} campaign${stats.totalPosts!==1?"s":""} with ${fmt(stats.reach)} total reach and ${stats.engagementRate.toFixed(1)}% engagement rate.`:"No campaigns yet — launch your first AI-powered campaign to see real insights here."}</div>
                 </div>
               </div>
-              <button className="vxd-btn-pri" onClick={()=>navigate("/social")}>Optimize Campaigns <ArrowRight size={15}/></button>
+              <button className="vxd-btn-pri" style={{ background:"linear-gradient(135deg, #547f44ff, #2563eb)",padding:"14px", border:"0.5px solid #ffffffff", fontSize:14, fontWeight:600,                
+              }} onClick={()=>navigate("/social")}>Optimize Campaigns <ArrowRight size={15}/></button>
             </motion.div>
 
             {/* KPI grid */}
