@@ -6,7 +6,7 @@ import {
   BarChart3, TrendingUp, Clock, XCircle, Bell, X, Calendar,
   Instagram, Facebook, Youtube, Linkedin, Twitter, Globe, Plus,
   Eye, MousePointer, DollarSign, Zap, CheckCircle2, AlertCircle,
-  RefreshCw, ArrowRight, Activity, Target
+  RefreshCw, ArrowRight, Activity, Target, Search
 } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardSidebar } from "../components/DashboardSidebar";
@@ -52,6 +52,19 @@ const S=`
   .vxan-btn-pri:hover{transform:translateY(-2px);}
   .vxan-btn-ghost{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:13px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);color:#64748b;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;font-family:'Inter',sans-serif;}
   .vxan-btn-ghost:hover{background:rgba(255,255,255,0.08);color:#94a3b8;}
+  .vxan-no-results{text-align:center;padding:48px 24px;background:rgba(255,255,255,0.015);border-radius:22px;border:1px dashed rgba(255,255,255,0.06);color:#475569;font-size:14px;}
+  .vxan-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
+  .vxan-tabs{display:flex;gap:5px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:5px;}
+  .vxan-tab{padding:8px 16px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:transparent;color:#475569;font-family:'Inter',sans-serif;transition:all 0.18s;display:flex;align-items:center;gap:7px;white-space:nowrap;}
+  .vxan-tab:hover{color:#94a3b8;background:rgba(255,255,255,0.04);}
+  .vxan-tab.active{background:linear-gradient(135deg,rgba(167,139,250,0.18),rgba(56,189,248,0.12));color:#c4b5fd;border:1px solid rgba(167,139,250,0.22);}
+  .vxan-tab-count{font-size:10px;background:rgba(255,255,255,0.07);padding:1px 7px;border-radius:20px;font-weight:800;}
+  .vxan-tab.active .vxan-tab-count{background:rgba(167,139,250,0.2);color:#c4b5fd;}
+  .vxan-search-wrap{position:relative;width:240px;flex-shrink:0;}
+  .vxan-search-ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#334155;pointer-events:none;}
+  .vxan-search{width:100%;padding:10px 14px 10px 36px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#e2e8f0;font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s;box-sizing:border-box;}
+  .vxan-search::placeholder{color:#334155;}
+  .vxan-search:focus{border-color:rgba(167,139,250,0.35);background:rgba(255,255,255,0.06);box-shadow:0 0 0 3px rgba(167,139,250,0.08);}
   @media(max-width:1100px){.vxan-kpis{grid-template-columns:repeat(2,1fr);}}
   @media(max-width:640px){.vxan-scroll{padding:20px 16px 80px;}.vxan-hero{padding:24px 20px;}.vxan-campaign{padding:20px;}}
 `;
@@ -105,14 +118,42 @@ export default function CampaignsDashboardPage(){
     try{const all:Notif[]=JSON.parse(raw);localStorage.setItem("adminNotifications",JSON.stringify(all.map(n=>n.id===id?{...n,dismissed:true}:n)));setNotifications(p=>p.filter(n=>n.id!==id));}catch{}
   };
 
+  const[search,setSearch]=useState("");
+  const[activeTab,setActiveTab]=useState<"recent"|"week"|"earlier">("recent");
+
   const totalImpr=campaigns.reduce((a,c)=>a+(c.analytics?.impressions||0),0);
   const totalSpend=campaigns.reduce((a,c)=>a+(c.analytics?.adSpend||0),0);
   const active=campaigns.filter(c=>["running","published","approved"].includes(c.status)).length;
   const inReview=campaigns.filter(c=>["pending","in_review"].includes(c.status)).length;
-  const userInfo=JSON.parse(localStorage.getItem("userInfo")||"{}");
+  const userInfo=JSON.parse(localStorage.getItem("userInfo")||"{}")
   const userName=userInfo.name?.split(" ")[0]||"User";
   const userInitial=userName[0]?.toUpperCase()||"U";
   const FV={initial:{opacity:0,y:20},animate:{opacity:1,y:0}};
+
+  // Categorise campaigns by timeline tab
+  const now=new Date();
+  const startOfToday=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const startOf7DaysAgo=new Date(startOfToday.getTime()-6*24*60*60*1000);
+  const startOfYesterday=new Date(startOfToday.getTime()-24*60*60*1000);
+
+  function tabOf(c:Campaign):"recent"|"week"|"earlier"{
+    const d=new Date(c.dateSubmitted);
+    if(d>=startOfYesterday)return"recent";
+    if(d>=startOf7DaysAgo)return"week";
+    return"earlier";
+  }
+
+  const counts={recent:campaigns.filter(c=>tabOf(c)==="recent").length,week:campaigns.filter(c=>tabOf(c)==="week").length,earlier:campaigns.filter(c=>tabOf(c)==="earlier").length};
+
+  const filtered=campaigns.filter(c=>{
+    if(tabOf(c)!==activeTab)return false;
+    const q=search.toLowerCase();
+    return !q||
+      c.name.toLowerCase().includes(q)||
+      c.businessName.toLowerCase().includes(q)||
+      c.status.toLowerCase().includes(q)||
+      c.platforms.some(p=>p.toLowerCase().includes(q));
+  });
 
   return(
     <div className="vxan-shell">
@@ -129,7 +170,7 @@ export default function CampaignsDashboardPage(){
               <div style={{display:"flex",gap:10}}>
                 <button className="vxan-btn-ghost" onClick={loadCampaigns}>
                   <motion.span animate={loading?{rotate:360}:{rotate:0}} transition={{duration:1,repeat:loading?Infinity:0,ease:"linear"}} style={{display:"flex",alignItems:"center"}}><RefreshCw size={13}/></motion.span>
-                  {loading?"Syncing…":"Refresh"}
+                  {loading?"Syncingâ€¦":"Refresh"}
                 </button>
                 <button className="vxan-btn-pri" onClick={()=>navigate("/upload")}><Plus size={15}/> New Campaign</button>
               </div>
@@ -158,15 +199,37 @@ export default function CampaignsDashboardPage(){
               ))}
             </div>
 
+            {/* Filter bar: tabs left, search right */}
+            {campaigns.length>0&&(
+              <motion.div {...FV} transition={{delay:0.18}} className="vxan-filter-bar">
+                <div className="vxan-tabs">
+                  {([{key:"recent",label:"Recent",icon:"ðŸ•"},{key:"week",label:"Previous 7 Days",icon:"ðŸ“…"},{key:"earlier",label:"Earlier",icon:"ðŸ—‚ï¸"}] as const).map(t=>(
+                    <button key={t.key} className={`vxan-tab${activeTab===t.key?" active":""}`} onClick={()=>{setActiveTab(t.key);setSearch("");}}>
+                      {t.icon} {t.label} <span className="vxan-tab-count">{counts[t.key]}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="vxan-search-wrap">
+                  <Search size={13} className="vxan-search-ic"/>
+                  <input className="vxan-search" placeholder="Search campaignsâ€¦" value={search} onChange={e=>setSearch(e.target.value)}/>
+                </div>
+              </motion.div>
+            )}
+
             {campaigns.length===0?(
               <motion.div {...FV} transition={{delay:0.2}} className="vxan-empty">
                 <BarChart3 size={52} style={{margin:"0 auto 20px",opacity:0.15}}/>
                 <div style={{fontSize:20,fontWeight:800,color:"#e2e8f0",marginBottom:8}}>No Campaigns Yet</div>
                 <div style={{color:"#475569",fontSize:14,marginBottom:28}}>Start your first AI-powered campaign and see analytics here.</div>
-                <button className="vxan-btn-pri" onClick={()=>navigate("/upload")}><Zap size={14}/> Upload & Launch</button>
+                <button className="vxan-btn-pri" onClick={()=>navigate("/upload")}><Zap size={14}/> Upload &amp; Launch</button>
               </motion.div>
-            ):campaigns.map((c,i)=>(
-              <motion.div key={c.id} initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{delay:0.12+i*0.06}} className="vxan-campaign">
+            ):filtered.length===0?(
+              <div className="vxan-no-results">
+                <Search size={28} style={{margin:"0 auto 12px",display:"block",opacity:0.3}}/>
+                {search?<>No results for <strong>"{search}"</strong> in this period.</>:<>No campaigns in this period.</>}
+              </div>
+            ):filtered.map((c,i)=>(
+              <motion.div key={c.id} initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{delay:0.04+i*0.04}} className="vxan-campaign">
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:14}}>
                   <div>
                     <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
@@ -183,19 +246,19 @@ export default function CampaignsDashboardPage(){
                   </div>
                   <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                     <div style={{display:"flex",gap:8}}>{c.platforms.map(p=><div key={p} className="vxan-plat-ic">{getPlatformIcon(p)}</div>)}</div>
-                    <button className="vxan-btn-ghost" onClick={()=>navigate(`/analytics/${c.id}`)}>Full Report <ArrowRight size={13}/></button>
+                    <button className="vxan-btn-ghost" onClick={()=>navigate(`/dashboard/campaigns/${c.id}/analytics`)}>Full Report <ArrowRight size={13}/></button>
                   </div>
                 </div>
                 <div style={{fontSize:12,fontWeight:700,color:"#334155",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:6}}>Budget <span style={{fontSize:16,fontWeight:800,color:"#06d6c7",textTransform:"none",letterSpacing:"normal",marginLeft:8}}>{c.budget}</span></div>
                 <div className="vxan-stats">
                   {[
-                    {icon:<TrendingUp size={11} color="#a78bfa"/>,lbl:"Impressions",val:c.analytics?.impressions?.toLocaleString()||"—"},
-                    {icon:<Eye size={11} color="#38bdf8"/>,lbl:"Reach",val:c.analytics?.reach?.toLocaleString()||"—"},
-                    {icon:<MousePointer size={11} color="#06d6c7"/>,lbl:"Clicks",val:c.analytics?.clicks?.toLocaleString()||"—"},
-                    {icon:<Activity size={11} color="#f472b6"/>,lbl:"CTR",val:c.analytics?.ctr?`${c.analytics.ctr}%`:"—"},
-                    {icon:<Target size={11} color="#fb923c"/>,lbl:"Conversions",val:c.analytics?.conversions?.toLocaleString()||"—"},
-                    {icon:<DollarSign size={11} color="#22c55e"/>,lbl:"Ad Spend",val:c.analytics?.adSpend?`?${c.analytics.adSpend.toLocaleString()}`:"—"},
-                    {icon:<Zap size={11} color="#fbbf24"/>,lbl:"ROAS",val:c.analytics?.roas?`${c.analytics.roas}x`:"—"},
+                    {icon:<TrendingUp size={11} color="#a78bfa"/>,lbl:"Impressions",val:c.analytics?.impressions?.toLocaleString()||"â€”"},
+                    {icon:<Eye size={11} color="#38bdf8"/>,lbl:"Reach",val:c.analytics?.reach?.toLocaleString()||"â€”"},
+                    {icon:<MousePointer size={11} color="#06d6c7"/>,lbl:"Clicks",val:c.analytics?.clicks?.toLocaleString()||"â€”"},
+                    {icon:<Activity size={11} color="#f472b6"/>,lbl:"CTR",val:c.analytics?.ctr?`${c.analytics.ctr}%`:"â€”"},
+                    {icon:<Target size={11} color="#fb923c"/>,lbl:"Conversions",val:c.analytics?.conversions?.toLocaleString()||"â€”"},
+                    {icon:<DollarSign size={11} color="#22c55e"/>,lbl:"Ad Spend",val:c.analytics?.adSpend?`?${c.analytics.adSpend.toLocaleString()}`:"â€”"},
+                    {icon:<Zap size={11} color="#fbbf24"/>,lbl:"ROAS",val:c.analytics?.roas?`${c.analytics.roas}x`:"â€”"},
                   ].map((s,j)=>(
                     <div key={j}><div className="vxan-stat-lbl">{s.icon} {s.lbl}</div><div className="vxan-stat-val">{s.val}</div></div>
                   ))}
@@ -204,7 +267,7 @@ export default function CampaignsDashboardPage(){
                   <div className="vxan-reject">
                     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,color:"#ef4444",fontWeight:800,fontSize:14}}><XCircle size={16}/> Rejection Notice</div>
                     <p style={{fontSize:13,color:"#94a3b8",lineHeight:1.6,marginBottom:14}}>{c.rejectionReason||"Campaign does not meet current guidelines. Please review and resubmit."}</p>
-                    <button onClick={()=>{toast.info("Resubmit flow starting…");setTimeout(()=>navigate("/upload"),1000);}} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"9px 20px",borderRadius:12,background:"rgba(239,68,68,0.15)",border:"1px solid rgba(239,68,68,0.3)",color:"#ef4444",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}><AlertCircle size={13}/> Review & Resubmit</button>
+                    <button onClick={()=>{toast.info("Resubmit flow startingâ€¦");setTimeout(()=>navigate("/upload"),1000);}} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"9px 20px",borderRadius:12,background:"rgba(239,68,68,0.15)",border:"1px solid rgba(239,68,68,0.3)",color:"#ef4444",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}><AlertCircle size={13}/> Review & Resubmit</button>
                   </div>
                 )}
               </motion.div>
@@ -215,3 +278,4 @@ export default function CampaignsDashboardPage(){
     </div>
   );
 }
+

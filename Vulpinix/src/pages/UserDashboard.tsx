@@ -280,6 +280,29 @@ export default function UserDashboard(){
     }
     if(!list.length){try{const raw=localStorage.getItem("userCampaigns");if(raw)list=JSON.parse(raw);}catch{}}
     if(!Array.isArray(list))list=[];
+    
+    // Seed a mock campaign if completely empty so user can view analytics
+    if(list.length === 0) {
+      const mockCampaign = {
+        id: "demo-campaign-1",
+        name: "Summer Promo Campaign (Demo)",
+        businessName: "Vulpinix Brand",
+        platforms: ["Instagram", "Facebook", "Twitter"],
+        budget: "₹5000",
+        status: "active",
+        analytics: {
+          impressions: 14500,
+          reach: 8900,
+          clicks: 1250,
+          ctr: 8.6,
+          conversions: 120,
+          adSpend: 2100,
+          roas: 3.2
+        }
+      };
+      list = [mockCampaign];
+      localStorage.setItem("userCampaigns", JSON.stringify(list));
+    }
     setCampaigns(list.slice(0,5));
 
     // Compute totalBudget from campaign list as fallback if backend returned 0
@@ -426,7 +449,7 @@ export default function UserDashboard(){
                 ):campaigns.map(c=>{
                   const st=statusStyle(c.status);
                   return(
-                    <div key={c.id} className="vxd-campaign-row" onClick={()=>navigate("/dashboard/campaigns")}>
+                    <div key={c.id} className="vxd-campaign-row" onClick={()=>navigate(`/dashboard/campaigns/${c.id}/analytics`)}>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontWeight:700,fontSize:14,color:"#e2e8f0",marginBottom:6,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</div>
                         <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
