@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import {
   Bell, Settings, Search, X, LayoutDashboard, Upload, User,
   BarChart3, Share2, Zap, Target, ChevronRight,
-  CheckCircle2, AlertCircle, Info, TrendingUp, Sparkles,
-  Check, Trash2, BellOff,
+  CheckCircle2, AlertCircle, Info, Sparkles,
+  Check, Trash2, BellOff, HelpCircle,
 } from "lucide-react";
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
@@ -127,6 +127,7 @@ interface Props { userName: string; userInitial: string; }
 
 export function DashboardTopBar({ userName, userInitial }: Props) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Search state
   const [query, setQuery]           = useState("");
@@ -217,8 +218,6 @@ export function DashboardTopBar({ userName, userInitial }: Props) {
     setNotifOpen(false);
   };
 
-  const timeAgo = (t: string) => t; // already human-readable strings
-
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: TB }} />
@@ -281,6 +280,38 @@ export function DashboardTopBar({ userName, userInitial }: Props) {
 
         {/* ── Right icons ── */}
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+
+          {/* Support (Dashboard Only) */}
+          {location.pathname === "/dashboard" && (
+            <button 
+              onClick={() => navigate("/contact")} 
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 12px",
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "8px",
+                color: "#e2e8f0",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.2)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
+              }}
+            >
+              <HelpCircle size={14}/>
+              Support
+            </button>
+          )}
 
           {/* Settings */}
           <button className="vxtb-icon-btn" onClick={() => navigate("/settings")} title="Settings">
