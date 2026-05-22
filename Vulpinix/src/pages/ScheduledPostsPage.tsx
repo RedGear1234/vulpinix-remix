@@ -48,6 +48,17 @@ const STYLE = `
   .vxsch-orb1 { position: fixed; top: -10%; right: -10%; width: 45vw; height: 45vw; background: radial-gradient(circle, rgba(167,139,250,0.06) 0%, transparent 70%); pointer-events: none; z-index: 1; }
   .vxsch-orb2 { position: fixed; bottom: -10%; left: -10%; width: 45vw; height: 45vw; background: radial-gradient(circle, rgba(244,114,182,0.05) 0%, transparent 70%); pointer-events: none; z-index: 1; }
 
+  /* Hero banner */
+  .vxsch-hero { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; padding: 28px 32px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 22px; position: relative; overflow: hidden; }
+  .vxsch-hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #a78bfa, #f472b6, #a78bfa); background-size: 200%; animation: vxsch-shimmer 3s ease infinite; }
+  @keyframes vxsch-shimmer { 0%,100%{background-position:0%} 50%{background-position:100%} }
+  .vxsch-hero-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #f472b6; background: rgba(244,114,182,0.1); border: 1px solid rgba(244,114,182,0.2); padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; }
+  .vxsch-hero-title { font-size: 26px; font-weight: 900; color: #f1f5f9; letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 8px; }
+  .vxsch-hero-title span { background: linear-gradient(135deg, #a78bfa, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .vxsch-hero-sub { font-size: 14px; color: #64748b; line-height: 1.5; }
+  .vxsch-hero-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 14px; background: linear-gradient(135deg, #a78bfa, #f472b6); border: none; color: #fff; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 6px 20px rgba(167,139,250,0.28); transition: all 0.2s; white-space: nowrap; font-family: 'Inter', sans-serif; flex-shrink: 0; }
+  .vxsch-hero-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(167,139,250,0.4); }
+
   /* Header controls */
   .vxsch-controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
   .vxsch-view-toggles { display: flex; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); padding: 4px; border-radius: 12px; }
@@ -363,17 +374,21 @@ export default function ScheduledPostsPage() {
           <motion.div
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="vxup-hero"
-            style={{ marginBottom: 30 }}
+            className="vxsch-hero"
           >
-            <div className="vxup-hero-line" style={{ background: "linear-gradient(90deg, #a78bfa, #f472b6)" }} />
             <div>
-              <div className="vxup-hero-title">Scheduled <span>Queue & Calendar</span></div>
-              <div className="vxup-hero-sub">Monitor and reschedule upcoming posts across all channels.</div>
-              <div className="vxup-hero-badge"><Sparkles size={11} /> Live Scheduling Engine</div>
+              <div className="vxsch-hero-eyebrow">
+                <Sparkles size={11} /> Live Scheduling Engine
+              </div>
+              <div className="vxsch-hero-title">
+                Scheduled <span>Queue &amp; Calendar</span>
+              </div>
+              <div className="vxsch-hero-sub">
+                Monitor and reschedule upcoming posts across all channels.
+              </div>
             </div>
-            <button className="vxup-btn-pri" style={{ width: "auto", padding: "10px 18px" }} onClick={() => navigate("/create-post")}>
-              <Plus size={14} /> Schedule New Post
+            <button className="vxsch-hero-btn" onClick={() => navigate("/create-post")}>
+              <Plus size={15} /> Schedule New Post
             </button>
           </motion.div>
 

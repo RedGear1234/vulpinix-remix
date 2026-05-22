@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 import { AnimatedRoutes } from "./components/AnimatedRoutes";
+import AIAgentPage from "./pages/AIAgentPage";
 import LandingPage from "./pages/LandingPage";
 import UploadPage from "./pages/UploadPage";
 import CreateAdPage from "./pages/CreateAdPage";
@@ -101,6 +102,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard/scheduled",
         Component: ScheduledPostsPage,
+      },
+      {
+        path: "dashboard/ai",
+        Component: AIAgentPage,
       },
       {
         path: "create-post",
