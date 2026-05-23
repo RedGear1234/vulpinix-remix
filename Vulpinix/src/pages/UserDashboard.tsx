@@ -413,7 +413,7 @@ export default function UserDashboard(){
                 </div>
               </div>
               <button className="vxd-btn-pri" style={{ background:"linear-gradient(135deg, #547f44ff, #2563eb)",padding:"14px", border:"0.5px solid #ffffffff", fontSize:14, fontWeight:600,                
-              }} onClick={()=>navigate("/social")}>Optimize Campaigns <ArrowRight size={15}/></button>
+              }} onClick={()=>navigate("/dashboard/ai")}>Consult AI Advisor <ArrowRight size={15}/></button>
             </motion.div>
 
             {/* KPI grid */}

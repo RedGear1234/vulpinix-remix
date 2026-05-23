@@ -7,6 +7,7 @@ import {
   Play, Check, AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE } from '../config/api';
 
 // Vulpinix fox SVG — used in place of Bot icon
 function VulpinixIcon({ size = 24, color = '#fff' }: { size?: number; color?: string }) {
@@ -835,7 +836,7 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
         text: m.text
       }));
 
-      const res = await fetch("http://localhost:5000/api/agent/chat", {
+      const res = await fetch(`${API_BASE}/api/agent/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -940,7 +941,7 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
 
     if (type === 'create_campaign' || type === 'publish_image') {
       try {
-        const res = await fetch("http://localhost:5000/api/campaign/create", {
+        const res = await fetch(`${API_BASE}/api/campaign/create`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -996,7 +997,7 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
       }
     } else if (type === 'analytics_summary') {
       try {
-        const res = await fetch("http://localhost:5000/api/campaign/my-campaigns", {
+        const res = await fetch(`${API_BASE}/api/campaign/my-campaigns`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }

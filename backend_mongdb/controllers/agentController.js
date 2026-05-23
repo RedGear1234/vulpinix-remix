@@ -1,14 +1,19 @@
 const Campaign = require("../models/campaign");
+const { publishCampaign } = require("./campaignController");
 const axios = require("axios");
 
 /**
  * Helper to call Gemini 1.5 Flash with function calling support
  */
-async function callGeminiAgent(apiKey, contents, userId) {
+async function callGeminiAgent(apiKey, contents, user) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
+  const userId = user?.id || user?.email || "anonymous";
+  const userEmail = user?.email || "";
+  const userName = user?.name || "User";
+
   const systemInstruction = `You are the Vulpinix AI Agent, a fully autonomous marketing co-pilot.
-You can execute tasks directly in the database using the tools provided.
+You can execute tasks directly in the database and publish to connected social networks using the tools provided.
 When the user asks to publish, schedule, or create a post or campaign, use the 'create_campaign' tool.
 When they ask to check campaigns, performance, CTR, or database analytics, use the 'get_analytics_summary' tool.
 Always verify parameters. Provide clear, professional, and emoji-enhanced responses showing what actions you automated.`;
@@ -18,7 +23,7 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
       functionDeclarations: [
         {
           name: "create_campaign",
-          description: "Create or schedule a social media marketing campaign or post in the database.",
+          description: "Create or schedule a social media marketing campaign or post, and publish it to the connected social accounts.",
           parameters: {
             type: "OBJECT",
             properties: {
@@ -70,6 +75,8 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
         try {
           const campaign = new Campaign({
             userId: userId,
+            userEmail: userEmail,
+            userName: userName,
             campaignName: call.args.campaignName || "AI Autonomous Post",
             platforms: call.args.platforms || ["instagram"],
             budget: call.args.budget || "500",
@@ -78,11 +85,24 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
             scheduledAt: call.args.scheduledAt ? new Date(call.args.scheduledAt) : null,
             status: call.args.scheduledAt ? "scheduled" : "pending"
           });
-          await campaign.save();
-          console.log(`✅ [AI AGENT] Campaign "${campaign.campaignName}" created via backend tool.`);
+
+          let publishResults = {};
+          if (campaign.scheduledAt) {
+            campaign.status = "scheduled";
+            await campaign.save();
+          } else {
+            await campaign.save();
+            // Actually publish the post to connected APIs
+            publishResults = await publishCampaign(campaign);
+          }
+
+          console.log(`✅ [AI AGENT] Campaign "${campaign.campaignName}" created via backend tool.`, publishResults);
+          
           functionResponseData = {
             success: true,
             id: campaign._id.toString(),
+            status: campaign.status,
+            publishResults,
             message: `Created campaign ID: ${campaign._id} successfully.`
           };
           executionMetadata = {
@@ -94,7 +114,8 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
               platforms: campaign.platforms,
               budget: campaign.budget,
               caption: campaign.adCaption,
-              scheduledAt: campaign.scheduledAt
+              scheduledAt: campaign.scheduledAt,
+              publishResults
             }
           };
         } catch (dbErr) {
@@ -178,8 +199,12 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
 /**
  * Rules-based Agent Simulator (handles requests offline when API key is missing)
  */
-async function simulateAgentResponse(text, userId) {
+async function simulateAgentResponse(text, user) {
   const lower = text.toLowerCase();
+
+  const userId = user?.id || user?.email || "anonymous";
+  const userEmail = user?.email || "";
+  const userName = user?.name || "User";
   
   if (lower.includes('post') || lower.includes('schedule') || lower.includes('publish') || lower.includes('create')) {
     // Parameter extraction
@@ -208,10 +233,12 @@ async function simulateAgentResponse(text, userId) {
       scheduledAt = tomorrow;
     }
 
-    // Server-side database automation execution
+    // Server-side database automation execution and social accounts publishing
     try {
       const campaign = new Campaign({
         userId: userId,
+        userEmail: userEmail,
+        userName: userName,
         campaignName: "AI Autonomous Agent Campaign",
         platforms,
         budget,
@@ -220,11 +247,20 @@ async function simulateAgentResponse(text, userId) {
         scheduledAt,
         status: scheduledAt ? "scheduled" : "pending"
       });
-      await campaign.save();
+
+      let publishResults = {};
+      if (scheduledAt) {
+        campaign.status = "scheduled";
+        await campaign.save();
+      } else {
+        await campaign.save();
+        // Trigger live OAuth social publishing!
+        publishResults = await publishCampaign(campaign);
+      }
 
       const timeStr = scheduledAt ? `scheduled for ${scheduledAt.toLocaleString()}` : "published immediately";
       return {
-        text: `🤖 **[Autonomous Action Completed]**\n\nI have successfully executed the social campaign creation in the database:\n- **Campaign Name**: ${campaign.campaignName}\n- **Caption**: "${caption}"\n- **Platforms**: ${platforms.join(', ')}\n- **Budget**: ₹${budget}\n- **Timing**: ${timeStr}\n\nThe campaign is now active in your workspace!`,
+        text: `🤖 **[Autonomous Action Completed]**\n\nI have successfully executed the social campaign creation and publishing flow:\n- **Campaign Name**: ${campaign.campaignName}\n- **Caption**: "${caption}"\n- **Platforms**: ${platforms.join(', ')}\n- **Budget**: ₹${budget}\n- **Timing**: ${timeStr}\n\nThe campaign is now active in your workspace and has been pushed to your connected social channels!`,
         execution: {
           type: "create_campaign",
           status: "success",
@@ -234,7 +270,8 @@ async function simulateAgentResponse(text, userId) {
             platforms: campaign.platforms,
             budget: campaign.budget,
             caption: campaign.adCaption,
-            scheduledAt: campaign.scheduledAt
+            scheduledAt: campaign.scheduledAt,
+            publishResults
           }
         }
       };
@@ -319,7 +356,7 @@ async function simulateAgentResponse(text, userId) {
 const handleAgentChat = async (req, res) => {
   try {
     const { message, history } = req.body;
-    const userId = req.user?.email || req.user?.id;
+    const user = req.user;
 
     if (!message) {
       return res.status(400).json({ success: false, message: "Message is required." });
@@ -338,7 +375,7 @@ const handleAgentChat = async (req, res) => {
         const result = await callGeminiAgent(
           apiKey,
           [...geminiHistory, { role: "user", parts: [{ text: message }] }],
-          userId
+          user
         );
 
         return res.json({
@@ -353,7 +390,7 @@ const handleAgentChat = async (req, res) => {
     }
 
     // Fallback to rules-based simulator which actually modifies MongoDB data on the server
-    const result = await simulateAgentResponse(message, userId);
+    const result = await simulateAgentResponse(message, user);
     return res.json({
       success: true,
       text: result.text,
