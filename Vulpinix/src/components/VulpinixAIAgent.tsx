@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router';
 import {
   Send, Image as ImageIcon, Loader2,
   Download, PenSquare, BarChart2, Lightbulb, Hash, Zap,
-  Plus, Clock, Trash2, ChevronLeft, RefreshCw, MessageSquare
+  Plus, Clock, Trash2, ChevronLeft, RefreshCw, MessageSquare,
+  Play, Check, AlertCircle
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Vulpinix fox SVG — used in place of Bot icon
 function VulpinixIcon({ size = 24, color = '#fff' }: { size?: number; color?: string }) {
@@ -504,6 +507,138 @@ const S = `
     text-align: center; margin-top: 10px;
     letter-spacing: 0.02em;
   }
+
+  /* ── Interactive Automation Cards ────────────────── */
+  .vai-automation-card {
+    margin-top: 14px;
+    background: linear-gradient(135deg, rgba(15,22,40,0.9), rgba(17,24,39,0.9));
+    border: 1px solid rgba(124,58,237,0.22);
+    border-radius: 16px;
+    padding: 16px 18px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .vai-automation-hdr {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #a78bfa;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding-bottom: 8px;
+  }
+  .vai-auto-input {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    color: #f1f5f9;
+    padding: 6px 10px;
+    font-size: 12px;
+    outline: none;
+    font-family: inherit;
+    width: 100%;
+  }
+  .vai-auto-input:focus {
+    border-color: rgba(124,58,237,0.4);
+  }
+  .vai-auto-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 4px;
+  }
+  .vai-auto-platforms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .vai-auto-plat-btn {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .vai-auto-plat-btn.active {
+    background: rgba(124,58,237,0.15);
+    border-color: rgba(124,58,237,0.3);
+    color: #c4b5fd;
+  }
+  .vai-auto-btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .vai-auto-btn-execute {
+    flex: 1;
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 4px 12px rgba(124,58,237,0.25);
+    transition: all 0.2s;
+  }
+  .vai-auto-btn-execute:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(124,58,237,0.4);
+  }
+  .vai-auto-btn-cancel {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #94a3b8;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .vai-auto-btn-cancel:hover {
+    background: rgba(255,255,255,0.08);
+    color: #cbd5e1;
+  }
+  .vai-auto-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-top: 4px;
+  }
+  .vai-auto-status.success {
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.2);
+    color: #4ade80;
+  }
+  .vai-auto-status.failed {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: #f87171;
+  }
+  .vai-auto-status.executing {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #94a3b8;
+  }
 `;
 
 const CAPABILITIES = [
@@ -556,6 +691,13 @@ interface Message {
   role: 'user' | 'bot';
   text: string;
   imageUrl?: string;
+  automationAction?: {
+    type: 'create_campaign' | 'analytics_summary' | 'publish_image';
+    data: any;
+    status: 'pending' | 'executing' | 'success' | 'failed';
+    error?: string;
+    resultId?: string;
+  };
 }
 
 interface Conversation {
@@ -604,6 +746,7 @@ function saveConversations(convs: Conversation[]) {
 }
 
 export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>(() => loadConversations());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -684,68 +827,46 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
   };
 
   const generateAIResponse = async (userText: string) => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    const systemPrompt = `You are Vulpinix AI, a sharp, creative social media marketing assistant inside the Vulpinix platform.
-Help the user write posts, brainstorm campaigns, and generate images.
-If they ask for an image, include [IMAGE: detailed visual prompt here] in your response on its own line.
-Be concise, use emojis naturally, use **bold** for key phrases. Sound like a clever marketing expert, not a generic chatbot.`;
+    const token = localStorage.getItem("authToken");
+    try {
+      // Clean system-generated text from messages history to send to backend
+      const historyPayload = messages.map(m => ({
+        role: m.role,
+        text: m.text
+      }));
 
-    if (apiKey && apiKey !== 'YOUR_GEMINI_API_KEY_HERE') {
-      try {
-        const history = messages.map(m => ({
-          role: m.role === 'user' ? 'user' : 'model',
-          parts: [{ text: m.text }]
-        }));
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [...history, { role: 'user', parts: [{ text: userText }] }]
-          })
-        });
-        const data = await res.json();
-        if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-          return data.candidates[0].content.parts[0].text;
-        }
-      } catch (e) {
-        console.error('Gemini error', e);
+      const res = await fetch("http://localhost:5000/api/agent/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          message: userText,
+          history: historyPayload
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
-    }
-    return fallbackResponse(userText);
-  };
 
-  const fallbackResponse = (text: string) => {
-    const lower = text.toLowerCase();
-    if (lower.includes('image') || lower.includes('picture') || lower.includes('photo') || lower.includes('generate')) {
-      const match = text.match(/(?:image|picture|photo) of (.*)/i);
-      const prompt = match ? match[1] : 'modern aesthetic social media marketing creative with vibrant colors';
-      return `Sure! Here's your generated image:\n[IMAGE: ${prompt}]`;
+      const data = await res.json();
+      if (data.success) {
+        return {
+          text: data.text,
+          execution: data.execution,
+          imageUrl: data.imageUrl
+        };
+      } else {
+        throw new Error(data.message || "Failed to get agent response");
+      }
+    } catch (e: any) {
+      console.error('Agent chat error', e);
+      return {
+        text: `⚠️ **[Agent Connection Offline]**\n\nI was unable to establish a secure connection with the autonomous backend handler.\nError: *${e.message || 'Unknown error'}*\n\nPlease make sure the Vulpinix backend is running on http://localhost:5000.`
+      };
     }
-    if (lower.includes('hashtag')) {
-      return '**Top hashtags for your brand:**\n\n#BrandGrowth #MarketingTips #SocialMediaStrategy #DigitalMarketing #ContentCreator #GrowYourBrand #OnlineMarketing #Trending #ViralContent #Engagement\n\nUse a mix of popular (1M+) and niche tags for the best reach! 🎯';
-    }
-    if (lower.includes('post') || lower.includes('caption')) {
-      return "Here's a post that'll convert 🔥\n\n**\"Stop scrolling. Start growing.\"**\n\nYour brand deserves more than average results. We help founders 10x their social presence with zero guesswork.\n\nReady to grow? Drop a 💬 below!\n\n#DigitalMarketing #BrandGrowth #Marketing";
-    }
-    if (lower.includes('campaign') || lower.includes('idea')) {
-      return "Here are **3 campaign ideas** 💡\n\n**1. 'Behind the Brand'** — Share your founding story as a 7-day reel series\n\n**2. 'User Wins'** — Repost customer success stories with a branded hashtag\n\n**3. 'Ask Me Anything'** — Live Q&A on Instagram Stories to boost engagement\n\nWant me to flesh out any of these? 🚀";
-    }
-    return "I'm **Vulpinix AI** — your marketing co-pilot! 🚀\n\nI can help you **write posts**, **generate images**, **brainstorm campaigns**, and more.\n\nTry asking me to write a caption or generate an image!";
-  };
-
-  const parseMessage = (rawText: string): { text: string; imageUrl?: string } => {
-    const imageMatch = rawText.match(/\[IMAGE:\s*(.*?)\]/);
-    if (imageMatch) {
-      const prompt = imageMatch[1].trim();
-      const textWithoutImage = rawText.replace(imageMatch[0], '').trim();
-      const encodedPrompt = encodeURIComponent(prompt + ', high quality, aesthetic, digital art, professional');
-      const seed = Math.floor(Math.random() * 100000);
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=600&height=600&nologo=true&seed=${seed}`;
-      return { text: textWithoutImage, imageUrl };
-    }
-    return { text: rawText };
   };
 
   const handleSend = async (overrideText?: string) => {
@@ -759,13 +880,29 @@ Be concise, use emojis naturally, use **bold** for key phrases. Sound like a cle
     setMessages(newMessages);
     setIsTyping(true);
 
-    const raw = await generateAIResponse(text);
-    const parsed = parseMessage(raw);
+    const result = await generateAIResponse(text);
+
+    // If an image was generated, extract it
+    let finalImageUrl = result.imageUrl;
+    // Check if the text contains image tag
+    const imageMatch = result.text.match(/\[IMAGE:\s*(.*?)\]/);
+    if (imageMatch && !finalImageUrl) {
+      const prompt = imageMatch[1].trim();
+      const encodedPrompt = encodeURIComponent(prompt + ', high quality, aesthetic, digital art, professional');
+      const seed = Math.floor(Math.random() * 100000);
+      finalImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=600&height=600&nologo=true&seed=${seed}`;
+    }
+
     const botMsg: Message = {
       id: (Date.now() + 1).toString(),
       role: 'bot',
-      text: parsed.text || 'Here is your generated image!',
-      imageUrl: parsed.imageUrl
+      text: result.text.replace(/\[IMAGE:\s*(.*?)\]/, '').trim() || 'Here is your request!',
+      imageUrl: finalImageUrl,
+      automationAction: result.execution ? {
+        type: result.execution.type,
+        data: result.execution.data,
+        status: result.execution.status || 'success'
+      } : undefined
     };
 
     const finalMessages = [...newMessages, botMsg];
@@ -782,6 +919,180 @@ Be concise, use emojis naturally, use **bold** for key phrases. Sound like a cle
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleExecuteAutomation = async (msgId: string, type: string, payload: any) => {
+    // Update message status to executing
+    setMessages(prev => prev.map(m => {
+      if (m.id === msgId && m.automationAction) {
+        return {
+          ...m,
+          automationAction: {
+            ...m.automationAction,
+            status: 'executing'
+          }
+        };
+      }
+      return m;
+    }));
+
+    const token = localStorage.getItem("authToken");
+
+    if (type === 'create_campaign' || type === 'publish_image') {
+      try {
+        const res = await fetch("http://localhost:5000/api/campaign/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            campaignName: payload.campaignName || "AI Generated Post",
+            platforms: payload.platforms,
+            budget: payload.budget || "500",
+            budgetType: "Daily",
+            currency: "INR",
+            adCaption: payload.caption || payload.adCaption,
+            adCopyText: payload.caption || payload.adCaption,
+            adImage: payload.imageUrl || payload.adImage || "",
+            scheduledAt: payload.scheduledAt || null,
+            status: payload.scheduledAt ? "scheduled" : "pending"
+          })
+        });
+        const data = await res.json();
+        if (data.success || res.status === 200 || res.status === 201) {
+          setMessages(prev => prev.map(m => {
+            if (m.id === msgId && m.automationAction) {
+              return {
+                ...m,
+                automationAction: {
+                  ...m.automationAction,
+                  status: 'success',
+                  resultId: data.campaign?.id || data.campaign?._id || data.data?.id || data.data?._id
+                }
+              };
+            }
+            return m;
+          }));
+          toast.success("Campaign automated successfully!");
+        } else {
+          throw new Error(data.message || "Failed to create campaign");
+        }
+      } catch (err: any) {
+        setMessages(prev => prev.map(m => {
+          if (m.id === msgId && m.automationAction) {
+            return {
+              ...m,
+              automationAction: {
+                ...m.automationAction,
+                status: 'failed',
+                error: err.message || "Request failed"
+              }
+            };
+          }
+          return m;
+        }));
+        toast.error("Automation failed: " + (err.message || "Unknown error"));
+      }
+    } else if (type === 'analytics_summary') {
+      try {
+        const res = await fetch("http://localhost:5000/api/campaign/my-campaigns", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          // Process analytics summary
+          const totalCampaigns = data.length;
+          const published = data.filter((c: any) => c.status === 'published' || c.status === 'running').length;
+          const scheduled = data.filter((c: any) => c.status === 'scheduled').length;
+          let totalImpressions = 0;
+          let totalClicks = 0;
+          let totalSpend = 0;
+          data.forEach((c: any) => {
+            totalImpressions += c.analytics?.impressions || 0;
+            totalClicks += c.analytics?.clicks || 0;
+            totalSpend += parseFloat(c.budget) || 0;
+          });
+          const avgCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : "0.00";
+
+          setMessages(prev => prev.map(m => {
+            if (m.id === msgId && m.automationAction) {
+              return {
+                ...m,
+                automationAction: {
+                  ...m.automationAction,
+                  status: 'success',
+                  data: {
+                    totalCampaigns,
+                    published,
+                    scheduled,
+                    totalImpressions,
+                    totalClicks,
+                    totalSpend,
+                    avgCtr
+                  }
+                }
+              };
+            }
+            return m;
+          }));
+          toast.success("Performance report generated!");
+        } else {
+          throw new Error("Failed to load campaigns data");
+        }
+      } catch (err: any) {
+        setMessages(prev => prev.map(m => {
+          if (m.id === msgId && m.automationAction) {
+            return {
+              ...m,
+              automationAction: {
+                ...m.automationAction,
+                status: 'failed',
+                error: err.message || "Request failed"
+              }
+            };
+          }
+          return m;
+        }));
+      }
+    }
+  };
+
+  const handleCancelAutomation = (msgId: string) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id === msgId && m.automationAction) {
+        return {
+          ...m,
+          automationAction: {
+            ...m.automationAction,
+            status: 'failed',
+            error: "Action cancelled by user"
+          }
+        };
+      }
+      return m;
+    }));
+    toast.info("Automation draft discarded.");
+  };
+
+  const handleUpdatePayloadField = (msgId: string, field: string, value: any) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id === msgId && m.automationAction) {
+        return {
+          ...m,
+          automationAction: {
+            ...m.automationAction,
+            data: {
+              ...m.automationAction.data,
+              [field]: value
+            }
+          }
+        };
+      }
+      return m;
+    }));
   };
 
   const renderText = (text: string) =>
@@ -905,6 +1216,207 @@ Be concise, use emojis naturally, use **bold** for key phrases. Sound like a cle
                       <button className="vai-img-save" onClick={() => window.open(msg.imageUrl, '_blank')}>
                         <Download size={11} /> Save Image
                       </button>
+                    </div>
+                  )}
+                  {msg.automationAction && (
+                    <div className="vai-automation-card">
+                      <div className="vai-automation-hdr">
+                        {msg.automationAction.type === 'create_campaign' && <Zap size={14} />}
+                        {msg.automationAction.type === 'publish_image' && <ImageIcon size={14} />}
+                        {msg.automationAction.type === 'analytics_summary' && <BarChart2 size={14} />}
+                        <span>
+                          {msg.automationAction.type === 'create_campaign' && 'Campaign Automation Proposal'}
+                          {msg.automationAction.type === 'publish_image' && 'Publish Image Creative'}
+                          {msg.automationAction.type === 'analytics_summary' && 'Performance Analytics Report'}
+                        </span>
+                      </div>
+
+                      {msg.automationAction.status === 'pending' && (
+                        <>
+                          {/* Create/Publish Campaign Fields */}
+                          {(msg.automationAction.type === 'create_campaign' || msg.automationAction.type === 'publish_image') && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <div>
+                                <div className="vai-auto-label">Campaign Name</div>
+                                <input 
+                                  className="vai-auto-input" 
+                                  value={msg.automationAction.data.campaignName || ''} 
+                                  onChange={e => handleUpdatePayloadField(msg.id, 'campaignName', e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <div className="vai-auto-label">Budget (INR)</div>
+                                <input 
+                                  className="vai-auto-input" 
+                                  type="number"
+                                  value={msg.automationAction.data.budget || ''} 
+                                  onChange={e => handleUpdatePayloadField(msg.id, 'budget', e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <div className="vai-auto-label">Ad Caption / Text</div>
+                                <textarea 
+                                  className="vai-auto-input" 
+                                  style={{ minHeight: 60, resize: 'vertical' }}
+                                  value={msg.automationAction.data.caption || ''} 
+                                  onChange={e => handleUpdatePayloadField(msg.id, 'caption', e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <div className="vai-auto-label">Target Platforms</div>
+                                <div className="vai-auto-platforms">
+                                  {['facebook', 'instagram', 'twitter', 'linkedin', 'youtube', 'pinterest'].map(p => {
+                                    const activePlatforms = msg.automationAction?.data.platforms || [];
+                                    const isSelected = activePlatforms.includes(p);
+                                    return (
+                                      <button 
+                                        key={p} 
+                                        type="button"
+                                        className={`vai-auto-plat-btn ${isSelected ? 'active' : ''}`}
+                                        onClick={() => {
+                                          const next = isSelected 
+                                            ? activePlatforms.filter((item: string) => item !== p)
+                                            : [...activePlatforms, p];
+                                          handleUpdatePayloadField(msg.id, 'platforms', next);
+                                        }}
+                                      >
+                                        {p.charAt(0).toUpperCase() + p.slice(1)}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              {msg.automationAction.data.scheduledAt && (
+                                <div>
+                                  <div className="vai-auto-label">Scheduled Time</div>
+                                  <input 
+                                    className="vai-auto-input" 
+                                    type="datetime-local"
+                                    value={new Date(new Date(msg.automationAction.data.scheduledAt).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)} 
+                                    onChange={e => handleUpdatePayloadField(msg.id, 'scheduledAt', new Date(e.target.value).toISOString())}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {msg.automationAction.type === 'analytics_summary' && (
+                            <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
+                              Ready to fetch and aggregate social campaign analytics. This will analyze impressions, click-through rates (CTR), and budget spends directly from your MongoDB collections.
+                            </div>
+                          )}
+
+                          <div className="vai-auto-btn-row">
+                            <button 
+                              className="vai-auto-btn-execute" 
+                              onClick={() => handleExecuteAutomation(msg.id, msg.automationAction!.type, msg.automationAction!.data)}
+                            >
+                              <Play size={11} /> 
+                              {msg.automationAction.type === 'analytics_summary' ? 'Generate Report' : 'Approve & Execute'}
+                            </button>
+                            <button 
+                              className="vai-auto-btn-cancel"
+                              onClick={() => handleCancelAutomation(msg.id)}
+                            >
+                              Discard
+                            </button>
+                          </div>
+                        </>
+                      )}
+
+                      {msg.automationAction.status === 'executing' && (
+                        <div className="vai-auto-status executing">
+                          <Loader2 size={14} className="lucide-spin" />
+                          <span>Executing autonomous marketing request...</span>
+                        </div>
+                      )}
+
+                      {msg.automationAction.status === 'success' && (
+                        <>
+                          <div className="vai-auto-status success">
+                            <Check size={14} />
+                            <span>
+                              {msg.automationAction.type === 'analytics_summary' 
+                                ? 'Report compiled successfully!' 
+                                : 'Campaign published & automated!'}
+                            </span>
+                          </div>
+                          
+                          {msg.automationAction.type === 'analytics_summary' && msg.automationAction.data && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', marginTop: 8, background: 'rgba(0,0,0,0.2)', padding: 12, borderRadius: 10, border: '1px solid rgba(255,255,255,0.04)' }}>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#64748b' }}>Total Campaigns</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{msg.automationAction.data.totalCampaigns}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#64748b' }}>Active / Running</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: '#34d399' }}>{msg.automationAction.data.published}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#64748b' }}>Scheduled Queue</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: '#a78bfa' }}>{msg.automationAction.data.scheduled}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, color: '#64748b' }}>Average CTR</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: '#38bdf8' }}>{msg.automationAction.data.avgCtr}%</div>
+                              </div>
+                              <div style={{ gridColumn: 'span 2' }}>
+                                <div style={{ fontSize: 10, color: '#64748b' }}>Total Ads Spend</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: '#fbbf24' }}>₹{msg.automationAction.data.totalSpend.toLocaleString()}</div>
+                              </div>
+                            </div>
+                          )}
+
+                          {msg.automationAction.type !== 'analytics_summary' && (
+                            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                              <button 
+                                className="vai-auto-btn-cancel" 
+                                style={{ flex: 1, padding: '6px 12px', fontSize: 11 }}
+                                onClick={() => navigate('/campaigns')}
+                              >
+                                View Campaigns
+                              </button>
+                              <button 
+                                className="vai-auto-btn-cancel" 
+                                style={{ flex: 1, padding: '6px 12px', fontSize: 11 }}
+                                onClick={() => navigate('/')}
+                              >
+                                Go to Dashboard
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {msg.automationAction.status === 'failed' && (
+                        <>
+                          <div className="vai-auto-status failed">
+                            <AlertCircle size={14} />
+                            <span>{msg.automationAction.error || 'Action cancelled.'}</span>
+                          </div>
+                          <button 
+                            className="vai-auto-btn-cancel" 
+                            style={{ alignSelf: 'flex-start', marginTop: 4, padding: '6px 12px', fontSize: 11 }}
+                            onClick={() => {
+                              // Reset status to pending to allow retry
+                              setMessages(prev => prev.map(m => {
+                                if (m.id === msg.id && m.automationAction) {
+                                  return {
+                                    ...m,
+                                    automationAction: {
+                                      ...m.automationAction,
+                                      status: 'pending'
+                                    }
+                                  };
+                                }
+                                return m;
+                              }));
+                            }}
+                          >
+                            Re-configure
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
