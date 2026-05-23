@@ -5,7 +5,8 @@ import {
   Settings, User, Bell, Shield, Palette, Trash2,
   Sun, Moon, Monitor, Eye, EyeOff, Save, ChevronRight,
   Mail, Phone, Lock, AlertTriangle, Check, Smartphone,
-  Globe, Zap, LogOut, X, Building2, Users, Upload, CheckCircle2, CreditCard, Bot, Sparkles, Type, MessageSquare, Target, ChevronDown
+  Globe, Zap, LogOut, X, Building2, Users, Upload, CheckCircle2, CreditCard, Bot, Sparkles, Type, MessageSquare, Target, ChevronDown,
+  Code2, Key, Copy, Plus, RefreshCw, ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardSidebar } from "../components/DashboardSidebar";
@@ -92,6 +93,12 @@ const S = `
   .vxst-modal{background:linear-gradient(135deg,#0f1628,#111827);border:1px solid rgba(239,68,68,0.3);border-radius:24px;padding:40px;max-width:440px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.6);}
   .vxst-plan-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:20px;background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(56,189,248,0.1));border:1px solid rgba(167,139,250,0.25);font-size:11px;font-weight:700;color:#c4b5fd;}
   .vxst-save-row{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);}
+
+  .vxst-code-block{background:#040711;border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:16px 20px;font-family:'Courier New',Courier,monospace;font-size:13px;color:#cbd5e1;overflow-x:auto;position:relative;}
+  .vxst-doc-tab{padding:6px 12px;font-size:12px;font-weight:700;color:#475569;cursor:pointer;border-radius:8px;border:1px solid transparent;transition:all 0.2s;user-select:none;}
+  .vxst-doc-tab:hover{color:#94a3b8;background:rgba(255,255,255,0.03);}
+  .vxst-doc-tab.active{background:rgba(167,139,250,0.1);color:#c4b5fd;border-color:rgba(167,139,250,0.15);}
+  .vxst-doc-tabs{display:flex;gap:6px;}
 
   @media(max-width:640px){.vxst-scroll{padding:20px 16px 80px;}.vxst-hero{padding:24px 20px;}.vxst-hero-title{font-size:22px;}.vxst-theme-btns{flex-direction:column;}}
 `;
@@ -237,6 +244,18 @@ export default function SettingsPage() {
   const [brandAudience, setBrandAudience] = useState("Marketing Professionals, Agency Owners, Social Media Managers");
   const [brandPainPoints, setBrandPainPoints] = useState("Lack of time for social media consistency, creative burnout, poor analytics tracking.");
 
+  // API Keys & Webhooks Settings state
+  const [apiKeys, setApiKeys] = useState<{ id: string; name: string; key: string; createdAt: string; lastUsed: string }[]>([]);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
+  const [visibleKeys, setVisibleKeys] = useState<{ [key: string]: boolean }>({});
+
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [webhookEvents, setWebhookEvents] = useState<string[]>([]);
+  const [webhookSaved, setWebhookSaved] = useState(false);
+  const [docLanguage, setDocLanguage] = useState<"curl" | "js" | "python">("curl");
+
   useEffect(() => {
     if (localStorage.getItem("isAuthenticated") !== "true") { navigate("/auth",{replace:true}); return; }
 
@@ -317,6 +336,17 @@ export default function SettingsPage() {
             if (mergedS.brandMission) setBrandMission(mergedS.brandMission);
             if (mergedS.brandAudience) setBrandAudience(mergedS.brandAudience);
             if (mergedS.brandPainPoints) setBrandPainPoints(mergedS.brandPainPoints);
+
+            // API & Webhook loading
+            if (mergedS.apiKeys) setApiKeys(mergedS.apiKeys);
+            if (mergedS.webhookUrl) setWebhookUrl(mergedS.webhookUrl);
+            if (mergedS.webhookSecret) {
+              setWebhookSecret(mergedS.webhookSecret);
+            } else {
+              const sec = "whsec_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+              setWebhookSecret(sec);
+            }
+            if (mergedS.webhookEvents) setWebhookEvents(mergedS.webhookEvents);
           }
         }
       } catch (err) {
@@ -344,7 +374,8 @@ export default function SettingsPage() {
       workspaceTimezone, workspaceCurrency,
       brandPrimary, brandSecondary, brandTypography,
       aiCreativity, aiModel, aiImageGen, aiAutoCaption, aiMultiLang,
-      brandTone, brandMission, brandAudience, brandPainPoints
+      brandTone, brandMission, brandAudience, brandPainPoints,
+      apiKeys, webhookUrl, webhookSecret, webhookEvents
     };
 
     const u = JSON.parse(localStorage.getItem("userInfo")||"{}");
@@ -406,6 +437,145 @@ export default function SettingsPage() {
     setTimeout(()=>navigate("/"), 1200);
   };
 
+  const generateWebhookSecret = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let res = "whsec_";
+    for (let i = 0; i < 24; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return res;
+  };
+
+  const generateApiKeyToken = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let res = "vx_live_";
+    for (let i = 0; i < 32; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return res;
+  };
+
+  const handleGenerateKey = async () => {
+    if (!newKeyName.trim()) {
+      toast.error("Please enter a key name");
+      return;
+    }
+    const token = generateApiKeyToken();
+    const newKey = {
+      id: "key_" + Math.random().toString(36).substring(2, 9),
+      name: newKeyName.trim(),
+      key: token,
+      createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      lastUsed: "Never"
+    };
+
+    const updatedKeys = [...apiKeys, newKey];
+    setApiKeys(updatedKeys);
+    setNewlyCreatedKey(token);
+    setNewKeyName("");
+    
+    // Save to settings
+    const s = JSON.parse(localStorage.getItem("vxSettings") || "{}");
+    s.apiKeys = updatedKeys;
+    localStorage.setItem("vxSettings", JSON.stringify(s));
+    
+    try {
+      const tokenLocal = localStorage.getItem("authToken");
+      if (tokenLocal) {
+        await fetch("http://localhost:5000/api/users/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
+          body: JSON.stringify({ settings: { apiKeys: updatedKeys } })
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    toast.success("API Key generated successfully!");
+  };
+
+  const handleRevokeKey = async (id: string) => {
+    const updatedKeys = apiKeys.filter(k => k.id !== id);
+    setApiKeys(updatedKeys);
+    
+    const s = JSON.parse(localStorage.getItem("vxSettings") || "{}");
+    s.apiKeys = updatedKeys;
+    localStorage.setItem("vxSettings", JSON.stringify(s));
+    
+    try {
+      const tokenLocal = localStorage.getItem("authToken");
+      if (tokenLocal) {
+        await fetch("http://localhost:5000/api/users/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
+          body: JSON.stringify({ settings: { apiKeys: updatedKeys } })
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    toast.success("API Key revoked successfully.");
+  };
+
+  const handleSaveWebhook = async () => {
+    const s = JSON.parse(localStorage.getItem("vxSettings") || "{}");
+    s.webhookUrl = webhookUrl;
+    s.webhookSecret = webhookSecret || generateWebhookSecret();
+    s.webhookEvents = webhookEvents;
+    localStorage.setItem("vxSettings", JSON.stringify(s));
+    
+    try {
+      const tokenLocal = localStorage.getItem("authToken");
+      if (tokenLocal) {
+        await fetch("http://localhost:5000/api/users/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
+          body: JSON.stringify({
+            settings: {
+              webhookUrl,
+              webhookSecret: s.webhookSecret,
+              webhookEvents
+            }
+          } as any)
+        });
+      }
+      setWebhookSecret(s.webhookSecret);
+      setWebhookSaved(true);
+      toast.success("Webhook configuration saved!");
+      setTimeout(() => setWebhookSaved(false), 2500);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save webhook settings.");
+    }
+  };
+
+  const handleRotateWebhookSecret = async () => {
+    const newSecret = generateWebhookSecret();
+    setWebhookSecret(newSecret);
+    
+    const s = JSON.parse(localStorage.getItem("vxSettings") || "{}");
+    s.webhookSecret = newSecret;
+    localStorage.setItem("vxSettings", JSON.stringify(s));
+    
+    try {
+      const tokenLocal = localStorage.getItem("authToken");
+      if (tokenLocal) {
+        await fetch("http://localhost:5000/api/users/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
+          body: JSON.stringify({ settings: { webhookSecret: newSecret } })
+        });
+      }
+      toast.success("Webhook signing secret rotated!");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const toggleKeyVisibility = (keyId: string) => {
+    setVisibleKeys(prev => ({ ...prev, [keyId]: !prev[keyId] }));
+  };
+
   const userInfo = JSON.parse(localStorage.getItem("userInfo")||"{}");
   const userName = name?.split(" ")[0] || userInfo.name?.split(" ")[0] || "User";
   const userInitial = userName[0]?.toUpperCase()||"U";
@@ -432,8 +602,9 @@ export default function SettingsPage() {
                    activeTab === "ai-profile" ? "AI Profile" :
                    activeTab === "brand-kit" ? "Brand Kit" :
                    activeTab === "brand-persona" ? "Brand Persona" :
-                   activeTab === "danger" ? "Danger Zone" : "Profile"}
-                  {activeTab !== "subscription" && activeTab !== "billing" && activeTab !== "brand-kit" && activeTab !== "brand-persona" && <span> Settings</span>}
+                   activeTab === "danger" ? "Danger Zone" :
+                   activeTab === "api" ? "API & Webhooks" : "Profile"}
+                  {activeTab !== "subscription" && activeTab !== "billing" && activeTab !== "brand-kit" && activeTab !== "brand-persona" && activeTab !== "api" && <span> Settings</span>}
                 </div>
                 <div className="vxst-hero-sub">
                   {activeTab === "notifications" ? "Choose how and when you receive updates." :
@@ -443,7 +614,8 @@ export default function SettingsPage() {
                    activeTab === "ai-profile" ? "Configure how the Vulpinix AI behaves and generates content." :
                    activeTab === "brand-kit" ? "Manage your visual brand assets, typography, and color palettes." :
                    activeTab === "brand-persona" ? "Define your brand's unique tone of voice and target audience." :
-                   activeTab === "danger" ? "Irreversible actions. Proceed with caution." : "Manage your personal preferences and security."}
+                   activeTab === "danger" ? "Irreversible actions. Proceed with caution." :
+                   activeTab === "api" ? "Create API keys, configure webhooks, and integrate your developer apps." : "Manage your personal preferences and security."}
                 </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -1143,7 +1315,8 @@ export default function SettingsPage() {
               )}
 
               {/* ── OTHER SECTIONS (DANGER, API, ETC) ── */}
-              {["danger", "api"].includes(activeTab) && (
+              {/* ── DANGER ZONE ── */}
+              {activeTab === "danger" && (
                 <motion.div key="danger" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
                   <div className="vxst-danger-card">
                     <div className="vxst-card-hd">
@@ -1168,6 +1341,366 @@ export default function SettingsPage() {
                           <div style={{fontSize:13,color:"#64748b",lineHeight:1.6,maxWidth:380}}>Permanently delete your Vulpinix account, all campaigns, analytics data and connected accounts. <strong style={{color:"#94a3b8"}}>This cannot be undone.</strong></div>
                         </div>
                         <button className="vxst-btn-danger" onClick={()=>setShowDeleteConfirm(true)}><Trash2 size={14}/> Delete Account</button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ── API & WEBHOOKS ── */}
+              {activeTab === "api" && (
+                <motion.div key="api" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.25}}>
+                  {/* API Keys Card */}
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(167,139,250,0.12)",color:"#a78bfa"}}><Key size={17}/></div>
+                        <div>
+                          <div className="vxst-card-title">API Keys</div>
+                          <div className="vxst-card-sub">Authenticate your custom apps and workflows with personal API tokens</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Inline Generate key form */}
+                    <div style={{display:"flex", gap:10, marginBottom:20, flexWrap:"wrap"}}>
+                      <input 
+                        className="vxst-input" 
+                        style={{flex:1, minWidth:200}} 
+                        placeholder="e.g. Production Server Key" 
+                        value={newKeyName} 
+                        onChange={e => setNewKeyName(e.target.value)}
+                      />
+                      <button className="vxst-btn-pri" onClick={handleGenerateKey}>
+                        <Plus size={14}/> Generate Key
+                      </button>
+                    </div>
+
+                    {/* New Key Display card */}
+                    {newlyCreatedKey && (
+                      <div style={{
+                        background: "rgba(167, 139, 250, 0.08)",
+                        border: "1px solid rgba(167, 139, 250, 0.3)",
+                        borderRadius: 16,
+                        padding: 20,
+                        marginBottom: 20,
+                        position: "relative"
+                      }}>
+                        <button 
+                          style={{position:"absolute", top:12, right:12, background:"none", border:"none", color:"#64748b", cursor:"pointer"}}
+                          onClick={() => setNewlyCreatedKey(null)}
+                        >
+                          <X size={16}/>
+                        </button>
+                        <div style={{display:"flex", alignItems:"center", gap:8, color:"#c4b5fd", fontWeight:800, fontSize:14, marginBottom:6}}>
+                          <CheckCircle2 size={16}/> Key Generated Successfully!
+                        </div>
+                        <div style={{fontSize:12, color:"#94a3b8", marginBottom:14, lineHeight:1.5}}>
+                          Make sure to copy your personal access token now. You won't be able to see it again!
+                        </div>
+                        <div style={{display:"flex", alignItems:"center", gap:10, background:"rgba(0,0,0,0.2)", padding:12, borderRadius:10, border:"1px solid rgba(255,255,255,0.05)"}}>
+                          <code style={{fontFamily:"monospace", fontSize:13, color:"#e2e8f0", wordBreak:"break-all", flex:1}}>{newlyCreatedKey}</code>
+                          <button 
+                            className="vxst-btn-ghost" 
+                            style={{padding:8, borderRadius:8}}
+                            onClick={() => {
+                              navigator.clipboard.writeText(newlyCreatedKey);
+                              toast.success("API Key copied to clipboard!");
+                            }}
+                          >
+                            <Copy size={14}/>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Existing Keys List */}
+                    <div style={{display:"flex", flexDirection:"column", gap:10}}>
+                      {apiKeys.length === 0 ? (
+                        <div style={{textAlign:"center", padding:"30px 10px", color:"#475569", fontSize:13}}>
+                          No API keys generated yet. Enter a name above to create your first key.
+                        </div>
+                      ) : (
+                        apiKeys.map(key => {
+                          const isVisible = visibleKeys[key.id] || false;
+                          const displayToken = isVisible ? key.key : `${key.key.substring(0, 12)}••••••••••••••••••••••••••••`;
+                          return (
+                            <div key={key.id} className="vxst-row" style={{padding:"14px", border:"1px solid rgba(255,255,255,0.04)", background:"rgba(255,255,255,0.01)", borderRadius:14}}>
+                              <div style={{display:"flex", flexDirection:"column", gap:4, flex:1, minWidth:0}}>
+                                <div style={{fontSize:14, fontWeight:700, color:"#e2e8f0"}}>{key.name}</div>
+                                <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
+                                  <code style={{fontFamily:"monospace", fontSize:12, color:"#64748b"}}>{displayToken}</code>
+                                  <div style={{display:"flex", gap:4}}>
+                                    <button 
+                                      style={{background:"none", border:"none", color:"#475569", cursor:"pointer", padding:4}}
+                                      onClick={() => toggleKeyVisibility(key.id)}
+                                      title={isVisible ? "Hide Key" : "Show Key"}
+                                    >
+                                      {isVisible ? <EyeOff size={13}/> : <Eye size={13}/>}
+                                    </button>
+                                    <button 
+                                      style={{background:"none", border:"none", color:"#475569", cursor:"pointer", padding:4}}
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(key.key);
+                                        toast.success("API Key copied to clipboard!");
+                                      }}
+                                      title="Copy Key"
+                                    >
+                                      <Copy size={13}/>
+                                    </button>
+                                  </div>
+                                </div>
+                                <div style={{display:"flex", gap:12, fontSize:11, color:"#475569", marginTop:2}}>
+                                  <span>Created: {key.createdAt}</span>
+                                  <span>Last used: {key.lastUsed}</span>
+                                </div>
+                              </div>
+                              <button 
+                                className="vxst-btn-ghost" 
+                                style={{color:"#ef4444", padding:"8px 12px", border:"1px solid rgba(239,68,68,0.1)", background:"rgba(239,68,68,0.02)"}}
+                                onClick={() => handleRevokeKey(key.id)}
+                              >
+                                <Trash2 size={13}/> Revoke
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Webhooks Section */}
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(56,189,248,0.12)",color:"#38bdf8"}}><Globe size={17}/></div>
+                        <div>
+                          <div className="vxst-card-title">Webhook Settings</div>
+                          <div className="vxst-card-sub">Receive real-time HTTP payloads whenever campaign actions trigger</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div style={{display:"flex", flexDirection:"column", gap:20}}>
+                      <div>
+                        <label className="vxst-lbl">Endpoint URL</label>
+                        <input 
+                          className="vxst-input" 
+                          placeholder="https://api.yourdomain.com/webhooks" 
+                          value={webhookUrl}
+                          onChange={e => setWebhookUrl(e.target.value)}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="vxst-lbl">Signing Secret</label>
+                        <div style={{display:"flex", gap:10}}>
+                          <div style={{flex:1, display:"flex", alignItems:"center", background:"rgba(0,0,0,0.15)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:13, padding:"0 14px", overflow:"hidden"}}>
+                            <code style={{fontFamily:"monospace", fontSize:13, color:"#cbd5e1", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+                              {webhookSecret || "whsec_••••••••••••••••••••••••••••"}
+                            </code>
+                            {webhookSecret && (
+                              <button 
+                                style={{background:"none", border:"none", color:"#475569", cursor:"pointer", padding:4, marginLeft:8}}
+                                onClick={() => {
+                                  navigator.clipboard.writeText(webhookSecret);
+                                  toast.success("Webhook secret copied!");
+                                }}
+                              >
+                                <Copy size={13}/>
+                              </button>
+                            )}
+                          </div>
+                          <button className="vxst-btn-ghost" style={{flexShrink:0}} onClick={handleRotateWebhookSecret}>
+                            <RefreshCw size={13}/> Rotate Secret
+                          </button>
+                        </div>
+                        <div style={{fontSize:11, color:"#475569", marginTop:6}}>
+                          Use this secret to sign payloads and verify they originate from Vulpinix.
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="vxst-lbl">Webhook Events</label>
+                        <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap:12, marginTop:8}}>
+                          {[
+                            { id: "campaign.created", title: "campaign.created", desc: "When a campaign is created" },
+                            { id: "post.published", title: "post.published", desc: "When a post is successfully published" },
+                            { id: "post.scheduled", title: "post.scheduled", desc: "When a post is scheduled in queue" },
+                            { id: "analytics.sync", title: "analytics.sync", desc: "When campaign metrics are updated" }
+                          ].map(ev => {
+                            const isChecked = webhookEvents.includes(ev.id);
+                            return (
+                              <div 
+                                key={ev.id} 
+                                style={{
+                                  display:"flex", 
+                                  alignItems:"flex-start", 
+                                  gap:10, 
+                                  padding:"12px 14px", 
+                                  borderRadius:12, 
+                                  border:"1px solid rgba(255,255,255,0.05)",
+                                  background: isChecked ? "rgba(56,189,248,0.03)" : "rgba(255,255,255,0.005)",
+                                  cursor:"pointer",
+                                  transition:"all 0.15s"
+                                }}
+                                onClick={() => {
+                                  if (isChecked) {
+                                    setWebhookEvents(webhookEvents.filter(id => id !== ev.id));
+                                  } else {
+                                    setWebhookEvents([...webhookEvents, ev.id]);
+                                  }
+                                }}
+                              >
+                                <input 
+                                  type="checkbox" 
+                                  checked={isChecked}
+                                  onChange={() => {}}
+                                  style={{ marginTop: 2, accentColor: "#38bdf8" }}
+                                />
+                                <div style={{display:"flex", flexDirection:"column", gap:2}}>
+                                  <span style={{fontSize:13, fontWeight:700, color:"#e2e8f0"}}>{ev.title}</span>
+                                  <span style={{fontSize:11, color:"#475569"}}>{ev.desc}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="vxst-save-row" style={{marginTop:24}}>
+                      <button className="vxst-btn-pri" onClick={handleSaveWebhook}>
+                        {webhookSaved ? <><Check size={14}/>Saved!</> : <><Save size={14}/>Save Webhook Settings</>}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* REST API Documentation Quickstart */}
+                  <div className="vxst-card">
+                    <div className="vxst-card-hd">
+                      <div className="vxst-card-hd-l">
+                        <div className="vxst-card-ic" style={{background:"rgba(34,197,94,0.12)",color:"#22c55e"}}><Code2 size={17}/></div>
+                        <div>
+                          <div className="vxst-card-title">Developer Quickstart</div>
+                          <div className="vxst-card-sub">Simple REST API guide to publish posts & query campaigns</div>
+                        </div>
+                      </div>
+                      <a 
+                        href="https://docs.vulpinix.com" 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="vxst-btn-ghost" 
+                        style={{display:"inline-flex", alignItems:"center", gap:6, textDecoration:"none"}}
+                      >
+                        Docs <ExternalLink size={12}/>
+                      </a>
+                    </div>
+                    
+                    <div style={{display:"flex", flexDirection:"column", gap:14}}>
+                      <div className="vxst-doc-tabs">
+                        {[
+                          { id: "curl", label: "cURL" },
+                          { id: "js", label: "JavaScript" },
+                          { id: "python", label: "Python" }
+                        ].map(t => (
+                          <div 
+                            key={t.id} 
+                            className={`vxst-doc-tab ${docLanguage === t.id ? "active" : ""}`}
+                            onClick={() => setDocLanguage(t.id as any)}
+                          >
+                            {t.label}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="vxst-code-block" style={{position:"relative"}}>
+                        <button 
+                          style={{
+                            position:"absolute", 
+                            top:12, 
+                            right:12, 
+                            background:"rgba(255,255,255,0.04)", 
+                            border:"1px solid rgba(255,255,255,0.06)", 
+                            borderRadius:8, 
+                            color:"#64748b", 
+                            cursor:"pointer",
+                            padding:6,
+                            display:"flex",
+                            alignItems:"center",
+                            justifyContent:"center"
+                          }}
+                          onClick={() => {
+                            const code = docLanguage === "curl" 
+                              ? `curl -X POST https://api.vulpinix.com/v1/posts \\\n  -H "Authorization: Bearer vx_live_YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "content": "Automating social media with Vulpinix Agent!",\n    "platforms": ["twitter", "linkedin"],\n    "scheduleTime": "2026-05-24T10:00:00Z"\n  }'`
+                              : docLanguage === "js"
+                              ? `fetch('https://api.vulpinix.com/v1/posts', {\n  method: 'POST',\n  headers: {\n    'Authorization': 'Bearer vx_live_YOUR_API_KEY',\n    'Content-Type': 'application/json'\n  },\n  body: JSON.stringify({\n    content: 'Automating social media with Vulpinix Agent!',\n    platforms: ['twitter', 'linkedin'],\n    scheduleTime: '2026-05-24T10:00:00Z'\n  })\n})\n.then(res => res.json())\n.then(data => console.log(data));`
+                              : `import requests\n\nurl = "https://api.vulpinix.com/v1/posts"\nheaders = {\n    "Authorization": "Bearer vx_live_YOUR_API_KEY",\n    "Content-Type": "application/json"\n}\ndata = {\n    "content": "Automating social media with Vulpinix Agent!",\n    "platforms": ["twitter", "linkedin"],\n    "scheduleTime": "2026-05-24T10:00:00Z"\n}\n\nresponse = requests.post(url, headers=headers, json=data)\nprint(response.json())`;
+                            navigator.clipboard.writeText(code);
+                            toast.success("Code snippet copied!");
+                          }}
+                        >
+                          <Copy size={12}/>
+                        </button>
+                        <pre style={{margin:0, whiteSpace:"pre-wrap", wordBreak:"break-all", color:"#a78bfa"}}>
+                          {docLanguage === "curl" ? (
+                            `curl -X POST https://api.vulpinix.com/v1/posts \\
+  -H "Authorization: Bearer vx_live_YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "content": "Automating social media with Vulpinix Agent!",
+    "platforms": ["twitter", "linkedin"],
+    "scheduleTime": "2026-05-24T10:00:00Z"
+  }'`
+                          ) : docLanguage === "js" ? (
+                            `fetch('https://api.vulpinix.com/v1/posts', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer vx_live_YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    content: 'Automating social media with Vulpinix Agent!',
+    platforms: ['twitter', 'linkedin'],
+    scheduleTime: '2026-05-24T10:00:00Z'
+  })
+})
+.then(res => res.json())
+.then(data => console.log(data));`
+                          ) : (
+                            `import requests
+
+url = "https://api.vulpinix.com/v1/posts"
+headers = {
+    "Authorization": "Bearer vx_live_YOUR_API_KEY",
+    "Content-Type": "application/json"
+}
+data = {
+    "content": "Automating social media with Vulpinix Agent!",
+    "platforms": ["twitter", "linkedin"],
+    "scheduleTime": "2026-05-24T10:00:00Z"
+}
+
+response = requests.post(url, headers=headers, json=data)
+print(response.json())`
+                          )}
+                        </pre>
+                      </div>
+                      
+                      <div style={{
+                        display:"flex", 
+                        alignItems:"center", 
+                        justifyContent:"space-between", 
+                        padding:"14px 18px", 
+                        borderRadius:12, 
+                        background:"rgba(255,255,255,0.015)", 
+                        border:"1px solid rgba(255,255,255,0.04)"
+                      }}>
+                        <div style={{display:"flex", alignItems:"center", gap:10}}>
+                          <div style={{width:8, height:8, borderRadius:"50%", background:"#22c55e"}}/>
+                          <span style={{fontSize:13, fontWeight:600, color:"#cbd5e1"}}>API Rate Limits</span>
+                        </div>
+                        <span style={{fontSize:12, color:"#64748b"}}>1,000 requests / day (Free tier)</span>
                       </div>
                     </div>
                   </div>
