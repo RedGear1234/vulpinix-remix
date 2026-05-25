@@ -165,8 +165,8 @@ Respond with ONLY valid JSON:
       if (hashtagsMatch) {
         hashtags = hashtagsMatch[1]
           .split(',')
-          .map(h => h.trim().replace(/["\s]/g, ''))
-          .filter(h => h.startsWith('#'));
+          .map((h: string) => h.trim().replace(/["\s]/g, ''))
+          .filter((h: string) => h.startsWith('#'));
       }
 
       parsedContent = { caption, hashtags };

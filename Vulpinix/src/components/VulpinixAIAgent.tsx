@@ -1236,7 +1236,7 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
                         style={{ width: '100%', display: 'block', borderRadius: 14 }}
                         onError={(e) => {
                           const target = e.currentTarget;
-                          const proxiedBase = `${API_BASE}/api/agent/image-proxy?url=${encodeURIComponent(msg.imageUrl)}`;
+                          const proxiedBase = `${API_BASE}/api/agent/image-proxy?url=${encodeURIComponent(msg.imageUrl!)}`;
                           if (!target.dataset.retryCount) {
                             target.dataset.retryCount = "1";
                             setTimeout(() => {
@@ -1250,7 +1250,7 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
                           }
                         }}
                       />
-                      <button className="vai-img-save" onClick={() => window.open(`${API_BASE}/api/agent/image-proxy?url=${encodeURIComponent(msg.imageUrl)}`, '_blank')}>
+                      <button className="vai-img-save" onClick={() => window.open(`${API_BASE}/api/agent/image-proxy?url=${encodeURIComponent(msg.imageUrl!)}`, '_blank')}>
                         <Download size={11} /> Save Image
                       </button>
                     </div>
