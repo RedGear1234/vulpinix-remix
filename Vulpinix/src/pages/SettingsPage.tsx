@@ -183,6 +183,22 @@ export default function SettingsPage() {
   
   const activeTab = getActiveSection();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("Editor");
+  const [teamMembers, setTeamMembers] = useState<{name: string, email: string, role: string, initial: string}[]>(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem("vxSettings") || "{}");
+      if (s.teamMembers && Array.isArray(s.teamMembers)) {
+        return s.teamMembers;
+      }
+    } catch {}
+    return [
+      { name: "Sarah Jenkins", email: "sarah@example.com", role: "Editor", initial: "S" },
+      { name: "Mike Ross", email: "mike@example.com", role: "Viewer", initial: "M" }
+    ];
+  });
   const [showPass, setShowPass] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -339,6 +355,7 @@ export default function SettingsPage() {
             if (mergedS.brandMission) setBrandMission(mergedS.brandMission);
             if (mergedS.brandAudience) setBrandAudience(mergedS.brandAudience);
             if (mergedS.brandPainPoints) setBrandPainPoints(mergedS.brandPainPoints);
+            if (mergedS.teamMembers) setTeamMembers(mergedS.teamMembers);
 
             // API & Webhook loading
             if (mergedS.apiKeys) setApiKeys(mergedS.apiKeys);
@@ -379,7 +396,7 @@ export default function SettingsPage() {
       aiCreativity, aiModel, aiImageGen, aiAutoCaption, aiMultiLang,
       geminiApiKey,
       brandTone, brandMission, brandAudience, brandPainPoints,
-      apiKeys, webhookUrl, webhookSecret, webhookEvents
+      apiKeys, webhookUrl, webhookSecret, webhookEvents, teamMembers
     };
 
     const u = JSON.parse(localStorage.getItem("userInfo")||"{}");
@@ -439,6 +456,75 @@ export default function SettingsPage() {
   const handleDeleteAccount = () => {
     localStorage.clear(); toast.success("Account deleted. Goodbye!");
     setTimeout(()=>navigate("/"), 1200);
+  };
+
+  const handleInviteMember = () => {
+    if (!inviteName.trim()) {
+      toast.error("Please enter a name");
+      return;
+    }
+    if (!inviteEmail.trim() || !inviteEmail.includes("@")) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    
+    const newMember = {
+      name: inviteName.trim(),
+      email: inviteEmail.trim(),
+      role: inviteRole,
+      initial: inviteName.trim().charAt(0).toUpperCase() || "M"
+    };
+
+    const updatedMembers = [...teamMembers, newMember];
+    setTeamMembers(updatedMembers);
+    
+    // Save to settings
+    const s = JSON.parse(localStorage.getItem("vxSettings") || "{}");
+    s.teamMembers = updatedMembers;
+    localStorage.setItem("vxSettings", JSON.stringify(s));
+
+    // Try to sync with server
+    try {
+      const tokenLocal = localStorage.getItem("authToken");
+      if (tokenLocal) {
+        fetch("http://localhost:5000/api/users/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
+          body: JSON.stringify({ settings: { teamMembers: updatedMembers } })
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    // Reset inputs
+    setInviteName("");
+    setInviteEmail("");
+    setInviteRole("Editor");
+    setShowInviteModal(false);
+    
+    toast.success(`${newMember.name} has been invited successfully!`);
+  };
+
+  const handleRemoveMember = (indexToRemove: number) => {
+    const updatedMembers = teamMembers.filter((_, idx) => idx !== indexToRemove);
+    setTeamMembers(updatedMembers);
+
+    const s = JSON.parse(localStorage.getItem("vxSettings") || "{}");
+    s.teamMembers = updatedMembers;
+    localStorage.setItem("vxSettings", JSON.stringify(s));
+
+    try {
+      const tokenLocal = localStorage.getItem("authToken");
+      if (tokenLocal) {
+        fetch("http://localhost:5000/api/users/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
+          body: JSON.stringify({ settings: { teamMembers: updatedMembers } })
+        });
+      }
+    } catch (err) {}
+    toast.success("Team member removed successfully.");
   };
 
   const generateWebhookSecret = () => {
@@ -963,16 +1049,15 @@ export default function SettingsPage() {
                         <div className="vxst-card-ic" style={{background:"rgba(56,189,248,0.12)",color:"#38bdf8"}}><Users size={17}/></div>
                         <div><div className="vxst-card-title">Team Members</div><div className="vxst-card-sub">Manage who has access to this workspace</div></div>
                       </div>
-                      <button className="vxst-btn-ghost"><User size={14}/> Invite Member</button>
+                      <button className="vxst-btn-ghost" onClick={() => setShowInviteModal(true)}><User size={14}/> Invite Member</button>
                     </div>
                     
                     <div style={{display:"flex",flexDirection:"column",gap:12}}>
                       {[
                         {name:userName,email:email||"user@example.com",role:"Owner",initial:userInitial},
-                        {name:"Sarah Jenkins",email:"sarah@example.com",role:"Editor",initial:"S"},
-                        {name:"Mike Ross",email:"mike@example.com",role:"Viewer",initial:"M"}
+                        ...teamMembers
                       ].map((member, i) => (
-                        <div key={i} className="vxst-row" style={{padding:"10px 0",borderBottom: i === 2 ? "none" : undefined}}>
+                        <div key={i} className="vxst-row" style={{padding:"10px 0",borderBottom: i === teamMembers.length ? "none" : undefined}}>
                           <div style={{display:"flex",alignItems:"center",gap:12,flex:1}}>
                             <div style={{width:36,height:36,borderRadius:10,background:"rgba(167,139,250,0.15)",color:"#c4b5fd",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{member.initial}</div>
                             <div className="vxst-row-l">
@@ -980,7 +1065,19 @@ export default function SettingsPage() {
                               <div className="vxst-row-sub">{member.email}</div>
                             </div>
                           </div>
-                          <div style={{fontSize:13,fontWeight:600,color:"#64748b",background:"rgba(255,255,255,0.04)",padding:"4px 10px",borderRadius:8}}>{member.role}</div>
+                          <div style={{display:"flex", alignItems:"center", gap:8}}>
+                            <div style={{fontSize:13,fontWeight:600,color:"#64748b",background:"rgba(255,255,255,0.04)",padding:"4px 10px",borderRadius:8}}>{member.role}</div>
+                            {i > 0 && (
+                              <button 
+                                className="vxst-btn-ghost" 
+                                style={{padding:"6px 8px", background:"rgba(239,68,68,0.05)", border:"1px solid rgba(239,68,68,0.1)", color:"#ef4444", borderRadius:8}}
+                                onClick={() => handleRemoveMember(i - 1)}
+                                title="Remove team member"
+                              >
+                                <Trash2 size={12}/>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1759,6 +1856,73 @@ print(response.json())`
               <div style={{display:"flex",gap:12}}>
                 <button className="vxst-btn-ghost" style={{flex:1,justifyContent:"center"}} onClick={()=>setShowDeleteConfirm(false)}><X size={14}/> Cancel</button>
                 <button className="vxst-btn-danger" style={{flex:1,justifyContent:"center"}} onClick={handleDeleteAccount}><Trash2 size={14}/> Yes, Delete</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Invite member modal */}
+      <AnimatePresence>
+        {showInviteModal && (
+          <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="vxst-overlay" onClick={()=>setShowInviteModal(false)}>
+            <motion.div 
+              initial={{scale:0.88,opacity:0}} 
+              animate={{scale:1,opacity:1}} 
+              exit={{scale:0.88,opacity:0}} 
+              transition={{type:"spring",stiffness:280,damping:22}} 
+              className="vxst-modal" 
+              style={{border:"1px solid rgba(167, 139, 250, 0.3)", maxWidth: 460}}
+              onClick={e=>e.stopPropagation()}
+            >
+              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20, borderBottom:"1px solid rgba(255,255,255,0.06)", paddingBottom:12}}>
+                <div style={{display:"flex", alignItems:"center", gap:8}}>
+                  <div style={{width:32,height:32,borderRadius:10,background:"rgba(167,139,250,0.12)",color:"#a78bfa",display:"flex",alignItems:"center",justifyContent:"center"}}><Users size={16}/></div>
+                  <div style={{fontSize:18,fontWeight:900,color:"#e2e8f0"}}>Invite Team Member</div>
+                </div>
+                <button style={{background:"none", border:"none", color:"#64748b", cursor:"pointer", display:"flex", alignItems:"center"}} onClick={()=>setShowInviteModal(false)}>
+                  <X size={18}/>
+                </button>
+              </div>
+
+              <div style={{display:"flex", flexDirection:"column", gap:16, marginBottom:24}}>
+                <div>
+                  <label className="vxst-lbl">Full Name</label>
+                  <input 
+                    className="vxst-input" 
+                    placeholder="e.g. John Doe" 
+                    value={inviteName} 
+                    onChange={e => setInviteName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="vxst-lbl">Email Address</label>
+                  <input 
+                    className="vxst-input" 
+                    type="email"
+                    placeholder="e.g. john@company.com" 
+                    value={inviteEmail} 
+                    onChange={e => setInviteEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="vxst-lbl">Workspace Role</label>
+                  <CustomSelect 
+                    style={{width:"100%"}} 
+                    value={inviteRole} 
+                    onChange={(v: string) => setInviteRole(v)} 
+                    options={[
+                      { value: "Editor", label: "Editor (Can edit & publish)" },
+                      { value: "Viewer", label: "Viewer (Can only view analytics)" },
+                      { value: "Admin", label: "Admin (Full settings access)" }
+                    ]} 
+                  />
+                </div>
+              </div>
+
+              <div style={{display:"flex",gap:12,borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:16}}>
+                <button className="vxst-btn-ghost" style={{flex:1,justifyContent:"center"}} onClick={()=>setShowInviteModal(false)}>Cancel</button>
+                <button className="vxst-btn-pri" style={{flex:1,justifyContent:"center"}} onClick={handleInviteMember}><Check size={14}/> Send Invitation</button>
               </div>
             </motion.div>
           </motion.div>
