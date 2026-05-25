@@ -325,9 +325,13 @@ export default function UserDashboard(){
 
   const generateRealAIIdeas = async () => {
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE") return; // Fallback to initial state
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE") {
+        const localSettings = JSON.parse(localStorage.getItem("vxSettings") || "{}");
+        apiKey = localSettings.geminiApiKey;
+      }
+      if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE" || !apiKey) return; // Fallback to initial state
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

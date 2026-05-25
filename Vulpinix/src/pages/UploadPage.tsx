@@ -10,6 +10,7 @@ import {
 import { getLinkedAccounts } from "./SocialAccountsPage";
 import { DashboardSidebar } from "../components/DashboardSidebar";
 import { DashboardTopBar } from "../components/DashboardTopBar";
+import { generateCaptionWithGemini } from "../utils/geminiHelper";
 
 const S = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -185,11 +186,29 @@ export default function UploadPage() {
 
   const generateWithAI=async()=>{
     if(!uploadedFile){toast.error("Upload a file first");return;}
-    setGeneratingCaption(true);toast.info("Generating captions…");
-    await new Promise(r=>setTimeout(r,2000));
-    setAiAnalysis({caption:"Elevate your marketing game with AI-powered solutions! 🌟 Transform your strategy today. 🚀",hashtags:["#DigitalMarketing","#AIAutomation","#VulpinixAI","#Growth"]});
-    toast.success("AI captions generated!");
-    setGeneratingCaption(false);
+    setGeneratingCaption(true);toast.info("Generating captions via Gemini…");
+    try {
+      let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE") {
+        const localSettings = JSON.parse(localStorage.getItem("vxSettings") || "{}");
+        apiKey = localSettings.geminiApiKey;
+      }
+      if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
+        toast.info("Configuring your Gemini API Key in Settings enables live visual analysis!");
+        await new Promise(r=>setTimeout(r,1500));
+        setAiAnalysis({caption:"Elevate your marketing game with AI-powered solutions! 🌟 Transform your strategy today. 🚀",hashtags:["#DigitalMarketing","#AIAutomation","#VulpinixAI","#Growth"]});
+      } else {
+        const result = await generateCaptionWithGemini(uploadedFile.file, apiKey);
+        setAiAnalysis({caption: result.caption, hashtags: result.hashtags});
+      }
+      toast.success("AI captions generated!");
+    } catch (err: any) {
+      console.error("Gemini caption generation error", err);
+      toast.error("AI generation failed. Using default fallback captions.");
+      setAiAnalysis({caption:"Elevate your marketing game with AI-powered solutions! 🌟 Transform your strategy today. 🚀",hashtags:["#DigitalMarketing","#AIAutomation","#VulpinixAI","#Growth"]});
+    } finally {
+      setGeneratingCaption(false);
+    }
   };
 
   const togglePlatform=(id:string)=>{

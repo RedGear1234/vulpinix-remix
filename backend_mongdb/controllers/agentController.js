@@ -6,7 +6,7 @@ const axios = require("axios");
  * Helper to call Gemini 1.5 Flash with function calling support
  */
 async function callGeminiAgent(apiKey, contents, user) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   const userId = user?.id || user?.email || "anonymous";
   const userEmail = user?.email || "";
@@ -16,6 +16,8 @@ async function callGeminiAgent(apiKey, contents, user) {
 You can execute tasks directly in the database and publish to connected social networks using the tools provided.
 When the user asks to publish, schedule, or create a post or campaign, use the 'create_campaign' tool.
 When they ask to check campaigns, performance, CTR, or database analytics, use the 'get_analytics_summary' tool.
+When they ask to generate, create, draw, or render an image, creative, banner, picture, or photo, use the 'generate_image' tool.
+After successfully calling the 'generate_image' tool, present the creative and explicitly ask the user if they would like to publish this creative as a marketing campaign or not.
 Always verify parameters. Provide clear, professional, and emoji-enhanced responses showing what actions you automated.`;
 
   const tools = [
@@ -46,6 +48,17 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
           parameters: {
             type: "OBJECT",
             properties: {}
+          }
+        },
+        {
+          name: "generate_image",
+          description: "Generate an AI visual creative, ad banner, photo, or picture based on a text prompt.",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              prompt: { type: "STRING", description: "Detailed description of the image to generate" }
+            },
+            required: ["prompt"]
           }
         }
       ]
@@ -158,6 +171,32 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
         } catch (dbErr) {
           functionResponseData = { success: false, error: dbErr.message };
         }
+      } else if (call.name === "generate_image") {
+        try {
+          const prompt = call.args.prompt || 'modern aesthetic social media marketing creative';
+          const seed = Math.floor(Math.random() * 100000);
+          const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=600&height=600&nologo=true&seed=${seed}`;
+
+          functionResponseData = {
+            success: true,
+            imageUrl,
+            message: `Successfully generated AI image creative for prompt: ${prompt}. YOU MUST NOW EXPLICITLY ASK THE USER: "Here is your generated image! Would you like me to publish this creative as a social media campaign or not?"`
+          };
+          
+          executionMetadata = {
+            type: "publish_image",
+            status: "pending",
+            data: {
+              imageUrl,
+              campaignName: 'AI Generated Creative',
+              platforms: ['instagram', 'facebook'],
+              caption: `AI generated visual for: ${prompt} 🎨✨`,
+              budget: '500'
+            }
+          };
+        } catch (imgErr) {
+          functionResponseData = { success: false, error: imgErr.message };
+        }
       }
 
       // Send execution response back to Gemini to get final conversational response
@@ -165,7 +204,7 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
         ...contents,
         { role: "model", parts: [part] },
         {
-          role: "user",
+          role: "function",
           parts: [
             {
               functionResponse: {
@@ -185,7 +224,8 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
       const finalText = secondRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || "Execution finished.";
       return {
         text: finalText,
-        execution: executionMetadata
+        execution: executionMetadata,
+        imageUrl: executionMetadata?.type === "publish_image" ? executionMetadata.data.imageUrl : undefined
       };
     }
 
@@ -328,7 +368,7 @@ async function simulateAgentResponse(text, user) {
     const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=600&height=600&nologo=true&seed=${seed}`;
 
     return {
-      text: `Sure! I have generated this visual creative using AI based on your description:\n[IMAGE: ${prompt}]`,
+      text: `Sure! I have generated this visual creative using AI based on your description:\n[IMAGE: ${prompt}]\n\nWould you like me to publish this creative as a marketing campaign or not?`,
       imageUrl,
       execution: {
         type: "publish_image",
@@ -362,7 +402,20 @@ const handleAgentChat = async (req, res) => {
       return res.status(400).json({ success: false, message: "Message is required." });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    let apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+
+    if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE") {
+      try {
+        const User = require("../models/user");
+        const dbUser = await User.findById(user?.id || user?._id);
+        if (dbUser && dbUser.settings && dbUser.settings.geminiApiKey) {
+          apiKey = dbUser.settings.geminiApiKey;
+          console.log("🔑 [AI AGENT] Using dynamically loaded custom Gemini API key from User Settings.");
+        }
+      } catch (dbErr) {
+        console.error("⚠️ [AI AGENT] Error retrieving dbUser settings for Gemini key:", dbErr.message);
+      }
+    }
 
     if (apiKey && apiKey !== "YOUR_GEMINI_API_KEY_HERE") {
       try {
@@ -403,6 +456,35 @@ const handleAgentChat = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/agent/image-proxy
+ * Server-side stream proxy to fetch images safely and bypass client-side CORS/CSP blocks.
+ */
+const handleImageProxy = async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).send("URL is required");
+    }
+
+    console.log(`🖼️ [IMAGE PROXY] Fetching image from: ${url}`);
+    const response = await axios({
+      method: "get",
+      url: url,
+      responseType: "stream",
+      timeout: 15000
+    });
+
+    res.setHeader("Content-Type", response.headers["content-type"] || "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 24h
+    response.data.pipe(res);
+  } catch (err) {
+    console.error("❌ [IMAGE PROXY] Failed to fetch image:", err.message);
+    res.status(500).send("Failed to stream image");
+  }
+};
+
 module.exports = {
-  handleAgentChat
+  handleAgentChat,
+  handleImageProxy
 };

@@ -120,6 +120,28 @@ const S = `
     border-color: rgba(124,58,237,0.2);
     color: #a78bfa;
   }
+  .vxai-pill.clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .vxai-pill.clickable:hover {
+    background: rgba(56,189,248,0.16);
+    border-color: rgba(56,189,248,0.35);
+    color: #38bdf8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(56,189,248,0.15);
+  }
+  .vxai-pill.clickable-orange {
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .vxai-pill.clickable-orange:hover {
+    background: rgba(251,146,60,0.16);
+    border-color: rgba(251,146,60,0.35);
+    color: #fb923c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(251,146,60,0.15);
+  }
 
   /* ── Chat container ────────────────────────────── */
   .vxai-chat-wrap {
@@ -190,10 +212,13 @@ export default function AIAgentPage() {
               <span className="vxai-pill purple">
                 <Sparkles size={12} /> AI-Powered
               </span>
-              <span className="vxai-pill">
+              <span className="vxai-pill clickable" onClick={() => navigate("/settings/ai-profile")} title="Configure Gemini API Key">
                 <Zap size={12} /> Gemini 1.5 Flash
               </span>
-              <span className="vxai-pill">
+              <span className="vxai-pill clickable clickable-orange" onClick={() => {
+                const event = new CustomEvent("trigger-image-prompt", { detail: { text: "Generate an image of " } });
+                window.dispatchEvent(event);
+              }} title="Trigger AI Image Generation">
                 Image Generation
               </span>
             </div>

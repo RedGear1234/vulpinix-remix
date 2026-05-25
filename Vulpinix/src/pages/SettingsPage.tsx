@@ -237,6 +237,8 @@ export default function SettingsPage() {
   const [aiImageGen, setAiImageGen] = useState("midjourney");
   const [aiAutoCaption, setAiAutoCaption] = useState(true);
   const [aiMultiLang, setAiMultiLang] = useState(false);
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
 
   // Brand Persona
   const [brandTone, setBrandTone] = useState("friendly");
@@ -332,6 +334,7 @@ export default function SettingsPage() {
             if (mergedS.aiImageGen) setAiImageGen(mergedS.aiImageGen);
             if (mergedS.aiAutoCaption !== undefined) setAiAutoCaption(mergedS.aiAutoCaption);
             if (mergedS.aiMultiLang !== undefined) setAiMultiLang(mergedS.aiMultiLang);
+            if (mergedS.geminiApiKey) setGeminiApiKey(mergedS.geminiApiKey);
             if (mergedS.brandTone) setBrandTone(mergedS.brandTone);
             if (mergedS.brandMission) setBrandMission(mergedS.brandMission);
             if (mergedS.brandAudience) setBrandAudience(mergedS.brandAudience);
@@ -374,6 +377,7 @@ export default function SettingsPage() {
       workspaceTimezone, workspaceCurrency,
       brandPrimary, brandSecondary, brandTypography,
       aiCreativity, aiModel, aiImageGen, aiAutoCaption, aiMultiLang,
+      geminiApiKey,
       brandTone, brandMission, brandAudience, brandPainPoints,
       apiKeys, webhookUrl, webhookSecret, webhookEvents
     };
@@ -1190,6 +1194,37 @@ export default function SettingsPage() {
                           <div className="vxst-row-l"><div className="vxst-row-title">Multi-Language Support</div><div className="vxst-row-sub">Allow AI to output translated variants for international audiences.</div></div>
                         </div>
                         <Toggle checked={aiMultiLang} onChange={(v)=>handleSettingToggle(setAiMultiLang, "aiMultiLang", v, "Multi-language support")}/>
+                      </div>
+                      
+                      <div className="vxst-row" style={{borderBottom:"none",paddingBottom:0,paddingTop:12,flexDirection:"column",alignItems:"stretch",gap:10}}>
+                        <div style={{display:"flex",alignItems:"center",gap:12}}>
+                          <div style={{width:34,height:34,borderRadius:10,background:"rgba(167,139,250,0.08)",border:"1px solid rgba(167,139,250,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#c4b5fd",flexShrink:0}}><Key size={15}/></div>
+                          <div className="vxst-row-l">
+                            <div className="vxst-row-title">Gemini 1.5 Flash API Key</div>
+                            <div className="vxst-row-sub">Enter your Google AI Studio API key to enable autonomous AI agent campaign execution and report compiling.</div>
+                          </div>
+                        </div>
+                        <div style={{position:"relative",marginTop:6}}>
+                          <input 
+                            className="vxst-input" 
+                            type={showGeminiKey ? "text" : "password"} 
+                            placeholder="AIzaSy..." 
+                            value={geminiApiKey} 
+                            onChange={e => setGeminiApiKey(e.target.value)}
+                            style={{paddingRight:40}}
+                          />
+                          <button 
+                            type="button"
+                            className="vxst-pass-eye" 
+                            onClick={() => setShowGeminiKey(p => !p)}
+                            style={{background:"none",border:"none",position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",cursor:"pointer",color:"#475569"}}
+                          >
+                            {showGeminiKey ? <EyeOff size={14}/> : <Eye size={14}/>}
+                          </button>
+                        </div>
+                        <div style={{fontSize:11,color:"#64748b",lineHeight:1.5}}>
+                          Don't have a key? Get one for free from <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noreferrer" style={{color:"#38bdf8",textDecoration:"underline"}}>Google AI Studio</a>.
+                        </div>
                       </div>
                     </div>
                     

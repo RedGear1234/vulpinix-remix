@@ -24,7 +24,7 @@ export const generateCaptionWithGemini = async (
     throw new Error("API key not configured");
   }
 
-  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   // Determine content type
   const isImage = file.type.startsWith('image/');

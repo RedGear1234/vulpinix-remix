@@ -762,6 +762,23 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
     saveConversations(conversations);
   }, [conversations]);
 
+  // Listen for trigger-image-prompt events from top navigation pills
+  useEffect(() => {
+    const handleTrigger = (e: any) => {
+      setInput(e.detail?.text || "");
+      setTimeout(() => {
+        const ta = textareaRef.current;
+        if (ta) {
+          ta.focus();
+          ta.style.height = 'auto';
+          ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+        }
+      }, 50);
+    };
+    window.addEventListener("trigger-image-prompt", handleTrigger);
+    return () => window.removeEventListener("trigger-image-prompt", handleTrigger);
+  }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -1212,9 +1229,28 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
                     <div className="vai-bubble">{renderText(msg.text)}</div>
                   )}
                   {msg.imageUrl && (
-                    <div className="vai-img-card">
-                      <img src={msg.imageUrl} alt="AI Generated" />
-                      <button className="vai-img-save" onClick={() => window.open(msg.imageUrl, '_blank')}>
+                    <div className="vai-img-card" style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', position: 'relative' }}>
+                      <img 
+                        src={`${API_BASE}/api/agent/image-proxy?url=${encodeURIComponent(msg.imageUrl)}`} 
+                        alt="AI Generated" 
+                        style={{ width: '100%', display: 'block', borderRadius: 14 }}
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          const proxiedBase = `${API_BASE}/api/agent/image-proxy?url=${encodeURIComponent(msg.imageUrl)}`;
+                          if (!target.dataset.retryCount) {
+                            target.dataset.retryCount = "1";
+                            setTimeout(() => {
+                              target.src = proxiedBase + '&retry=' + Date.now();
+                            }, 2500);
+                          } else if (parseInt(target.dataset.retryCount) < 3) {
+                            target.dataset.retryCount = (parseInt(target.dataset.retryCount) + 1).toString();
+                            setTimeout(() => {
+                              target.src = proxiedBase + '&retry=' + Date.now();
+                            }, 3500);
+                          }
+                        }}
+                      />
+                      <button className="vai-img-save" onClick={() => window.open(`${API_BASE}/api/agent/image-proxy?url=${encodeURIComponent(msg.imageUrl)}`, '_blank')}>
                         <Download size={11} /> Save Image
                       </button>
                     </div>
