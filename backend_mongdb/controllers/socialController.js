@@ -3,9 +3,13 @@ const express = require('express');
 const axios = require('axios');
 const User = require('../models/user');
 
+// ── Base URLs (set these on Render dashboard) ─────────────────────────────────
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
 // Helper to get OAuth URL based on platform
 const getOAuthUrl = (platform, userId) => {
-  const REDIRECT_URI = `http://localhost:5000/api/social/callback/${platform}`;
+  const REDIRECT_URI = `${BACKEND_URL}/api/social/callback/${platform}`;
   
   // Pass the userId in the state parameter so we know who logged in during the callback
   const stateString = userId ? `userId=${userId}` : 'social_auth_req';
@@ -43,7 +47,7 @@ const getOAuthUrl = (platform, userId) => {
       const pinterestClientSecret = process.env.PINTEREST_CLIENT_SECRET;
       if (!pinterestClientId || pinterestClientId.startsWith('your_') || !pinterestClientSecret) return null;
       // Use https to bypass Pinterest's developer dashboard validation restrictions
-      const pinterestRedirectUri = `https://localhost:5000/api/social/callback/pinterest`;
+      const pinterestRedirectUri = `${BACKEND_URL}/api/social/callback/pinterest`;
       return `https://www.pinterest.com/oauth/?client_id=${pinterestClientId}&redirect_uri=${encodeURIComponent(pinterestRedirectUri)}&response_type=code&scope=user_accounts:read,boards:read,pins:read,pins:write&state=${stateString}`;
 
     default:
@@ -60,7 +64,7 @@ exports.authorizePlatform = (req, res) => {
     // authUrl is null — either unsupported platform or missing credentials
     const missingCreds = ['twitter', 'linkedin', 'youtube', 'pinterest'].includes(platform);
     if (missingCreds) {
-      return res.redirect(`http://localhost:3000/social?error=missing_credentials&platform=${platform}`);
+      return res.redirect(`${FRONTEND_URL}/social?error=missing_credentials&platform=${platform}`);
     }
     return res.status(400).json({ error: 'Unsupported platform' });
   }
@@ -73,7 +77,7 @@ exports.handleCallback = async (req, res) => {
   const { code, state, error } = req.query;
 
   if (error) {
-    return res.redirect(`http://localhost:3000/social?error=${error}`);
+    return res.redirect(`${FRONTEND_URL}/social?error=${error}`);
   }
 
   if (!code) {
@@ -92,7 +96,7 @@ exports.handleCallback = async (req, res) => {
     }
 
     if (platform === 'facebook' || platform === 'instagram') {
-      const REDIRECT_URI = `http://localhost:5000/api/social/callback/${platform}` || `https://vulpinix-remix.vercel.app/api/social/callback/${platform}`;
+      const REDIRECT_URI = `${BACKEND_URL}/api/social/callback/${platform}`;
       const fbAppId = process.env.FACEBOOK_APP_ID;
       const fbAppSecret = process.env.FACEBOOK_APP_SECRET;
 
@@ -214,7 +218,7 @@ exports.handleCallback = async (req, res) => {
         await targetUser.save();
       }
     } else if (platform === 'twitter') {
-      const REDIRECT_URI = `http://localhost:5000/api/social/callback/twitter`;
+      const REDIRECT_URI = `${BACKEND_URL}/api/social/callback/twitter`;
       const twitterClientId = process.env.TWITTER_CLIENT_ID;
       const twitterClientSecret = process.env.TWITTER_CLIENT_SECRET;
 
@@ -258,7 +262,7 @@ exports.handleCallback = async (req, res) => {
       } catch (authErr) {
         console.error('Real Twitter OAuth failed:', authErr.response?.data || authErr.message);
         const errMsg = authErr.response?.data?.error_description || authErr.response?.data?.error || authErr.message;
-        return res.redirect(`http://localhost:3000/social?error=${encodeURIComponent('Twitter Auth Failed: ' + errMsg)}`);
+        return res.redirect(`${FRONTEND_URL}/social?error=${encodeURIComponent('Twitter Auth Failed: ' + errMsg)}`);
       }
 
       // Save to User Model
@@ -285,7 +289,7 @@ exports.handleCallback = async (req, res) => {
         console.log(`✅ Saved Twitter credentials for ${targetUser.email}`);
       }
     } else if (platform === 'youtube') {
-      const REDIRECT_URI = `http://localhost:5000/api/social/callback/youtube`;
+      const REDIRECT_URI = `${BACKEND_URL}/api/social/callback/youtube`;
       const googleClientId = process.env.GOOGLE_CLIENT_ID;
       const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
@@ -351,7 +355,7 @@ exports.handleCallback = async (req, res) => {
         console.log(`✅ Saved YouTube credentials for ${targetUser.email}`);
       }
     } else if (platform === 'linkedin') {
-      const REDIRECT_URI = `http://localhost:5000/api/social/callback/linkedin`;
+      const REDIRECT_URI = `${BACKEND_URL}/api/social/callback/linkedin`;
       const linkedinClientId = process.env.LINKEDIN_CLIENT_ID;
       const linkedinClientSecret = process.env.LINKEDIN_CLIENT_SECRET;
 
@@ -446,7 +450,7 @@ exports.handleCallback = async (req, res) => {
         console.log(`✅ [LINKEDIN] Saved credentials for ${targetUser.email}`);
       }
     } else if (platform === 'pinterest') {
-      const REDIRECT_URI = `https://localhost:5000/api/social/callback/pinterest`;
+      const REDIRECT_URI = `${BACKEND_URL}/api/social/callback/pinterest`;
       const pinterestClientId = process.env.PINTEREST_CLIENT_ID;
       const pinterestClientSecret = process.env.PINTEREST_CLIENT_SECRET;
 
@@ -515,11 +519,11 @@ exports.handleCallback = async (req, res) => {
       }
     }
 
-    res.redirect(`http://localhost:3000/social?success=true&platform=${platform}`);
+    res.redirect(`${FRONTEND_URL}/social?success=true&platform=${platform}`);
   } catch (err) {
     console.error(`Error handling ${platform} callback:`, err.response?.data || err.message);
     const errMsg = err.response?.data?.error?.message || err.message || 'auth_failed';
-    res.redirect(`http://localhost:3000/social?error=${encodeURIComponent(errMsg)}`);
+    res.redirect(`${FRONTEND_URL}/social?error=${encodeURIComponent(errMsg)}`);
   }
 };
 
