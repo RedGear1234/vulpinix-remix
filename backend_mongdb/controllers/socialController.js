@@ -92,7 +92,7 @@ exports.handleCallback = async (req, res) => {
     }
 
     if (platform === 'facebook' || platform === 'instagram') {
-      const REDIRECT_URI = `http://localhost:5000/api/social/callback/${platform}`;
+      const REDIRECT_URI = `http://localhost:5000/api/social/callback/${platform}` || `https://vulpinix-remix.vercel.app/api/social/callback/${platform}`;
       const fbAppId = process.env.FACEBOOK_APP_ID;
       const fbAppSecret = process.env.FACEBOOK_APP_SECRET;
 
