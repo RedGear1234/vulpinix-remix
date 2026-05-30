@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_BASE } from "../config/api";
 import { useNavigate, useParams } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -284,7 +285,7 @@ export default function SettingsPage() {
 
         // Fetch Profile
         try {
-          const profileRes = await fetch("http://localhost:5000/api/users/profile", {
+          const profileRes = await fetch(`${API_BASE}/api/users/profile`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
           if (profileRes.ok) {
@@ -301,7 +302,7 @@ export default function SettingsPage() {
         }
 
         // Fetch Settings
-        const res = await fetch("http://localhost:5000/api/users/settings", {
+        const res = await fetch(`${API_BASE}/api/users/settings`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -407,14 +408,14 @@ export default function SettingsPage() {
       const token = localStorage.getItem("authToken");
       if (token) {
         // Sync profile changes
-        fetch("http://localhost:5000/api/users/profile", {
+        fetch(`${API_BASE}/api/users/profile`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify({ phone, company, website })
         });
         
         // Sync settings
-        await fetch("http://localhost:5000/api/users/settings", {
+        await fetch(`${API_BASE}/api/users/settings`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify({ settings: sObj })
@@ -436,7 +437,7 @@ export default function SettingsPage() {
     try {
       const token = localStorage.getItem("authToken");
       if (token) {
-        await fetch("http://localhost:5000/api/users/settings", {
+        await fetch(`${API_BASE}/api/users/settings`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify({ settings: { [key]: value } })
@@ -487,7 +488,7 @@ export default function SettingsPage() {
     try {
       const tokenLocal = localStorage.getItem("authToken");
       if (tokenLocal) {
-        fetch("http://localhost:5000/api/users/settings", {
+        fetch(`${API_BASE}/api/users/settings`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
           body: JSON.stringify({ settings: { teamMembers: updatedMembers } })
@@ -517,7 +518,7 @@ export default function SettingsPage() {
     try {
       const tokenLocal = localStorage.getItem("authToken");
       if (tokenLocal) {
-        fetch("http://localhost:5000/api/users/settings", {
+        fetch(`${API_BASE}/api/users/settings`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
           body: JSON.stringify({ settings: { teamMembers: updatedMembers } })
@@ -572,7 +573,7 @@ export default function SettingsPage() {
     try {
       const tokenLocal = localStorage.getItem("authToken");
       if (tokenLocal) {
-        await fetch("http://localhost:5000/api/users/settings", {
+        await fetch(`${API_BASE}/api/users/settings`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
           body: JSON.stringify({ settings: { apiKeys: updatedKeys } })
@@ -595,7 +596,7 @@ export default function SettingsPage() {
     try {
       const tokenLocal = localStorage.getItem("authToken");
       if (tokenLocal) {
-        await fetch("http://localhost:5000/api/users/settings", {
+        await fetch(`${API_BASE}/api/users/settings`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
           body: JSON.stringify({ settings: { apiKeys: updatedKeys } })
@@ -617,7 +618,7 @@ export default function SettingsPage() {
     try {
       const tokenLocal = localStorage.getItem("authToken");
       if (tokenLocal) {
-        await fetch("http://localhost:5000/api/users/settings", {
+        await fetch(`${API_BASE}/api/users/settings`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
           body: JSON.stringify({
@@ -650,7 +651,7 @@ export default function SettingsPage() {
     try {
       const tokenLocal = localStorage.getItem("authToken");
       if (tokenLocal) {
-        await fetch("http://localhost:5000/api/users/settings", {
+        await fetch(`${API_BASE}/api/users/settings`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenLocal}` },
           body: JSON.stringify({ settings: { webhookSecret: newSecret } })

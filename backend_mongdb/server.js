@@ -5,7 +5,20 @@ const connectDB = require("./config/db");
 
 const app = express();
 
-app.use(cors());
+// ── CORS ──────────────────────────────────────────────────────────────────────
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : ["http://localhost:3000", "http://localhost:5173"];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: Origin '${origin}' not allowed`));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: "20mb" })); // allow base64 image uploads
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 

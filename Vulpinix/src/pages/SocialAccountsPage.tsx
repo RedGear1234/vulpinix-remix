@@ -129,7 +129,7 @@ export default function SocialAccountsPage(){
     try{
       const u=JSON.parse(localStorage.getItem("userInfo")||"{}");
       const userId=u.id||u._id||u.email||"";
-      const res=await fetch(`http://localhost:5000/api/social/status?userId=${userId}`);
+      const res=await fetch(`${API_BASE}/api/social/status?userId=${userId}`);
       const data=await res.json();
       if(data.success){
         const next:string[]=[];
@@ -198,7 +198,7 @@ export default function SocialAccountsPage(){
     const userId=u.id||u._id||u.email||"";
     if(linked.includes(platformId)){
       try{
-        const res=await fetch(`http://localhost:5000/api/social/${platformId}?userId=${userId}`,{method:"DELETE"});
+        const res=await fetch(`${API_BASE}/api/social/${platformId}?userId=${userId}`,{method:"DELETE"});
         const data=await res.json();
         if(data.success){
           const next=linked.filter(id=>id!==platformId);
@@ -209,7 +209,7 @@ export default function SocialAccountsPage(){
         }else toast.error("Disconnect failed");
       }catch{toast.error("Could not disconnect");}
     }else{
-      window.location.href=`http://localhost:5000/api/social/auth/${platformId}?userId=${userId}`;
+      window.location.href=`${API_BASE}/api/social/auth/${platformId}?userId=${userId}`;
     }
   };
 
