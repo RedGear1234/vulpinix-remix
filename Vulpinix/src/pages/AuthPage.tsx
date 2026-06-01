@@ -8,11 +8,7 @@ import { VulpinixLogo } from "../components/VulpinixLogo";
 
 type AuthMode = "login" | "signup";
 
-const AppleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-  </svg>
-);
+
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -40,19 +36,7 @@ export default function AuthPage() {
   useEffect(() => { if (location.pathname.includes("signup")) setAuthMode("signup"); else if (location.pathname.includes("login")) setAuthMode("login"); }, [location.pathname]);
   useEffect(() => { localStorage.setItem("returningUser", "true"); }, []);
 
-  useEffect(() => {
-    // Load Apple Sign-In JS SDK
-    const script = document.createElement("script");
-    script.src = "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js";
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-    };
-  }, []);
+
   useEffect(() => { 
     const uStr = localStorage.getItem("userInfo");
     const a = localStorage.getItem("isAuthenticated"); 
@@ -120,78 +104,7 @@ export default function AuthPage() {
     toast.error("Google Sign-In Failed", { description: "An error occurred during Google authentication." }); 
   };
 
-  const handleAppleSignIn = async () => {
-    if (!(window as any).AppleID) {
-      toast.error("Apple Sign-In is still loading. Please try again in a moment.");
-      return;
-    }
 
-    setIsLoading(true);
-    try {
-      // Initialize Apple ID auth
-      // Client ID should be your Services ID from Apple Developer portal
-      const APPLE_CLIENT_ID = "com.vulpinix.signin"; // Replace this with your actual Apple Services ID in production
-
-      (window as any).AppleID.auth.init({
-        clientId: APPLE_CLIENT_ID,
-        scope: "name email",
-        redirectURI: window.location.origin, // Must be registered in Apple Developer Console
-        state: "vx_apple_auth_state",
-        usePopup: true,
-      });
-
-      const response = await (window as any).AppleID.auth.signIn();
-      
-      const res = await fetch(`${API_BASE}/api/users/apple`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          credential: response.authorization.id_token,
-          user: response.user // Will contain name & email on first login
-        }),
-      });
-
-      const data = await res.json();
-      
-      if (!res.ok) {
-        toast.error(data.message || "Apple Sign-In Failed");
-        setIsLoading(false);
-        return;
-      }
-
-      localStorage.setItem("authToken", data.token);
-      localStorage.setItem("userInfo", JSON.stringify(data.user));
-      if (data.settings) localStorage.setItem("vxSettings", JSON.stringify(data.settings));
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("authProvider", "apple");
-      localStorage.setItem("socialLinks", JSON.stringify({ instagram: "", facebook: "", youtube: "", twitter: "", linkedin: "" }));
-      
-      toast.success(
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-green-400" />
-          <div>
-            <p className="font-semibold">Welcome, {data.user.name}!</p>
-            <p className="text-xs text-gray-400 mt-0.5">Signed in via Apple</p>
-          </div>
-        </div>, 
-        { duration: 5000 }
-      );
-
-      setTimeout(() => {
-        if (data.user.onboardingCompleted) navigate("/upload");
-        else navigate("/onboarding");
-      }, 1000);
-    } catch (err) {
-      console.error("Apple login error:", err);
-      if (err && (err as any).error === "popup_closed_by_user") {
-        toast.error("Sign-in cancelled", { description: "The Apple Sign-In window was closed." });
-      } else {
-        toast.error("Apple Sign-In Failed", { description: "An error occurred during Apple authentication." });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -448,9 +361,6 @@ export default function AuthPage() {
                     width={String(btnWidth)}
                   />
                 </div>
-                <button type="button" className="auth-soc-btn" style={{ width: "100%", height: "40px" }} onClick={handleAppleSignIn} disabled={isLoading}>
-                  <AppleIcon /> Continue with Apple
-                </button>
               </div>
 
               <div className="auth-divider">
@@ -507,9 +417,6 @@ export default function AuthPage() {
                     width={String(btnWidth)}
                   />
                 </div>
-                <button type="button" className="auth-soc-btn" style={{ width: "100%", height: "40px" }} onClick={handleAppleSignIn} disabled={isLoading}>
-                  <AppleIcon /> Continue with Apple
-                </button>
               </div>
 
               <div className="auth-divider">

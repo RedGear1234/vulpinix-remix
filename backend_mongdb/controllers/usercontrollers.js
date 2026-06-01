@@ -96,7 +96,6 @@ const loginUser = async (req, res) => {
 
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const appleSignin = require('apple-signin-auth');
 
 // â”€â”€ Google Auth (upsert) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const googleAuth = async (req, res) => {
@@ -166,86 +165,6 @@ const googleAuth = async (req, res) => {
   }
 };
 
-// ── Apple Auth (upsert) ────────────────────────────────────────────────────────
-const appleAuth = async (req, res) => {
-  try {
-    const { credential, user: clientUser } = req.body;
-
-    if (!credential) {
-      return res.status(400).json({ success: false, message: "Missing Apple credential" });
-    }
-
-    // Verify the ID token from Apple
-    const appleClientId = process.env.APPLE_CLIENT_ID || "com.vulpinix.signin";
-    const payload = await appleSignin.verifyIdToken(credential, {
-      audience: appleClientId,
-    });
-
-    const { sub: appleId, email } = payload;
-
-    if (!email || !appleId) {
-      return res.status(400).json({ success: false, message: "Invalid Apple token payload" });
-    }
-
-    let user = await User.findOne({ $or: [{ appleId }, { email: email.toLowerCase() }] });
-
-    if (user) {
-      // Update appleId if it was missing
-      if (!user.appleId) {
-        user.appleId = appleId;
-        await user.save();
-      }
-    } else {
-      // Determine the user's name
-      let name = "";
-      if (clientUser && clientUser.name) {
-        const { firstName, lastName } = clientUser.name;
-        name = [firstName, lastName].filter(Boolean).join(" ").trim();
-      }
-      
-      // Fallback if no name was passed (since Apple only sends name on first login)
-      if (!name) {
-        name = email.split("@")[0].replace(/[._-]/g, " ");
-        // Capitalize words
-        name = name.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-      }
-
-      user = await User.create({
-        name,
-        email: email.toLowerCase(),
-        appleId,
-        picture: "",
-        company: "",
-        phone: "",
-      });
-    }
-
-    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-    res.json({
-      success: true,
-      message: "Apple auth successful",
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        onboardingCompleted: user.onboardingCompleted,
-        picture: user.picture || "",
-        phone: user.phone || "",
-        company: user.company || "",
-        industry: user.industry || "",
-        location: user.location || "",
-        website: user.website || "",
-        businessType: user.businessType || ""
-      },
-      settings: user.settings || {}
-    });
-  } catch (err) {
-    console.error("Apple auth error:", err);
-    res.status(500).json({ success: false, message: "Apple authentication failed. Please try again." });
-  }
-};
 // â”€â”€ Update Profile (Onboarding) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const updateProfile = async (req, res) => {
   try {
@@ -352,4 +271,4 @@ const updateSettings = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, googleAuth, appleAuth, updateProfile, getProfile, getSettings, updateSettings };
+module.exports = { registerUser, loginUser, googleAuth, updateProfile, getProfile, getSettings, updateSettings };
