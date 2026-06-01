@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
     website: { type: String, default: "" },
     businessType: { type: String, default: "" },
     googleId: { type: String, default: "" },
+    appleId: { type: String, default: "" },
     picture: { type: String, default: "" },
     onboardingCompleted: { type: Boolean, default: false },
     socialAccounts: {

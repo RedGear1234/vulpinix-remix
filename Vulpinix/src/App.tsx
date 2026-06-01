@@ -19,7 +19,7 @@ export default function App() {
     if (!metaTag) {
       metaTag = document.createElement('meta');
       metaTag.setAttribute('http-equiv', 'Permissions-Policy');
-      metaTag.setAttribute('content', 'identity-credentials-get=(self), browsing-topics=()');
+      metaTag.setAttribute('content', 'identity-credentials-get=(self "https://accounts.google.com"), browsing-topics=()');
       document.head.appendChild(metaTag);
     }
 
