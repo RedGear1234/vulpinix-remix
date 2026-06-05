@@ -3,8 +3,10 @@ const { publishCampaign } = require("./campaignController");
 const axios = require("axios");
 
 /**
- * Generate an image using Gemini first, Pollinations as fallback.
- * Returns a base64 data URL: data:image/jpeg;base64,...
+ * Generate an image using Gemini first, Pollinations URL as fallback.
+ * Returns base64 data URL (Gemini) or Pollinations URL (browser fetches it).
+ * NOTE: We never fetch Pollinations server-side — Render IPs get 402.
+ *       Browsers fetch Pollinations directly without issues.
  */
 async function generateImageBase64(prompt, apiKey) {
   // ── Try Gemini image generation first ─────────────────────
@@ -25,33 +27,19 @@ async function generateImageBase64(prompt, apiKey) {
           return `data:${mimeType || 'image/jpeg'};base64,${data}`;
         }
       }
-      throw new Error('No image data in Gemini response');
+      console.warn('[IMAGE GEN] No image data in Gemini response, using Pollinations URL fallback');
     } catch (geminiErr) {
-      console.warn(`⚠️ [IMAGE GEN] Gemini image gen failed (${geminiErr.response?.status || geminiErr.message}), falling back to Pollinations...`);
+      console.warn(`⚠️ [IMAGE GEN] Gemini image gen failed (${geminiErr.response?.status || geminiErr.message}), using Pollinations URL fallback`);
     }
   }
 
-  // ── Fallback: Pollinations.ai (minimal params, no paid features) ──
+  // ── Fallback: return Pollinations URL for the browser to fetch ──
+  // Do NOT fetch server-side — Render server IPs are blocked with 402.
+  // Browsers can access Pollinations freely without restrictions.
   const seed = Math.floor(Math.random() * 100000);
-  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}`;
-  console.log(`🎨 [IMAGE GEN] Trying Pollinations: ${pollinationsUrl}`);
-
-  const response = await axios({
-    method: 'get',
-    url: pollinationsUrl,
-    responseType: 'arraybuffer',
-    timeout: 60000,
-    headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'image/*,*/*' }
-  });
-
-  const contentType = response.headers['content-type'] || 'image/jpeg';
-  if (!contentType.startsWith('image/')) {
-    throw new Error(`Pollinations returned non-image (${contentType}) — status: ${response.status}`);
-  }
-
-  const base64 = Buffer.from(response.data, 'binary').toString('base64');
-  console.log(`✅ [IMAGE GEN] Pollinations image fetched successfully`);
-  return `data:${contentType};base64,${base64}`;
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}`;
+  console.log(`🎨 [IMAGE GEN] Returning Pollinations URL for browser: ${url}`);
+  return url;
 }
 
 /**
