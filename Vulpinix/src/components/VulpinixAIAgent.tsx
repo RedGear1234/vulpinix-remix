@@ -839,7 +839,7 @@ function getCuratedStockFallback(prompt: string): string {
   if (lower.includes('gym') || lower.includes('fitness') || lower.includes('workout') || lower.includes('run') || lower.includes('sport')) {
     return "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80";
   }
-  if (lower.includes('tech') || lower.includes('laptop') || lower.includes('computer') || lower.includes('code') || lower.includes('software') || lower.includes('phone')) {
+  if (lower.includes('laptop') || lower.includes('computer') || lower.includes('code') || lower.includes('software') || lower.includes('workspace')) {
     return "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&auto=format&fit=crop&q=80";
   }
   if (lower.includes('travel') || lower.includes('beach') || lower.includes('mountain') || lower.includes('nature') || lower.includes('vacation') || lower.includes('tour')) {
@@ -849,26 +849,21 @@ function getCuratedStockFallback(prompt: string): string {
     return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80";
   }
   
-  // Dynamic keyword fallback using LoremFlickr if it doesn't match predefined categories
-  const stopWords = new Set([
-    'generate', 'image', 'create', 'make', 'draw', 'paint', 'photo', 'photograph',
-    'picture', 'of', 'a', 'an', 'the', 'with', 'for', 'in', 'on', 'at', 'and', 'or',
-    'high-quality', 'photorealistic', 'realistic', 'beautiful', 'cute', 'cozy',
-    'modern', 'aesthetic', 'doll'
-  ]);
-  
-  const tags = prompt
+  // Clean prompt to extract exact subject keywords for LoremFlickr search
+  const cleanSubject = prompt
     .toLowerCase()
-    .replace(/[^\w\s]/g, '')
-    .split(/\s+/)
-    .filter(word => word.length > 2 && !stopWords.has(word));
+    .replace(/[^\w\s]/g, ' ')
+    // Remove common verb/prefix/adjective phrases
+    .replace(/\b(generate|create|draw|make|show|display|render)\b/g, '')
+    .replace(/\b(an?|the|some|any|only|just|detailed|photorealistic|realistic|beautiful|cute|cozy|modern|aesthetic)\b/g, '')
+    .replace(/\b(image|picture|photo|visual|banner|creative|graphic|art)\b/g, '')
+    .replace(/\b(of|for|in|on|at|with|by|and|or)\b/g, ' ')
+    .trim();
 
-  // If tags is empty, we can keep the doll or any specific tag
-  if (lower.includes('doll')) {
-    tags.push('doll');
-  }
-
-  const tagQuery = tags.length > 0 ? tags.slice(0, 2).join(',') : 'creative';
+  // Split into words, filter empty, and take the first 3 words as the subject
+  const words = cleanSubject.split(/\s+/).filter(w => w.length > 2);
+  const tagQuery = words.length > 0 ? words.slice(0, 3).join(',') : 'creative';
+  
   const lock = Math.floor(Math.random() * 10000);
   return `https://loremflickr.com/512/512/${encodeURIComponent(tagQuery)}?lock=${lock}`;
 }
