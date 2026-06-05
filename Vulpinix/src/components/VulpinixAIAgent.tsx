@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Send, Image as ImageIcon, Loader2,
@@ -424,6 +424,83 @@ const S = `
   }
   .vai-img-save:hover { background: rgba(124,58,237,0.75); }
 
+  /* ── Image loading skeleton ──────────────────────── */
+  .vai-img-skeleton {
+    width: 320px;
+    height: 320px;
+    border-radius: 14px;
+    background: linear-gradient(90deg,
+      rgba(255,255,255,0.04) 0%,
+      rgba(255,255,255,0.09) 40%,
+      rgba(255,255,255,0.04) 80%
+    );
+    background-size: 200% 100%;
+    animation: vai-shimmer 1.6s ease-in-out infinite;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: 1px solid rgba(255,255,255,0.07);
+    margin-top: 12px;
+  }
+  @keyframes vai-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .vai-img-skeleton-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.25);
+    display: flex; align-items: center; justify-content: center;
+    color: #a78bfa;
+  }
+  .vai-img-skeleton-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .vai-img-skeleton-dots {
+    display: flex; gap: 5px;
+  }
+  .vai-img-skeleton-dots span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #7c3aed;
+    animation: vai-dot 1.4s ease-in-out infinite;
+  }
+  .vai-img-skeleton-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .vai-img-skeleton-dots span:nth-child(3) { animation-delay: 0.4s; }
+  .vai-img-error {
+    width: 320px;
+    height: 180px;
+    border-radius: 14px;
+    background: rgba(239,68,68,0.05);
+    border: 1px solid rgba(239,68,68,0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+    color: #f87171;
+    font-size: 12px;
+  }
+  .vai-img-retry {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(239,68,68,0.3);
+    background: rgba(239,68,68,0.1);
+    color: #f87171;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .vai-img-retry:hover { background: rgba(239,68,68,0.2); }
+
   /* ── Thinking ────────────────────────────────────── */
   .vai-thinking {
     display: flex; align-items: center; gap: 10px;
@@ -744,6 +821,80 @@ function saveConversations(convs: Conversation[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(convs.slice(0, MAX_HISTORY)));
   } catch {}
+}
+
+// ── Stateful Image Card ───────────────────────────────────────────
+// Images from backend are base64 data URLs — render instantly, no fetch needed.
+function AIImageCard({ imageUrl, apiBase }: { imageUrl: string; apiBase: string }) {
+  const isBase64 = imageUrl.startsWith('data:image/');
+  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>(
+    isBase64 ? 'loaded' : 'loading'
+  );
+  const proxyUrl = isBase64 ? '' : `${apiBase}/api/agent/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+
+  const handleSave = () => {
+    if (isBase64) {
+      // Create a download link for base64 images
+      const a = document.createElement('a');
+      a.href = imageUrl;
+      a.download = `vulpinix-ai-${Date.now()}.jpg`;
+      a.click();
+    } else {
+      window.open(proxyUrl, '_blank');
+    }
+  };
+
+  // For base64: render immediately
+  if (isBase64) {
+    return (
+      <div className="vai-img-card">
+        <img
+          src={imageUrl}
+          alt="AI Generated"
+          style={{ width: '100%', display: 'block', borderRadius: 14 }}
+        />
+        <button className="vai-img-save" onClick={handleSave}>
+          <Download size={11} /> Save Image
+        </button>
+      </div>
+    );
+  }
+
+  // For legacy external URLs: try to load with status tracking
+  return (
+    <>
+      {status === 'loading' && (
+        <div className="vai-img-skeleton">
+          <div className="vai-img-skeleton-icon"><ImageIcon size={22} /></div>
+          <div className="vai-img-skeleton-text">
+            Loading image…<br />
+            <span style={{ color: '#334155', fontSize: 10 }}>Please wait</span>
+          </div>
+          <div className="vai-img-skeleton-dots"><span /><span /><span /></div>
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="vai-img-error">
+          <AlertCircle size={22} />
+          <span>Image could not be loaded</span>
+        </div>
+      )}
+      {status !== 'error' && (
+        <div className="vai-img-card" style={{ display: status === 'loaded' ? 'block' : 'none' }}>
+          <img
+            src={imageUrl}
+            alt="AI Generated"
+            style={{ width: '100%', display: 'block', borderRadius: 14 }}
+            onLoad={() => setStatus('loaded')}
+            onError={() => setStatus('error')}
+          />
+          <button className="vai-img-save" onClick={handleSave}>
+            <Download size={11} /> Save Image
+          </button>
+        </div>
+      )}
+    </>
+  );
 }
 
 export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
@@ -1229,31 +1380,7 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
                     <div className="vai-bubble">{renderText(msg.text)}</div>
                   )}
                   {msg.imageUrl && (
-                    <div className="vai-img-card" style={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', position: 'relative' }}>
-                      <img 
-                        src={`${API_BASE}/api/agent/image-proxy?url=${encodeURIComponent(msg.imageUrl)}`} 
-                        alt="AI Generated" 
-                        style={{ width: '100%', display: 'block', borderRadius: 14 }}
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          const proxiedBase = `${API_BASE}/api/agent/image-proxy?url=${encodeURIComponent(msg.imageUrl!)}`;
-                          if (!target.dataset.retryCount) {
-                            target.dataset.retryCount = "1";
-                            setTimeout(() => {
-                              target.src = proxiedBase + '&retry=' + Date.now();
-                            }, 2500);
-                          } else if (parseInt(target.dataset.retryCount) < 3) {
-                            target.dataset.retryCount = (parseInt(target.dataset.retryCount) + 1).toString();
-                            setTimeout(() => {
-                              target.src = proxiedBase + '&retry=' + Date.now();
-                            }, 3500);
-                          }
-                        }}
-                      />
-                      <button className="vai-img-save" onClick={() => window.open(`${API_BASE}/api/agent/image-proxy?url=${encodeURIComponent(msg.imageUrl!)}`, '_blank')}>
-                        <Download size={11} /> Save Image
-                      </button>
-                    </div>
+                    <AIImageCard imageUrl={msg.imageUrl} apiBase={API_BASE} />
                   )}
                   {msg.automationAction && (
                     <div className="vai-automation-card">

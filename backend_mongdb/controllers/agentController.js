@@ -3,6 +3,35 @@ const { publishCampaign } = require("./campaignController");
 const axios = require("axios");
 
 /**
+ * Fetch image from Pollinations.ai and return as base64 data URL
+ * This runs server-side, bypassing all client CORS/CSP issues.
+ */
+async function fetchImageAsBase64(prompt) {
+  const seed = Math.floor(Math.random() * 100000);
+  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=768&height=768&nologo=true&seed=${seed}&model=flux`;
+  console.log(`🎨 [IMAGE GEN] Fetching from Pollinations: ${pollinationsUrl}`);
+
+  const response = await axios({
+    method: 'get',
+    url: pollinationsUrl,
+    responseType: 'arraybuffer',
+    timeout: 60000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; VulpinixBot/1.0)',
+      'Accept': 'image/*'
+    }
+  });
+
+  const contentType = response.headers['content-type'] || 'image/jpeg';
+  if (!contentType.startsWith('image/')) {
+    throw new Error(`Pollinations returned non-image content: ${contentType}`);
+  }
+
+  const base64 = Buffer.from(response.data, 'binary').toString('base64');
+  return `data:${contentType};base64,${base64}`;
+}
+
+/**
  * Helper to call Gemini 1.5 Flash with function calling support
  */
 async function callGeminiAgent(apiKey, contents, user) {
@@ -174,20 +203,21 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
       } else if (call.name === "generate_image") {
         try {
           const prompt = call.args.prompt || 'modern aesthetic social media marketing creative';
-          const seed = Math.floor(Math.random() * 100000);
-          const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=600&height=600&nologo=true&seed=${seed}`;
+          // Fetch server-side and return as base64 — no client CORS issues
+          const dataUrl = await fetchImageAsBase64(prompt);
+          console.log(`✅ [IMAGE GEN] Successfully fetched image for: "${prompt}"`);
 
           functionResponseData = {
             success: true,
-            imageUrl,
+            imageUrl: dataUrl,
             message: `Successfully generated AI image creative for prompt: ${prompt}. YOU MUST NOW EXPLICITLY ASK THE USER: "Here is your generated image! Would you like me to publish this creative as a social media campaign or not?"`
           };
-          
+
           executionMetadata = {
             type: "publish_image",
             status: "pending",
             data: {
-              imageUrl,
+              imageUrl: dataUrl,
               campaignName: 'AI Generated Creative',
               platforms: ['instagram', 'facebook'],
               caption: `AI generated visual for: ${prompt} 🎨✨`,
@@ -195,6 +225,7 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
             }
           };
         } catch (imgErr) {
+          console.error(`❌ [IMAGE GEN] Failed:`, imgErr.message);
           functionResponseData = { success: false, error: imgErr.message };
         }
       }
@@ -361,27 +392,36 @@ async function simulateAgentResponse(text, user) {
   }
 
   // Generate Image
-  if (lower.includes('image') || lower.includes('picture') || lower.includes('photo') || lower.includes('generate')) {
-    const match = text.match(/(?:image|picture|photo) of (.*)/i);
-    const prompt = match ? match[1] : 'modern aesthetic social media marketing creative';
-    const seed = Math.floor(Math.random() * 100000);
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=600&height=600&nologo=true&seed=${seed}`;
+  if (lower.includes('image') || lower.includes('picture') || lower.includes('photo') || lower.includes('generate') || lower.includes('draw') || lower.includes('create') && (lower.includes('visual') || lower.includes('banner') || lower.includes('creative'))) {
+    const match = text.match(/(?:generate|create|draw|make|show|image|picture|photo|visual|banner|creative)(?:\s+(?:an?|me|a|the))?(?:\s+(?:image|picture|photo|visual|banner|creative))?(?:\s+of)?\s+(.+)/i);
+    const prompt = match ? match[1].trim() : text.replace(/^(generate|create|draw|make)\s+(an?\s+)?(image|picture|photo|visual)?\s*(of)?\s*/i, '').trim() || 'modern aesthetic social media marketing creative';
+    
+    try {
+      console.log(`🎨 [SIMULATE] Generating image for prompt: "${prompt}"`);
+      const dataUrl = await fetchImageAsBase64(prompt);
+      console.log(`✅ [SIMULATE] Image generated successfully`);
 
-    return {
-      text: `Sure! I have generated this visual creative using AI based on your description:\n[IMAGE: ${prompt}]\n\nWould you like me to publish this creative as a marketing campaign or not?`,
-      imageUrl,
-      execution: {
-        type: "publish_image",
-        status: "pending",
-        data: {
-          imageUrl,
-          campaignName: 'AI Generated Creative',
-          platforms: ['instagram', 'facebook'],
-          caption: 'Freshly generated creative! 🎨🚀',
-          budget: '500'
+      return {
+        text: `🎨 Here is your AI-generated image!\n\nWould you like me to publish this creative as a social media marketing campaign?`,
+        imageUrl: dataUrl,
+        execution: {
+          type: "publish_image",
+          status: "pending",
+          data: {
+            imageUrl: dataUrl,
+            campaignName: 'AI Generated Creative',
+            platforms: ['instagram', 'facebook'],
+            caption: `AI generated creative: ${prompt} 🎨✨`,
+            budget: '500'
+          }
         }
-      }
-    };
+      };
+    } catch (imgErr) {
+      console.error(`❌ [SIMULATE] Image generation failed:`, imgErr.message);
+      return {
+        text: `⚠️ Image generation is currently unavailable. The AI image service (Pollinations.ai) could not be reached.\n\nError: *${imgErr.message}*\n\nPlease try again in a moment.`
+      };
+    }
   }
 
   return {
@@ -472,11 +512,17 @@ const handleImageProxy = async (req, res) => {
       method: "get",
       url: url,
       responseType: "stream",
-      timeout: 15000
+      timeout: 45000,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; VulpinixBot/1.0)",
+        "Accept": "image/*,*/*"
+      }
     });
 
     res.setHeader("Content-Type", response.headers["content-type"] || "image/jpeg");
     res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 24h
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     response.data.pipe(res);
   } catch (err) {
     console.error("❌ [IMAGE PROXY] Failed to fetch image:", err.message);
