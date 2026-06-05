@@ -8,7 +8,7 @@ const axios = require("axios");
  */
 async function fetchImageAsBase64(prompt) {
   const seed = Math.floor(Math.random() * 100000);
-  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=768&height=768&nologo=true&seed=${seed}&model=flux`;
+  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${seed}`;
   console.log(`🎨 [IMAGE GEN] Fetching from Pollinations: ${pollinationsUrl}`);
 
   const response = await axios({
