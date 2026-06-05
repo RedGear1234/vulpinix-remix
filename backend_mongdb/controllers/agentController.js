@@ -3,31 +3,54 @@ const { publishCampaign } = require("./campaignController");
 const axios = require("axios");
 
 /**
- * Fetch image from Pollinations.ai and return as base64 data URL
- * This runs server-side, bypassing all client CORS/CSP issues.
+ * Generate an image using Gemini first, Pollinations as fallback.
+ * Returns a base64 data URL: data:image/jpeg;base64,...
  */
-async function fetchImageAsBase64(prompt) {
+async function generateImageBase64(prompt, apiKey) {
+  // ── Try Gemini image generation first ─────────────────────
+  if (apiKey && apiKey !== 'YOUR_GEMINI_API_KEY_HERE') {
+    try {
+      console.log(`🎨 [IMAGE GEN] Trying Gemini image generation for: "${prompt}"`);
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`;
+      const geminiRes = await axios.post(geminiUrl, {
+        contents: [{ parts: [{ text: `Generate a high-quality, photorealistic image of: ${prompt}` }] }],
+        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+      }, { timeout: 30000 });
+
+      const parts = geminiRes.data?.candidates?.[0]?.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          const { mimeType, data } = part.inlineData;
+          console.log(`✅ [IMAGE GEN] Gemini image generated successfully`);
+          return `data:${mimeType || 'image/jpeg'};base64,${data}`;
+        }
+      }
+      throw new Error('No image data in Gemini response');
+    } catch (geminiErr) {
+      console.warn(`⚠️ [IMAGE GEN] Gemini image gen failed (${geminiErr.response?.status || geminiErr.message}), falling back to Pollinations...`);
+    }
+  }
+
+  // ── Fallback: Pollinations.ai (minimal params, no paid features) ──
   const seed = Math.floor(Math.random() * 100000);
-  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${seed}`;
-  console.log(`🎨 [IMAGE GEN] Fetching from Pollinations: ${pollinationsUrl}`);
+  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}`;
+  console.log(`🎨 [IMAGE GEN] Trying Pollinations: ${pollinationsUrl}`);
 
   const response = await axios({
     method: 'get',
     url: pollinationsUrl,
     responseType: 'arraybuffer',
     timeout: 60000,
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; VulpinixBot/1.0)',
-      'Accept': 'image/*'
-    }
+    headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'image/*,*/*' }
   });
 
   const contentType = response.headers['content-type'] || 'image/jpeg';
   if (!contentType.startsWith('image/')) {
-    throw new Error(`Pollinations returned non-image content: ${contentType}`);
+    throw new Error(`Pollinations returned non-image (${contentType}) — status: ${response.status}`);
   }
 
   const base64 = Buffer.from(response.data, 'binary').toString('base64');
+  console.log(`✅ [IMAGE GEN] Pollinations image fetched successfully`);
   return `data:${contentType};base64,${base64}`;
 }
 
@@ -204,7 +227,7 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
         try {
           const prompt = call.args.prompt || 'modern aesthetic social media marketing creative';
           // Fetch server-side and return as base64 — no client CORS issues
-          const dataUrl = await fetchImageAsBase64(prompt);
+          const dataUrl = await generateImageBase64(prompt, apiKey);
           console.log(`✅ [IMAGE GEN] Successfully fetched image for: "${prompt}"`);
 
           functionResponseData = {
@@ -270,7 +293,7 @@ Always verify parameters. Provide clear, professional, and emoji-enhanced respon
 /**
  * Rules-based Agent Simulator (handles requests offline when API key is missing)
  */
-async function simulateAgentResponse(text, user) {
+async function simulateAgentResponse(text, user, apiKey = null) {
   const lower = text.toLowerCase();
 
   const userId = user?.id || user?.email || "anonymous";
@@ -398,7 +421,7 @@ async function simulateAgentResponse(text, user) {
     
     try {
       console.log(`🎨 [SIMULATE] Generating image for prompt: "${prompt}"`);
-      const dataUrl = await fetchImageAsBase64(prompt);
+      const dataUrl = await generateImageBase64(prompt, apiKey);
       console.log(`✅ [SIMULATE] Image generated successfully`);
 
       return {
@@ -419,7 +442,7 @@ async function simulateAgentResponse(text, user) {
     } catch (imgErr) {
       console.error(`❌ [SIMULATE] Image generation failed:`, imgErr.message);
       return {
-        text: `⚠️ Image generation is currently unavailable. The AI image service (Pollinations.ai) could not be reached.\n\nError: *${imgErr.message}*\n\nPlease try again in a moment.`
+        text: `⚠️ Image generation is currently unavailable.\n\nError: *${imgErr.message}*\n\nTip: Add your Gemini API key in Settings → AI Profile to enable image generation.`
       };
     }
   }
@@ -483,7 +506,7 @@ const handleAgentChat = async (req, res) => {
     }
 
     // Fallback to rules-based simulator which actually modifies MongoDB data on the server
-    const result = await simulateAgentResponse(message, user);
+    const result = await simulateAgentResponse(message, user, apiKey);
     return res.json({
       success: true,
       text: result.text,
