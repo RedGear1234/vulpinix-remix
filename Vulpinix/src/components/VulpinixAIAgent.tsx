@@ -823,24 +823,70 @@ function saveConversations(convs: Conversation[]) {
   } catch {}
 }
 
+// Helper to get curated, high-quality Unsplash fallbacks when Pollinations is blocked
+function getCuratedStockFallback(prompt: string): string {
+  const lower = prompt.toLowerCase();
+  
+  if (lower.includes('coffee') || lower.includes('cafe') || lower.includes('cup') || lower.includes('mug') || lower.includes('espresso')) {
+    return "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&auto=format&fit=crop&q=80";
+  }
+  if (lower.includes('food') || lower.includes('restaurant') || lower.includes('burger') || lower.includes('pizza') || lower.includes('eat') || lower.includes('dinner')) {
+    return "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80";
+  }
+  if (lower.includes('shoe') || lower.includes('sneaker') || lower.includes('boot') || lower.includes('apparel') || lower.includes('fashion') || lower.includes('clothes') || lower.includes('tshirt')) {
+    return "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80";
+  }
+  if (lower.includes('gym') || lower.includes('fitness') || lower.includes('workout') || lower.includes('run') || lower.includes('sport')) {
+    return "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80";
+  }
+  if (lower.includes('tech') || lower.includes('laptop') || lower.includes('computer') || lower.includes('code') || lower.includes('software') || lower.includes('phone')) {
+    return "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&auto=format&fit=crop&q=80";
+  }
+  if (lower.includes('travel') || lower.includes('beach') || lower.includes('mountain') || lower.includes('nature') || lower.includes('vacation') || lower.includes('tour')) {
+    return "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&auto=format&fit=crop&q=80";
+  }
+  if (lower.includes('marketing') || lower.includes('business') || lower.includes('office') || lower.includes('meeting') || lower.includes('team')) {
+    return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80";
+  }
+  
+  // High-end abstract creative gradient as default
+  return "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80";
+}
+
 // ── Stateful Image Card ───────────────────────────────────────────
 // Images from backend are base64 data URLs — render instantly, no fetch needed.
 function AIImageCard({ imageUrl, apiBase }: { imageUrl: string; apiBase: string }) {
   const isBase64 = imageUrl.startsWith('data:image/');
+  const [currentSrc, setCurrentSrc] = useState(imageUrl);
+  const [hasFallback, setHasFallback] = useState(false);
   const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>(
     isBase64 ? 'loaded' : 'loading'
   );
-  const proxyUrl = isBase64 ? '' : `${apiBase}/api/agent/image-proxy?url=${encodeURIComponent(imageUrl)}`;
 
   const handleSave = () => {
     if (isBase64) {
       // Create a download link for base64 images
       const a = document.createElement('a');
-      a.href = imageUrl;
+      a.href = currentSrc;
       a.download = `vulpinix-ai-${Date.now()}.jpg`;
       a.click();
     } else {
-      window.open(proxyUrl, '_blank');
+      window.open(currentSrc, '_blank');
+    }
+  };
+
+  const handleError = () => {
+    if (!hasFallback && !isBase64) {
+      // Extract prompt keywords from Pollinations URL if possible
+      const promptMatch = imageUrl.match(/\/prompt\/([^?]+)/);
+      const promptText = promptMatch ? decodeURIComponent(promptMatch[1]) : "creative marketing";
+      
+      const fallback = getCuratedStockFallback(promptText);
+      setCurrentSrc(fallback);
+      setHasFallback(true);
+      setStatus('loading');
+    } else {
+      setStatus('error');
     }
   };
 
@@ -860,7 +906,7 @@ function AIImageCard({ imageUrl, apiBase }: { imageUrl: string; apiBase: string 
     );
   }
 
-  // For legacy external URLs: try to load with status tracking
+  // For legacy external URLs: try to load with status tracking & fallback swap
   return (
     <>
       {status === 'loading' && (
@@ -882,11 +928,11 @@ function AIImageCard({ imageUrl, apiBase }: { imageUrl: string; apiBase: string 
       {status !== 'error' && (
         <div className="vai-img-card" style={{ display: status === 'loaded' ? 'block' : 'none' }}>
           <img
-            src={imageUrl}
+            src={currentSrc}
             alt="AI Generated"
             style={{ width: '100%', display: 'block', borderRadius: 14 }}
             onLoad={() => setStatus('loaded')}
-            onError={() => setStatus('error')}
+            onError={handleError}
           />
           <button className="vai-img-save" onClick={handleSave}>
             <Download size={11} /> Save Image

@@ -12,24 +12,27 @@ async function generateImageBase64(prompt, apiKey) {
   // ── Try Gemini image generation first ─────────────────────
   if (apiKey && apiKey !== 'YOUR_GEMINI_API_KEY_HERE') {
     try {
-      console.log(`🎨 [IMAGE GEN] Trying Gemini image generation for: "${prompt}"`);
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`;
+      console.log(`🎨 [IMAGE GEN] Trying Google Imagen 3 generation for: "${prompt}"`);
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
       const geminiRes = await axios.post(geminiUrl, {
-        contents: [{ parts: [{ text: `Generate a high-quality, photorealistic image of: ${prompt}` }] }],
-        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+        instances: [
+          { prompt }
+        ],
+        parameters: {
+          sampleCount: 1,
+          aspectRatio: "1:1"
+        }
       }, { timeout: 30000 });
 
-      const parts = geminiRes.data?.candidates?.[0]?.content?.parts || [];
-      for (const part of parts) {
-        if (part.inlineData?.data) {
-          const { mimeType, data } = part.inlineData;
-          console.log(`✅ [IMAGE GEN] Gemini image generated successfully`);
-          return `data:${mimeType || 'image/jpeg'};base64,${data}`;
-        }
+      const prediction = geminiRes.data?.predictions?.[0];
+      if (prediction && prediction.bytesBase64Encoded) {
+        const mimeType = prediction.mimeType || 'image/jpeg';
+        console.log(`✅ [IMAGE GEN] Google Imagen image generated successfully`);
+        return `data:${mimeType};base64,${prediction.bytesBase64Encoded}`;
       }
-      console.warn('[IMAGE GEN] No image data in Gemini response, using Pollinations URL fallback');
+      console.warn('[IMAGE GEN] No image prediction data in Gemini response, using Pollinations URL fallback');
     } catch (geminiErr) {
-      console.warn(`⚠️ [IMAGE GEN] Gemini image gen failed (${geminiErr.response?.status || geminiErr.message}), using Pollinations URL fallback`);
+      console.warn(`⚠️ [IMAGE GEN] Google Imagen failed (${geminiErr.response?.status || geminiErr.message}), using Pollinations URL fallback`);
     }
   }
 
