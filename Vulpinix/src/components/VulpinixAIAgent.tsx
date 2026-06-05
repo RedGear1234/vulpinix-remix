@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Send, Image as ImageIcon, Loader2,
@@ -855,7 +855,7 @@ function getCuratedStockFallback(prompt: string): string {
 
 // ── Stateful Image Card ───────────────────────────────────────────
 // Images from backend are base64 data URLs — render instantly, no fetch needed.
-function AIImageCard({ imageUrl, apiBase }: { imageUrl: string; apiBase: string }) {
+function AIImageCard({ imageUrl }: { imageUrl: string }) {
   const isBase64 = imageUrl.startsWith('data:image/');
   const [currentSrc, setCurrentSrc] = useState(imageUrl);
   const [hasFallback, setHasFallback] = useState(false);
@@ -1426,7 +1426,7 @@ export function VulpinixAIAgent({ userInitial = 'U' }: Props) {
                     <div className="vai-bubble">{renderText(msg.text)}</div>
                   )}
                   {msg.imageUrl && (
-                    <AIImageCard imageUrl={msg.imageUrl} apiBase={API_BASE} />
+                    <AIImageCard imageUrl={msg.imageUrl} />
                   )}
                   {msg.automationAction && (
                     <div className="vai-automation-card">
