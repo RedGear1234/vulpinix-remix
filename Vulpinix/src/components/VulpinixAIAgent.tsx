@@ -849,8 +849,28 @@ function getCuratedStockFallback(prompt: string): string {
     return "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&auto=format&fit=crop&q=80";
   }
   
-  // High-end abstract creative gradient as default
-  return "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80";
+  // Dynamic keyword fallback using LoremFlickr if it doesn't match predefined categories
+  const stopWords = new Set([
+    'generate', 'image', 'create', 'make', 'draw', 'paint', 'photo', 'photograph',
+    'picture', 'of', 'a', 'an', 'the', 'with', 'for', 'in', 'on', 'at', 'and', 'or',
+    'high-quality', 'photorealistic', 'realistic', 'beautiful', 'cute', 'cozy',
+    'modern', 'aesthetic', 'doll'
+  ]);
+  
+  const tags = prompt
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.has(word));
+
+  // If tags is empty, we can keep the doll or any specific tag
+  if (lower.includes('doll')) {
+    tags.push('doll');
+  }
+
+  const tagQuery = tags.length > 0 ? tags.slice(0, 2).join(',') : 'creative';
+  const lock = Math.floor(Math.random() * 10000);
+  return `https://loremflickr.com/512/512/${encodeURIComponent(tagQuery)}?lock=${lock}`;
 }
 
 // ── Stateful Image Card ───────────────────────────────────────────
