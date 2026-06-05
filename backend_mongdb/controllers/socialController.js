@@ -592,3 +592,274 @@ exports.getSocialAccounts = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+// ── AI Caption Generator ───────────────────────────────────────────────────────
+exports.generateCaption = async (req, res) => {
+  try {
+    const { imageBase64, mimeType, isImage, fileName, fileType } = req.body;
+    console.log(`[CAPTION] Received request. isImage: ${isImage}, base64 length: ${imageBase64 ? imageBase64.length : 0}`);
+
+    const grokKey = process.env.GROK_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
+
+    let generatedText = '';
+
+    if (grokKey && grokKey !== 'YOUR_GROK_API_KEY_HERE') {
+      const isGroq = grokKey.startsWith('gsk_');
+
+      if (isGroq) {
+        console.log("[CAPTION] Generating caption using Groq (llama-3.3-70b-versatile)...");
+        const fileLabel = fileName
+          ? `a file named "${fileName}"`
+          : `a ${fileType || 'media'} file`;
+
+        const messages = [
+          {
+            role: 'user',
+            content: `Generate engaging social media content for ${fileLabel}.
+
+Use the filename as context to infer the topic and create relevant, specific content. Do not use generic marketing language — be specific to the likely subject matter.
+
+Provide:
+1. A captivating caption (2-3 sentences) with emojis, relevant to the topic
+2. 5-7 relevant hashtags based on the likely content
+
+Respond with ONLY valid JSON, no markdown:
+{
+  "caption": "your context-aware caption with emojis",
+  "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4", "#Tag5"]
+}`
+          }
+        ];
+
+        const groqResponse = await axios.post(
+          'https://api.groq.com/openai/v1/chat/completions',
+          {
+            model: 'llama-3.3-70b-versatile',
+            messages,
+            temperature: 0.85,
+            max_tokens: 512
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${grokKey}`
+            }
+          }
+        );
+
+        generatedText = groqResponse.data.choices?.[0]?.message?.content || '';
+
+      } else {
+        console.log("[CAPTION] Generating caption using Grok (xAI API)...");
+        const resolvedMime = (mimeType === 'image/heic' || mimeType === 'image/heif')
+          ? 'image/jpeg'
+          : (mimeType || 'image/jpeg');
+
+        let messages = [];
+        let model = 'grok-2-1212';
+
+        if (isImage && imageBase64) {
+          model = 'grok-2-vision-1212';
+          messages = [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze this image carefully and generate engaging social media content that is specifically relevant to what you see in the image.
+
+Provide:
+1. A captivating caption (2-3 sentences) tailored to the actual image content, with appropriate emojis
+2. 5-7 relevant hashtags based on what is shown in the image
+
+Respond with ONLY valid JSON, no markdown:
+{
+  "caption": "your image-specific caption with emojis",
+  "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4", "#Tag5"]
+}`
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${resolvedMime};base64,${imageBase64}`
+                  }
+                }
+              ]
+            }
+          ];
+        } else {
+          const fileLabel = fileName
+            ? `a video named "${fileName}"`
+            : `a ${fileType || 'video'} file`;
+
+          messages = [
+            {
+              role: 'user',
+              content: `Generate engaging social media content for ${fileLabel}.
+
+Use the filename as context to infer the topic and create relevant, specific content. Do not use generic marketing language — be specific to the likely subject matter.
+
+Provide:
+1. A captivating caption (2-3 sentences) with emojis, relevant to the video topic
+2. 5-7 relevant hashtags based on the likely content
+
+Respond with ONLY valid JSON, no markdown:
+{
+  "caption": "your context-aware caption with emojis",
+  "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4", "#Tag5"]
+}`
+            }
+          ];
+        }
+
+        const grokResponse = await axios.post(
+          'https://api.x.ai/v1/chat/completions',
+          {
+            model,
+            messages,
+            temperature: 0.85,
+            max_tokens: 512
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${grokKey}`
+            }
+          }
+        );
+
+        generatedText = grokResponse.data.choices?.[0]?.message?.content || '';
+      }
+
+    } else if (geminiKey && geminiKey !== 'YOUR_GEMINI_API_KEY_HERE') {
+      console.log("[CAPTION] Generating caption using Gemini...");
+      const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+
+      let requestBody;
+
+      if (isImage && imageBase64) {
+        const resolvedMime = (mimeType === 'image/heic' || mimeType === 'image/heif')
+          ? 'image/jpeg'
+          : (mimeType || 'image/jpeg');
+
+        requestBody = {
+          contents: [{
+            parts: [
+              {
+                inline_data: {
+                  mime_type: resolvedMime,
+                  data: imageBase64
+                }
+              },
+              {
+                text: `Analyze this image carefully and generate engaging social media content that is specifically relevant to what you see in the image.
+
+Provide:
+1. A captivating caption (2-3 sentences) tailored to the actual image content, with appropriate emojis
+2. 5-7 relevant hashtags based on what is shown in the image
+
+Respond with ONLY valid JSON, no markdown:
+{
+  "caption": "your image-specific caption with emojis",
+  "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4", "#Tag5"]
+}`
+              }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.85,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 512
+          }
+        };
+      } else {
+        const fileLabel = fileName
+          ? `a video named "${fileName}"`
+          : `a ${fileType || 'video'} file`;
+
+        requestBody = {
+          contents: [{
+            parts: [{
+              text: `Generate engaging social media content for ${fileLabel}.
+
+Use the filename as context to infer the topic and create relevant, specific content. Do not use generic marketing language — be specific to the likely subject matter.
+
+Provide:
+1. A captivating caption (2-3 sentences) with emojis, relevant to the video topic
+2. 5-7 relevant hashtags based on the likely content
+
+Respond with ONLY valid JSON, no markdown:
+{
+  "caption": "your context-aware caption with emojis",
+  "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4", "#Tag5"]
+}`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.85,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 512
+          }
+        };
+      }
+
+      const geminiResponse = await axios.post(GEMINI_API_URL, requestBody, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      generatedText = geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    } else {
+      // No server key is configured
+      return res.status(503).json({
+        error: 'No AI service key configured on server',
+        needsClientKey: true
+      });
+    }
+
+    if (!generatedText) {
+      throw new Error('No content generated from AI service');
+    }
+
+    // Parse JSON from response
+    let parsedContent;
+    try {
+      let cleanedText = generatedText.trim();
+      cleanedText = cleanedText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedContent = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON block found');
+      }
+
+      if (!parsedContent.caption || !parsedContent.hashtags) {
+        throw new Error('Invalid JSON structure');
+      }
+    } catch {
+      // Manual extraction fallback
+      const captionMatch = generatedText.match(/"caption"\s*:\s*"([^"]*)"/);
+      parsedContent = {
+        caption: captionMatch ? captionMatch[1] : generatedText.slice(0, 200),
+        hashtags: ['#DigitalMarketing', '#AI', '#ContentCreation', '#SocialMedia', '#Marketing']
+      };
+    }
+
+    res.json({
+      success: true,
+      caption: parsedContent.caption,
+      hashtags: Array.isArray(parsedContent.hashtags) ? parsedContent.hashtags : []
+    });
+
+  } catch (err) {
+    console.error('❌ [CAPTION] AI generation error:', err.response?.data || err.message);
+    const httpStatus = err.response?.status || 500;
+    res.status(httpStatus).json({
+      error: err.response?.data?.error?.message || err.message || 'AI Caption generation failed'
+    });
+  }
+};
+

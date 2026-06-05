@@ -184,32 +184,36 @@ export default function UploadPage() {
 
   const removeFile=()=>{setUploadedFile(null);setProgress(0);};
 
-  const generateWithAI=async()=>{
-    if(!uploadedFile){toast.error("Upload a file first");return;}
-    setGeneratingCaption(true);toast.info("Generating captions via Gemini…");
+  const generateWithAI = async () => {
+    if (!uploadedFile) { toast.error("Upload a file first"); return; }
+    setGeneratingCaption(true);
+    toast.info("Analysing your media with Gemini AI…");
     try {
-      let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE") {
+      // Get the user's own API key from Settings (used only as a fallback
+      // when the backend GEMINI_API_KEY env var is not configured)
+      let clientApiKey: string | undefined;
+      try {
         const localSettings = JSON.parse(localStorage.getItem("vxSettings") || "{}");
-        apiKey = localSettings.geminiApiKey;
-      }
-      if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
-        toast.info("Configuring your Gemini API Key in Settings enables live visual analysis!");
-        await new Promise(r=>setTimeout(r,1500));
-        setAiAnalysis({caption:"Elevate your marketing game with AI-powered solutions! 🌟 Transform your strategy today. 🚀",hashtags:["#DigitalMarketing","#AIAutomation","#VulpinixAI","#Growth"]});
-      } else {
-        const result = await generateCaptionWithGemini(uploadedFile.file, apiKey);
-        setAiAnalysis({caption: result.caption, hashtags: result.hashtags});
-      }
+        clientApiKey = localSettings.geminiApiKey || import.meta.env.VITE_GEMINI_API_KEY;
+      } catch { /* ignore */ }
+
+      const result = await generateCaptionWithGemini(uploadedFile.file, clientApiKey);
+      setAiAnalysis({ caption: result.caption, hashtags: result.hashtags });
       toast.success("AI captions generated!");
     } catch (err: any) {
-      console.error("Gemini caption generation error", err);
-      toast.error("AI generation failed. Using default fallback captions.");
-      setAiAnalysis({caption:"Elevate your marketing game with AI-powered solutions! 🌟 Transform your strategy today. 🚀",hashtags:["#DigitalMarketing","#AIAutomation","#VulpinixAI","#Growth"]});
+      console.error("Gemini caption generation error:", err);
+      // Surface a helpful message depending on the failure reason
+      if (err.message?.includes("No Gemini API key")) {
+        toast.warning("No Gemini API key configured. Add your key in Settings → AI Configuration, or set GEMINI_API_KEY in the backend .env");
+      } else {
+        toast.error(`AI generation failed: ${err.message || "Unknown error"}`);
+      }
+      // Keep any previously generated captions; don't overwrite with a generic fallback
     } finally {
       setGeneratingCaption(false);
     }
   };
+
 
   const togglePlatform=(id:string)=>{
     if(id==="youtube"){

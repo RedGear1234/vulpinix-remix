@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authorizePlatform, handleCallback, getSocialAccounts, disconnectSocialAccount } = require('../controllers/socialController');
+const { authorizePlatform, handleCallback, getSocialAccounts, disconnectSocialAccount, generateCaption } = require('../controllers/socialController');
 
 // @route   GET /api/social/status
 // @desc    Gets the status of connected social accounts
@@ -21,5 +21,10 @@ router.get('/auth/:platform', authorizePlatform);
 // @desc    Handles the OAuth callback from the social platform
 // @access  Public
 router.get('/callback/:platform', handleCallback);
+
+// @route   POST /api/social/generate-caption
+// @desc    Generates an AI caption for uploaded media using Gemini
+// @access  Public
+router.post('/generate-caption', generateCaption);
 
 module.exports = router;

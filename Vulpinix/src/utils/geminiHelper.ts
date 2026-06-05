@@ -1,4 +1,4 @@
-// Helper functions for Gemini AI integration
+import { API_BASE } from '../config/api';
 
 export interface GeminiCaptionResult {
   caption: string;
@@ -15,165 +15,239 @@ export const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-export const generateCaptionWithGemini = async (
+/**
+ * Generate caption via the backend proxy.
+ * The backend holds the GEMINI_API_KEY securely.
+ * Returns { needsClientKey: true } if the server key is not configured.
+ */
+const generateCaptionViaBackend = async (
+  file: File
+): Promise<GeminiCaptionResult & { needsClientKey?: boolean }> => {
+  const isImage = !file.type.startsWith('video/');
+
+  const payload: Record<string, any> = {
+    isImage,
+    fileName: file.name,
+    fileType: file.type,
+    fileSize: file.size,
+  };
+
+  if (isImage) {
+    const base64Data = await fileToBase64(file);
+    const base64Content = base64Data.split(',')[1] || base64Data;
+    let mimeType = file.type || 'image/jpeg';
+    // Remap HEIC/HEIF to JPEG since Gemini doesn't accept them directly
+    if (mimeType === 'image/heic' || mimeType === 'image/heif') {
+      mimeType = 'image/jpeg';
+    }
+    payload.imageBase64 = base64Content;
+    payload.mimeType = mimeType;
+  }
+
+  const response = await fetch(`${API_BASE}/api/social/generate-caption`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (response.ok && data.success) {
+    return { caption: data.caption, hashtags: data.hashtags };
+  }
+
+  if (data.needsClientKey) {
+    // Signal to caller that we need the user's own API key
+    return { caption: '', hashtags: [], needsClientKey: true };
+  }
+
+  throw new Error(data.error || `Backend error ${response.status}`);
+};
+
+/**
+ * Direct Gemini API call — only used when the backend key is not configured
+ * and the user has provided their own key via Settings.
+ * Uses gemini-2.5-flash.
+ */
+const generateCaptionDirectly = async (
   file: File,
   apiKey: string
 ): Promise<GeminiCaptionResult> => {
-  // Check if API key is configured
-  if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || !apiKey) {
-    throw new Error("API key not configured");
-  }
+  const isImage = !file.type.startsWith('video/');
 
+  // Use gemini-2.5-flash
   const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-  // Determine content type
-  const isImage = file.type.startsWith('image/');
 
   let requestBody: any;
 
   if (isImage) {
-    // Convert file to base64
     const base64Data = await fileToBase64(file);
     const base64Content = base64Data.split(',')[1] || base64Data;
-
-    // Get proper mime type
-    let mimeType = file.type;
-
-    // Convert HEIC to supported format
+    let mimeType = file.type || 'image/jpeg';
     if (mimeType === 'image/heic' || mimeType === 'image/heif') {
       mimeType = 'image/jpeg';
     }
 
-    // Request body for image analysis
     requestBody = {
-      contents: [
-        {
-          parts: [
-            {
-              inline_data: {
-                mime_type: mimeType,
-                data: base64Content
-              }
+      contents: [{
+        parts: [
+          {
+            inline_data: {
+              mime_type: mimeType,
+              data: base64Content,
             },
-            {
-              text: `Analyze this image and generate engaging social media content.
+          },
+          {
+            text: `Analyze this image carefully and generate engaging social media content that is specifically relevant to what you see in the image.
 
 Provide:
-1. A captivating caption (2-3 sentences) for Instagram, Facebook, and LinkedIn
-2. 5-7 relevant hashtags for maximum engagement
+1. A captivating caption (2-3 sentences) tailored to the actual image content, with appropriate emojis
+2. 5-7 relevant hashtags based on what is shown in the image
 
-Respond with ONLY valid JSON:
+Respond with ONLY valid JSON, no markdown:
 {
-  "caption": "your caption with emojis",
+  "caption": "your image-specific caption with emojis",
   "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4", "#Tag5"]
-}`
-            }
-          ]
-        }
-      ],
+}`,
+          },
+        ],
+      }],
       generationConfig: {
-        temperature: 0.9,
+        temperature: 0.85,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 1024
-      }
+        maxOutputTokens: 512,
+      },
     };
   } else {
-    // For videos, use text-only prompt
+    // Video: use filename as context
+    const fileLabel = file.name
+      ? `a video named "${file.name}"`
+      : `a ${file.type || 'video'} file`;
+
     requestBody = {
-      contents: [
-        {
-          parts: [
-            {
-              text: `Generate engaging social media content for a video about digital marketing and AI.
+      contents: [{
+        parts: [{
+          text: `Generate engaging social media content for ${fileLabel}.
+
+Use the filename as context to infer the topic and create relevant, specific content.
 
 Provide:
-1. A captivating caption (2-3 sentences) for Instagram, Facebook, and LinkedIn
-2. 5-7 relevant hashtags for maximum engagement
+1. A captivating caption (2-3 sentences) with emojis, relevant to the video topic
+2. 5-7 relevant hashtags based on the likely content
 
-Respond with ONLY valid JSON:
+Respond with ONLY valid JSON, no markdown:
 {
-  "caption": "your caption with emojis",
+  "caption": "your context-aware caption with emojis",
   "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4", "#Tag5"]
-}`
-            }
-          ]
-        }
-      ],
+}`,
+        }],
+      }],
       generationConfig: {
-        temperature: 0.9,
+        temperature: 0.85,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 1024
-      }
+        maxOutputTokens: 512,
+      },
     };
   }
 
-  // Call Gemini API
   const response = await fetch(GEMINI_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(requestBody)
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    console.error("Gemini API Error:", errorData);
-    throw new Error(`API request failed: ${response.status}`);
+    console.error('Gemini Direct API Error:', errorData);
+    throw new Error(
+      errorData?.error?.message || `Gemini API error ${response.status}`
+    );
   }
 
   const data = await response.json();
-
-  // Extract generated text
-  const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
   if (!generatedText) {
-    throw new Error("No content generated");
+    throw new Error('No content generated from Gemini');
   }
 
-  // Parse JSON response
-  let parsedContent: GeminiCaptionResult;
-  
+  return parseGeminiText(generatedText);
+};
+
+/** Parses the raw Gemini text response into caption + hashtags */
+function parseGeminiText(generatedText: string): GeminiCaptionResult {
   try {
-    // Remove markdown code blocks
     let cleanedText = generatedText.trim();
     cleanedText = cleanedText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-
-    // Extract JSON
     const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      parsedContent = JSON.parse(jsonMatch[0]);
-    } else {
-      throw new Error("No JSON found");
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed.caption && parsed.hashtags) {
+        return { caption: parsed.caption, hashtags: parsed.hashtags };
+      }
     }
-
-    // Validate
-    if (!parsedContent.caption || !parsedContent.hashtags) {
-      throw new Error("Invalid JSON structure");
-    }
-  } catch (parseError) {
+    throw new Error('No valid JSON found');
+  } catch {
     // Manual extraction fallback
     const captionMatch = generatedText.match(/"caption"\s*:\s*"([^"]*)"/);
     const hashtagsMatch = generatedText.match(/"hashtags"\s*:\s*\[(.*?)\]/s);
 
-    if (captionMatch) {
-      const caption = captionMatch[1];
-      let hashtags = ["#DigitalMarketing", "#AI", "#Marketing"];
+    const caption = captionMatch?.[1] || generatedText.slice(0, 200);
+    let hashtags = ['#DigitalMarketing', '#AI', '#Marketing', '#ContentCreation', '#SocialMedia'];
 
-      if (hashtagsMatch) {
-        hashtags = hashtagsMatch[1]
-          .split(',')
-          .map((h: string) => h.trim().replace(/["\s]/g, ''))
-          .filter((h: string) => h.startsWith('#'));
-      }
-
-      parsedContent = { caption, hashtags };
-    } else {
-      throw new Error("Could not parse response");
+    if (hashtagsMatch) {
+      const parsed = hashtagsMatch[1]
+        .split(',')
+        .map((h: string) => h.trim().replace(/["\s]/g, ''))
+        .filter((h: string) => h.startsWith('#'));
+      if (parsed.length > 0) hashtags = parsed;
     }
+
+    return { caption, hashtags };
+  }
+}
+
+/**
+ * Main export: generates a caption for the uploaded file.
+ * 1. Tries the secure backend endpoint (/api/social/generate-caption)
+ * 2. Falls back to a direct Gemini API call if the server key is missing
+ *    and the user has configured their own key (passed via `clientApiKey`)
+ */
+export const generateCaptionWithGemini = async (
+  file: File,
+  clientApiKey?: string
+): Promise<GeminiCaptionResult> => {
+  let backendError: Error | null = null;
+
+  // Step 1: Try backend
+  try {
+    const backendResult = await generateCaptionViaBackend(file);
+
+    if (!backendResult.needsClientKey) {
+      return { caption: backendResult.caption, hashtags: backendResult.hashtags };
+    }
+  } catch (err: any) {
+    backendError = err;
+    console.warn('[Gemini] Backend call failed:', err.message);
   }
 
-  return parsedContent;
+  // Step 2: Check if client fallback key is configured
+  const hasClientKey = clientApiKey && clientApiKey !== 'YOUR_GEMINI_API_KEY_HERE';
+
+  if (!hasClientKey) {
+    // If backend gave a real API error, propagate it so the user sees the real cause (e.g. quota limit)
+    if (backendError) {
+      throw backendError;
+    }
+    // Otherwise, it was just a missing server key
+    throw new Error(
+      'No Gemini API key available. Add GEMINI_API_KEY to the backend .env or configure your key in Settings.'
+    );
+  }
+
+  // Step 3: Fall back to direct API with client key
+  console.info('[Gemini] Trying direct API with client key…');
+  return generateCaptionDirectly(file, clientApiKey);
 };

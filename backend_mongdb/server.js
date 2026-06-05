@@ -19,8 +19,8 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json({ limit: "20mb" })); // allow base64 image uploads
-app.use(express.urlencoded({ extended: true, limit: "20mb" }));
+app.use(express.json({ limit: "25mb" })); // allow base64 image uploads (4MB img ≈ 5.5MB base64)
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 connectDB().then(() => {
   const { startScheduler } = require("./config/scheduler");
