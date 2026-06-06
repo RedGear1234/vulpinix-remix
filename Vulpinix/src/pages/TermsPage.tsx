@@ -145,7 +145,7 @@ export default function TermsPage() {
                 For legal inquiries or clarifications regarding these terms, please contact:
               </p>
               <div style={{ padding: "24px", borderRadius: 16, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)" }}>
-                <p style={{ color: "var(--vx-text-primary)", fontWeight: 600, marginBottom: 4 }}>Email: legal@vulpinix.ai</p>
+                <p style={{ color: "var(--vx-text-primary)", fontWeight: 600, marginBottom: 4 }}>Email: connect@vulpinixproductions.com</p>
                 <p style={{ color: "var(--vx-text-muted)", fontSize: 14 }}>Legal Response Team</p>
               </div>
             </section>
