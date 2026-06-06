@@ -44,33 +44,28 @@ const safeCompare = (a, b) => {
 
 // ── Hub Challenge (GET) ───────────────────────────────────────────────────────
 // Used by Meta/Facebook, Stripe, GitHub and others to verify the endpoint.
+//
+// Priority for verify_token check:
+//   1. WEBHOOK_VERIFY_TOKEN env var  (set this on Render — simple, no DB needed)
+//   2. user.settings.webhookSecret   (fallback for per-user secrets)
+//
 // GET /api/webhook/verify?hub.mode=subscribe&hub.challenge=<token>&hub.verify_token=<vt>
-// GET /api/webhook/verify?mode=subscribe&challenge=<token>&verify_token=<vt>
 
 exports.handleChallenge = async (req, res) => {
   try {
-    const user = await resolveUser(req);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const storedSecret = user.settings?.webhookSecret;
-    if (!storedSecret) {
-      return res.status(400).json({
-        error: 'No webhook signing secret configured. Save one in Settings → API & Webhooks.'
-      });
-    }
-
     // Support both Meta-style (?hub.mode / hub.challenge / hub.verify_token)
     // and generic (?mode / challenge / verify_token)
-    const mode          = req.query['hub.mode']          || req.query.mode;
-    const challenge     = req.query['hub.challenge']     || req.query.challenge;
-    const verifyToken   = req.query['hub.verify_token']  || req.query.verify_token;
+    const mode        = req.query['hub.mode']         || req.query.mode;
+    const challenge   = req.query['hub.challenge']    || req.query.challenge;
+    const verifyToken = req.query['hub.verify_token'] || req.query.verify_token;
 
     // If no challenge parameters are present, just confirm the endpoint is live.
     if (!challenge && !verifyToken) {
       return res.json({
-        success: true,
-        message : 'Webhook endpoint is active. Send ?hub.mode=subscribe&hub.challenge=<token>&hub.verify_token=<secret> to verify.',
-        endpoint: `${process.env.BACKEND_URL || 'https://your-backend.render.com'}/api/webhook/verify`
+        success : true,
+        message : 'Webhook endpoint is active.',
+        hint    : 'Send ?hub.mode=subscribe&hub.challenge=<token>&hub.verify_token=<your_WEBHOOK_VERIFY_TOKEN> to verify.',
+        endpoint: `${process.env.BACKEND_URL || ''}/api/webhook/verify`
       });
     }
 
@@ -78,14 +73,34 @@ exports.handleChallenge = async (req, res) => {
       return res.status(400).json({ error: `hub.mode must be "subscribe", got "${mode}"` });
     }
 
-    if (!safeCompare(verifyToken, storedSecret)) {
-      console.warn(`[WEBHOOK] Challenge failed — verify_token mismatch for user ${user.email}`);
-      return res.status(403).json({ error: 'Forbidden — verify_token does not match your webhook signing secret' });
+    if (!verifyToken) {
+      return res.status(400).json({ error: 'Missing hub.verify_token parameter.' });
     }
 
-    console.log(`[WEBHOOK] ✅ Challenge verified for user ${user.email}`);
-    // Meta expects the raw challenge string, not JSON.
-    return res.status(200).send(challenge);
+    // ── Primary check: static env var (set WEBHOOK_VERIFY_TOKEN on Render) ──
+    const staticToken = process.env.WEBHOOK_VERIFY_TOKEN;
+    if (staticToken && safeCompare(verifyToken, staticToken)) {
+      console.log('[WEBHOOK] ✅ Challenge verified via WEBHOOK_VERIFY_TOKEN env var');
+      return res.status(200).send(challenge);
+    }
+
+    // ── Fallback: per-user secret stored in DB ───────────────────────────────
+    try {
+      const user = await resolveUser(req);
+      const storedSecret = user?.settings?.webhookSecret;
+      if (storedSecret && safeCompare(verifyToken, storedSecret)) {
+        console.log(`[WEBHOOK] ✅ Challenge verified via user DB secret (${user.email})`);
+        return res.status(200).send(challenge);
+      }
+    } catch (dbErr) {
+      console.warn('[WEBHOOK] DB fallback check failed:', dbErr.message);
+    }
+
+    // ── Both checks failed ───────────────────────────────────────────────────
+    console.warn(`[WEBHOOK] ❌ Challenge failed — verify_token "${verifyToken}" did not match WEBHOOK_VERIFY_TOKEN or any user secret`);
+    return res.status(403).json({
+      error: 'Forbidden — verify_token does not match. Set WEBHOOK_VERIFY_TOKEN on your Render backend and use the same value in Meta\'s "Verify token" field.'
+    });
   } catch (err) {
     console.error('[WEBHOOK] handleChallenge error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
