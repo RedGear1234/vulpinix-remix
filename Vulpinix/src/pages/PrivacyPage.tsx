@@ -125,7 +125,7 @@ export default function PrivacyPage() {
                 If you have questions about your data or wish to exercise your privacy rights, please contact our Data Protection Officer:
               </p>
               <div style={{ padding: "24px", borderRadius: 16, background: "var(--vx-bg-input)", border: "1px solid var(--vx-border)" }}>
-                <p style={{ color: "var(--vx-text-primary)", fontWeight: 600, marginBottom: 4 }}>Email: privacy@vulpinix.ai</p>
+                <p style={{ color: "var(--vx-text-primary)", fontWeight: 600, marginBottom: 4 }}>Email: connect@vulpinixproductions.com</p>
                 <p style={{ color: "var(--vx-text-muted)", fontSize: 14 }}>Response guaranteed within 24 hours.</p>
               </div>
             </section>
