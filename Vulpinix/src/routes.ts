@@ -25,6 +25,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import SettingsPage from "./pages/SettingsPage";
 import ScheduledPostsPage from "./pages/ScheduledPostsPage";
 import FeedbackPage from "./pages/FeedbackPage";
+import DataDeletionPage from "./pages/DataDeletionPage";
 
 export const router = createBrowserRouter([
   {
@@ -86,6 +87,10 @@ export const router = createBrowserRouter([
       {
         path: "cookies",
         Component: CookiePage,
+      },
+      {
+        path: "data-deletion",
+        Component: DataDeletionPage,
       },
       {
         path: "blogs",
