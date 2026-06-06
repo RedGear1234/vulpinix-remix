@@ -50,6 +50,14 @@ const getOAuthUrl = (platform, userId) => {
       const pinterestRedirectUri = `${BACKEND_URL}/api/social/callback/pinterest`;
       return `https://www.pinterest.com/oauth/?client_id=${pinterestClientId}&redirect_uri=${encodeURIComponent(pinterestRedirectUri)}&response_type=code&scope=user_accounts:read,boards:read,pins:read,pins:write&state=${stateString}`;
 
+    case 'threads':
+      const threadsAppId = process.env.FACEBOOK_APP_ID;
+      const threadsAppSecret = process.env.FACEBOOK_APP_SECRET;
+      if (!threadsAppId || !threadsAppSecret) return null;
+      const threadsRedirectUri = `${BACKEND_URL}/api/social/callback/threads`;
+      // Threads OAuth — uses threads.net with threads_basic scope
+      return `https://threads.net/oauth/authorize?client_id=${threadsAppId}&redirect_uri=${encodeURIComponent(threadsRedirectUri)}&scope=threads_basic,threads_content_publish&response_type=code&state=${stateString}`;
+
     default:
       return null;
   }
@@ -62,7 +70,7 @@ exports.authorizePlatform = (req, res) => {
   const authUrl = getOAuthUrl(platform, userId);
   if (!authUrl) {
     // authUrl is null — either unsupported platform or missing credentials
-    const missingCreds = ['twitter', 'linkedin', 'youtube', 'pinterest'].includes(platform);
+    const missingCreds = ['twitter', 'linkedin', 'youtube', 'pinterest', 'threads'].includes(platform);
     if (missingCreds) {
       return res.redirect(`${FRONTEND_URL}/social?error=missing_credentials&platform=${platform}`);
     }
@@ -517,6 +525,79 @@ exports.handleCallback = async (req, res) => {
         await targetUser.save();
         console.log(`✅ [PINTEREST] Saved credentials for ${targetUser.email}`);
       }
+    } else if (platform === 'threads') {
+      const REDIRECT_URI = `${BACKEND_URL}/api/social/callback/threads`;
+      const threadsAppId = process.env.FACEBOOK_APP_ID;
+      const threadsAppSecret = process.env.FACEBOOK_APP_SECRET;
+
+      if (!threadsAppId || !threadsAppSecret) {
+        throw new Error('Facebook App ID/Secret (used for Threads) not configured in .env');
+      }
+
+      // 1. Exchange code for short-lived token
+      const tokenParams = new URLSearchParams();
+      tokenParams.append('client_id', threadsAppId);
+      tokenParams.append('client_secret', threadsAppSecret);
+      tokenParams.append('grant_type', 'authorization_code');
+      tokenParams.append('redirect_uri', REDIRECT_URI);
+      tokenParams.append('code', code);
+
+      const tokenRes = await axios.post(
+        'https://graph.threads.net/oauth/access_token',
+        tokenParams,
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
+
+      const shortToken = tokenRes.data.access_token;
+      const threadsUserId = tokenRes.data.user_id;
+      console.log(`✅ [THREADS] Short-lived token obtained for user_id: ${threadsUserId}`);
+
+      // 2. Exchange for long-lived token (60 days)
+      let access_token = shortToken;
+      try {
+        const llRes = await axios.get(
+          `https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=${threadsAppSecret}&access_token=${shortToken}`
+        );
+        access_token = llRes.data.access_token;
+        console.log(`✅ [THREADS] Long-lived token obtained. Expires in: ${Math.round((llRes.data.expires_in || 0) / 86400)} days`);
+      } catch (llErr) {
+        console.warn(`⚠️ [THREADS] Could not exchange for long-lived token:`, llErr.response?.data || llErr.message);
+      }
+
+      // 3. Fetch Threads profile (username)
+      let threadsUsername = 'Threads User';
+      try {
+        const profileRes = await axios.get(
+          `https://graph.threads.net/v1.0/me?fields=id,username,name&access_token=${access_token}`
+        );
+        threadsUsername = profileRes.data?.username || profileRes.data?.name || 'Threads User';
+        console.log(`✅ [THREADS] Profile fetched: @${threadsUsername}`);
+      } catch (profErr) {
+        console.error('❌ [THREADS] Profile fetch failed:', profErr.response?.data || profErr.message);
+      }
+
+      // 4. Save to User Model
+      let targetUser = null;
+      if (userId) {
+        if (userId.includes('@')) {
+          targetUser = await User.findOne({ email: userId });
+        } else {
+          try { targetUser = await User.findById(userId); } catch (e) {}
+        }
+      }
+      if (!targetUser) targetUser = await User.findOne({});
+
+      if (targetUser) {
+        if (!targetUser.socialAccounts) targetUser.socialAccounts = {};
+        targetUser.socialAccounts.threads = {
+          accessToken: access_token,
+          threadsUserId: threadsUserId,
+          username: threadsUsername
+        };
+        targetUser.markModified('socialAccounts');
+        await targetUser.save();
+        console.log(`✅ [THREADS] Saved credentials for ${targetUser.email}`);
+      }
     }
 
     res.redirect(`${FRONTEND_URL}/social?success=true&platform=${platform}`);
@@ -548,6 +629,7 @@ exports.getSocialAccounts = async (req, res) => {
       linkedin: !!user.socialAccounts?.linkedin?.accessToken,
       youtube: !!user.socialAccounts?.youtube?.accessToken,
       pinterest: !!user.socialAccounts?.pinterest?.accessToken || !!process.env.PINTEREST_PERSONAL_ACCESS_TOKEN,
+      threads: !!user.socialAccounts?.threads?.accessToken,
       handles: {
         facebook: user.socialAccounts?.facebook?.pageId ? "Connected Page" : null,
         instagram: user.socialAccounts?.instagram?.username ? `@${user.socialAccounts.instagram.username}` : null,
@@ -555,6 +637,7 @@ exports.getSocialAccounts = async (req, res) => {
         youtube: user.socialAccounts?.youtube?.channelTitle ? user.socialAccounts.youtube.channelTitle : null,
         linkedin: user.socialAccounts?.linkedin?.linkedinName ? user.socialAccounts.linkedin.linkedinName : null,
         pinterest: user.socialAccounts?.pinterest?.username ? `@${user.socialAccounts.pinterest.username}` : (process.env.PINTEREST_PERSONAL_ACCESS_TOKEN ? "Developer Account" : null),
+        threads: user.socialAccounts?.threads?.username ? `@${user.socialAccounts.threads.username}` : null,
       }
     };
 

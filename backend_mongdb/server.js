@@ -19,6 +19,17 @@ app.use(cors({
   },
   credentials: true,
 }));
+// ── Raw-body capture for webhook signature verification ──────────────────────
+// Must be registered BEFORE express.json() so we have access to the unmodified
+// byte stream when computing the HMAC against the incoming signature header.
+app.use("/api/webhook/incoming", express.raw({ type: "*/*", limit: "5mb" }), (req, _res, next) => {
+  // Store the raw buffer; webhookController reads it as req.rawBody.
+  req.rawBody = req.body;
+  // Re-parse as JSON so the downstream handler gets req.body as an object.
+  try { req.body = JSON.parse(req.rawBody.toString("utf8")); } catch { /* leave as-is */ }
+  next();
+});
+
 app.use(express.json({ limit: "25mb" })); // allow base64 image uploads (4MB img ≈ 5.5MB base64)
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
@@ -32,7 +43,8 @@ app.use("/api/campaign", require("./API routes/campaignRoutes"));
 app.use("/api/admin", require("./API routes/adminRoutes"));
 app.use("/api/users", require("./API routes/userroutes"));
 app.use("/api/social", require("./API routes/socialRoutes"));
-app.use("/api/agent", require("./API routes/agentRoutes"));
+app.use("/api/agent",   require("./API routes/agentRoutes"));
+app.use("/api/webhook", require("./API routes/webhookRoutes"));
 
 app.get("/", (req, res) => {
   res.send("Vulpinix AI Backend is running 🚀");

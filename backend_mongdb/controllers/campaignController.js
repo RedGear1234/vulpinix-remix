@@ -47,8 +47,9 @@ const publishCampaign = async (campaign) => {
       const isYoutubeSelected = platformsLower.includes('youtube');
       const isLinkedinSelected = platformsLower.includes('linkedin');
       const isPinterestSelected = platformsLower.includes('pinterest');
+      const isThreadsSelected = platformsLower.includes('threads');
 
-      if (isFacebookSelected || isInstagramSelected || isTwitterSelected || isYoutubeSelected || isLinkedinSelected || isPinterestSelected) {
+      if (isFacebookSelected || isInstagramSelected || isTwitterSelected || isYoutubeSelected || isLinkedinSelected || isPinterestSelected || isThreadsSelected) {
         const User = require("../models/user");
         const axios = require("axios");
 
@@ -694,6 +695,86 @@ const publishCampaign = async (campaign) => {
             }
             console.error("❌ [PINTEREST] Pin creation failed:", errorMsg);
             publishResults.pinterest = { status: "failed", error: errorMsg };
+          }
+        }
+
+        // --- STEP 10: Publish to Threads ---
+        if (isThreadsSelected) {
+          console.log("🔍 [THREADS] Starting Threads publish flow...");
+          try {
+            const threadsToken = user?.socialAccounts?.threads?.accessToken;
+            const threadsUserId = user?.socialAccounts?.threads?.threadsUserId;
+
+            if (!threadsToken || !threadsUserId) {
+              console.log("⚠️ [THREADS] No Threads access token or user ID found. User must connect Threads first.");
+              publishResults.threads = { status: "failed", error: "Threads account not connected. Please connect Threads from the Social Accounts page." };
+            } else {
+              const postText = adCaption || adCopyText || campaignName || "New post from Vulpinix";
+
+              // Threads supports text-only OR image posts via a media container → publish flow
+              if (publicImageUrl) {
+                // A. Create image media container
+                console.log("🔍 [THREADS] Creating image media container on Threads...");
+                const containerRes = await axios.post(
+                  `https://graph.threads.net/v1.0/${threadsUserId}/threads`,
+                  {
+                    media_type: 'IMAGE',
+                    image_url: publicImageUrl,
+                    text: postText,
+                    access_token: threadsToken
+                  }
+                );
+                const creationId = containerRes.data?.id;
+                console.log("🔍 [THREADS] Container ID:", creationId);
+
+                if (!creationId) throw new Error("Failed to create Threads media container.");
+
+                // B. Wait briefly for container to be ready
+                await new Promise(r => setTimeout(r, 3000));
+
+                // C. Publish the container
+                const publishRes = await axios.post(
+                  `https://graph.threads.net/v1.0/${threadsUserId}/threads_publish`,
+                  { creation_id: creationId, access_token: threadsToken }
+                );
+                const postId = publishRes.data?.id;
+                console.log("✅ [THREADS] Image post published! Post ID:", postId);
+                isPublishedAny = true;
+                publishResults.threads = { status: "success", id: postId };
+
+              } else {
+                // Text-only Threads post
+                console.log("🔍 [THREADS] Creating text-only post on Threads...");
+
+                // A. Create text container
+                const containerRes = await axios.post(
+                  `https://graph.threads.net/v1.0/${threadsUserId}/threads`,
+                  {
+                    media_type: 'TEXT',
+                    text: postText,
+                    access_token: threadsToken
+                  }
+                );
+                const creationId = containerRes.data?.id;
+                if (!creationId) throw new Error("Failed to create Threads text container.");
+
+                await new Promise(r => setTimeout(r, 2000));
+
+                // B. Publish it
+                const publishRes = await axios.post(
+                  `https://graph.threads.net/v1.0/${threadsUserId}/threads_publish`,
+                  { creation_id: creationId, access_token: threadsToken }
+                );
+                const postId = publishRes.data?.id;
+                console.log("✅ [THREADS] Text post published! Post ID:", postId);
+                isPublishedAny = true;
+                publishResults.threads = { status: "success", id: postId };
+              }
+            }
+          } catch (thErr) {
+            const errorMsg = thErr.response?.data?.error?.message || thErr.message;
+            console.error("❌ [THREADS] Publish failed:", errorMsg);
+            publishResults.threads = { status: "failed", error: errorMsg };
           }
         }
 
