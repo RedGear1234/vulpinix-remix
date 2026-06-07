@@ -152,6 +152,7 @@ exports.handleCallback = async (req, res) => {
       let fbPageToken = "";
       let igAccountId = "";
       let igUsername = "";
+      let igDetailsData = {};
 
       try {
         const pagesRes = await axios.get(`https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`);
@@ -165,7 +166,6 @@ exports.handleCallback = async (req, res) => {
           } catch (e) {}
         }
 
-        let igDetailsData = {};
         if (pages.length > 0) {
           // We'll take the first page that has a linked Instagram account, or just the first page
           let selectedPage = pages[0];
