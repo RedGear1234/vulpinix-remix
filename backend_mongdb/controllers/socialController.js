@@ -3,9 +3,11 @@ const express = require('express');
 const axios = require('axios');
 const User = require('../models/user');
 
-// ── Base URLs (set these on Render dashboard) ─────────────────────────────────
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+// ── Base URLs ─────────────────────────────────────────────────────────────────
+// Override via BACKEND_URL / FRONTEND_URL env vars on Render dashboard.
+// Defaults to production URLs so OAuth works even without env vars set.
+const BACKEND_URL = process.env.BACKEND_URL || 'https://vulpinix-backend.onrender.com';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://vulpinix-remix.vercel.app';
 
 // Helper to get OAuth URL based on platform
 const getOAuthUrl = (platform, userId) => {
