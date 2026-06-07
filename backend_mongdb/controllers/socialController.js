@@ -19,14 +19,14 @@ const getOAuthUrl = (platform, userId) => {
     case 'facebook':
       const fbAppId = process.env.FACEBOOK_APP_ID || 'YOUR_FACEBOOK_APP_ID';
       const fbScope = 'public_profile,email,instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,pages_manage_posts';
-      return `https://www.facebook.com/v18.0/dialog/oauth?client_id=${fbAppId}&redirect_uri=${REDIRECT_URI}&state=${stateString}&scope=${fbScope}&auth_type=rerequest`;
+      return `https://www.facebook.com/v18.0/dialog/oauth?client_id=${fbAppId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${encodeURIComponent(stateString)}&scope=${fbScope}&auth_type=rerequest`;
       
     case 'twitter':
       const twitterClientId = process.env.TWITTER_CLIENT_ID;
       if (!twitterClientId || twitterClientId.startsWith('paste_') || twitterClientId === 'your_twitter_client_id') {
         return null; // Signals missing config
       }
-      return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${twitterClientId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=tweet.read%20users.read%20tweet.write%20offline.access&state=${stateString}&code_challenge=challenge&code_challenge_method=plain`;
+      return `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${twitterClientId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=tweet.read%20users.read%20tweet.write%20offline.access&state=${encodeURIComponent(stateString)}&code_challenge=challenge&code_challenge_method=plain`;
       
     case 'linkedin':
       const linkedinClientId = process.env.LINKEDIN_CLIENT_ID;
@@ -34,13 +34,13 @@ const getOAuthUrl = (platform, userId) => {
       if (!linkedinClientId || linkedinClientId.startsWith('your_') || !linkedinClientSecret) return null;
       // openid and profile for identity, w_member_social for posting.
       // Note: User MUST add "Sign In with LinkedIn using OpenID Connect" product in their developer portal.
-      return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${linkedinClientId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${stateString}&scope=openid%20profile%20w_member_social`;
+      return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${linkedinClientId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${encodeURIComponent(stateString)}&scope=openid%20profile%20w_member_social`;
       
     case 'youtube':
       const googleClientId = process.env.GOOGLE_CLIENT_ID;
       if (!googleClientId || googleClientId === 'YOUR_GOOGLE_CLIENT_ID') return null;
       // Request offline access to get a refresh token, and prompt=consent to ensure we get it
-      return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/youtube.upload%20https://www.googleapis.com/auth/youtube.readonly&access_type=offline&prompt=consent&state=${stateString}`;
+      return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=https://www.googleapis.com/auth/youtube.upload%20https://www.googleapis.com/auth/youtube.readonly&access_type=offline&prompt=consent&state=${encodeURIComponent(stateString)}`;
       
     case 'pinterest':
       const pinterestClientId = process.env.PINTEREST_CLIENT_ID;
@@ -48,15 +48,15 @@ const getOAuthUrl = (platform, userId) => {
       if (!pinterestClientId || pinterestClientId.startsWith('your_') || !pinterestClientSecret) return null;
       // Use https to bypass Pinterest's developer dashboard validation restrictions
       const pinterestRedirectUri = `${BACKEND_URL}/api/social/callback/pinterest`;
-      return `https://www.pinterest.com/oauth/?client_id=${pinterestClientId}&redirect_uri=${encodeURIComponent(pinterestRedirectUri)}&response_type=code&scope=user_accounts:read,boards:read,pins:read,pins:write&state=${stateString}`;
-
+      return `https://www.pinterest.com/oauth/?client_id=${pinterestClientId}&redirect_uri=${encodeURIComponent(pinterestRedirectUri)}&response_type=code&scope=user_accounts:read,boards:read,pins:read,pins:write&state=${encodeURIComponent(stateString)}`;
+ 
     case 'threads':
       const threadsAppId = process.env.FACEBOOK_APP_ID;
       const threadsAppSecret = process.env.FACEBOOK_APP_SECRET;
       if (!threadsAppId || !threadsAppSecret) return null;
       const threadsRedirectUri = `${BACKEND_URL}/api/social/callback/threads`;
       // Threads OAuth — uses threads.net with threads_basic scope
-      return `https://threads.net/oauth/authorize?client_id=${threadsAppId}&redirect_uri=${encodeURIComponent(threadsRedirectUri)}&scope=threads_basic,threads_content_publish&response_type=code&state=${stateString}`;
+      return `https://threads.net/oauth/authorize?client_id=${threadsAppId}&redirect_uri=${encodeURIComponent(threadsRedirectUri)}&scope=threads_basic,threads_content_publish&response_type=code&state=${encodeURIComponent(stateString)}`;
 
     default:
       return null;
