@@ -94,13 +94,19 @@ exports.handleCallback = async (req, res) => {
 
   try {
     let userId = null;
-    console.log(`[OAUTH CALLBACK] Received state from Google:`, state);
+    console.log(`[OAUTH CALLBACK] Received state:`, state);
     
-    if (state && state.startsWith('userId=')) {
-      userId = state.split('=')[1];
-      console.log(`[OAUTH CALLBACK] Extracted userId:`, userId);
-    } else {
-      console.log(`[OAUTH CALLBACK] State did not contain userId. Using default fallback.`);
+    try {
+      // Decode in case the browser double-encoded it
+      const decodedState = decodeURIComponent(state || '');
+      if (decodedState.startsWith('userId=')) {
+        userId = decodedState.split('=')[1].trim();
+        console.log(`[OAUTH CALLBACK] Extracted userId from state:`, userId);
+      } else {
+        console.log(`[OAUTH CALLBACK] State did not contain userId:`, decodedState);
+      }
+    } catch (stateErr) {
+      console.warn('[OAUTH CALLBACK] Could not parse state parameter:', stateErr.message);
     }
 
     if (platform === 'facebook' || platform === 'instagram') {
@@ -193,55 +199,83 @@ exports.handleCallback = async (req, res) => {
       }
 
       // 3. Save to User Model
+      // Priority: state userId → Meta email lookup → error out
       let targetUser = null;
       if (userId) {
         if (userId.includes('@')) {
-          targetUser = await User.findOne({ email: userId });
+          targetUser = await User.findOne({ email: userId.toLowerCase().trim() });
+          console.log(`[OAUTH] Looked up by email "${userId}": ${targetUser ? 'found' : 'NOT found'}`);
         } else {
-          try { targetUser = await User.findById(userId); } catch (e) {}
+          try {
+            targetUser = await User.findById(userId);
+            console.log(`[OAUTH] Looked up by ID "${userId}": ${targetUser ? 'found' : 'NOT found'}`);
+          } catch (e) {
+            console.warn('[OAUTH] findById failed:', e.message);
+          }
         }
-      } 
-      if (!targetUser) {
-        targetUser = await User.findOne({ email: "shubhamchavan@live.com" });
       }
 
-      if (targetUser) {
-        if (!targetUser.socialAccounts) targetUser.socialAccounts = {};
-        
-        // Only save the platform the user actually clicked to connect
-        if (platform === 'facebook') {
-          targetUser.socialAccounts.facebook = {
+      // Fallback: try to find via the Meta user's own email
+      if (!targetUser) {
+        console.log('[OAUTH] userId lookup failed. Trying Meta /me?fields=email to identify user...');
+        try {
+          const meRes = await axios.get(`https://graph.facebook.com/v18.0/me?fields=email&access_token=${accessToken}`);
+          const metaEmail = meRes.data?.email;
+          console.log('[OAUTH] Meta account email:', metaEmail);
+          if (metaEmail) {
+            targetUser = await User.findOne({ email: metaEmail.toLowerCase().trim() });
+            console.log(`[OAUTH] Looked up by Meta email "${metaEmail}": ${targetUser ? 'found' : 'NOT found'}`);
+          }
+        } catch (meErr) {
+          console.warn('[OAUTH] Could not fetch Meta /me email:', meErr.response?.data?.error?.message || meErr.message);
+        }
+      }
+
+      if (!targetUser) {
+        console.error('[OAUTH] ❌ Could not identify any user for this OAuth callback. Aborting save.');
+        return res.redirect(`${FRONTEND_URL}/social?error=${encodeURIComponent('Could not identify your account. Please log in to Vulpinix first and try again.')}`);
+      }
+
+      console.log(`[OAUTH] ✅ Target user identified: ${targetUser.email}`);
+      if (!targetUser.socialAccounts) targetUser.socialAccounts = {};
+
+      // Only save the platform the user actually clicked to connect
+      if (platform === 'facebook') {
+        targetUser.socialAccounts.facebook = {
+          accessToken: accessToken,
+          pageId: fbPageId,
+          pageAccessToken: fbPageToken
+        };
+        targetUser.markModified('socialAccounts');
+        await targetUser.save();
+        console.log(`✅ Linked Facebook for user: ${targetUser.email}`);
+        return res.redirect(`${FRONTEND_URL}/social?success=true&platform=facebook`);
+      }
+
+      if (platform === 'instagram') {
+        if (igAccountId) {
+          targetUser.socialAccounts.instagram = {
             accessToken: accessToken,
+            igAccountId: igAccountId,
+            username: igUsername || igDetailsData.username,
+            name: igDetailsData.name || "",
+            profilePictureUrl: igDetailsData.profile_picture_url || "",
+            biography: igDetailsData.biography || "",
+            followersCount: igDetailsData.followers_count || 0,
+            followsCount: igDetailsData.follows_count || 0,
+            mediaCount: igDetailsData.media_count || 0,
             pageId: fbPageId,
             pageAccessToken: fbPageToken
           };
-          console.log(`✅ Linked Facebook for user: ${targetUser.email}`);
+          targetUser.markModified('socialAccounts');
+          await targetUser.save();
+          console.log(`✅ Linked Instagram (IG Account: ${igAccountId}) for user: ${targetUser.email}`);
+          return res.redirect(`${FRONTEND_URL}/social?success=true&platform=instagram`);
+        } else {
+          console.log(`⚠️ No IG Business Account found on Page for user: ${targetUser.email}`);
+          console.log(`   → Make sure your Instagram is a Business/Creator account linked to your Facebook Page.`);
+          return res.redirect(`${FRONTEND_URL}/social?error=${encodeURIComponent('No Instagram Business account found. Ensure your Instagram is a Business/Creator account linked to your Facebook Page.')}`);
         }
-        
-        if (platform === 'instagram') {
-          if (igAccountId) {
-            targetUser.socialAccounts.instagram = {
-              accessToken: accessToken,
-              igAccountId: igAccountId,
-              username: igUsername || igDetailsData.username,
-              name: igDetailsData.name || "",
-              profilePictureUrl: igDetailsData.profile_picture_url || "",
-              biography: igDetailsData.biography || "",
-              followersCount: igDetailsData.followers_count || 0,
-              followsCount: igDetailsData.follows_count || 0,
-              mediaCount: igDetailsData.media_count || 0,
-              pageId: fbPageId,
-              pageAccessToken: fbPageToken
-            };
-            console.log(`✅ Linked Instagram (IG Account: ${igAccountId}) for user: ${targetUser.email}`);
-          } else {
-            console.log(`⚠️ No IG Business Account found on Page for user: ${targetUser.email}`);
-            console.log(`   → Make sure your Instagram is a Business/Creator account linked to your Facebook Page.`);
-            return res.redirect(`${FRONTEND_URL}/social?error=${encodeURIComponent("No Instagram Business account found. Ensure it is linked to your Facebook Page.")}`);
-          }
-        }
-        
-        await targetUser.save();
       }
     } else if (platform === 'twitter') {
       const REDIRECT_URI = `${BACKEND_URL}/api/social/callback/twitter`;
