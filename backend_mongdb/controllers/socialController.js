@@ -163,21 +163,25 @@ exports.handleCallback = async (req, res) => {
           let selectedPage = pages[0];
           
           for (const p of pages) {
-            const igRes = await axios.get(`https://graph.facebook.com/v18.0/${p.id}?fields=instagram_business_account&access_token=${p.access_token || accessToken}`);
-            if (igRes.data?.instagram_business_account) {
-              selectedPage = p;
-              igAccountId = igRes.data.instagram_business_account.id;
-              
-              // Get IG details
-              try {
-                const igDetails = await axios.get(`https://graph.facebook.com/v18.0/${igAccountId}?fields=username,name,profile_picture_url,biography,followers_count,follows_count,media_count&access_token=${p.access_token || accessToken}`);
-                igDetailsData = igDetails.data;
-                igUsername = igDetails.data.username;
-              } catch (detErr) {
-                console.error("Error fetching IG details:", detErr.response?.data || detErr.message);
-                igUsername = "Instagram User";
+            try {
+              const igRes = await axios.get(`https://graph.facebook.com/v18.0/${p.id}?fields=instagram_business_account&access_token=${p.access_token || accessToken}`);
+              if (igRes.data?.instagram_business_account) {
+                selectedPage = p;
+                igAccountId = igRes.data.instagram_business_account.id;
+                
+                // Get IG details
+                try {
+                  const igDetails = await axios.get(`https://graph.facebook.com/v18.0/${igAccountId}?fields=username,name,profile_picture_url,biography,followers_count,follows_count,media_count&access_token=${p.access_token || accessToken}`);
+                  igDetailsData = igDetails.data;
+                  igUsername = igDetails.data.username;
+                } catch (detErr) {
+                  console.error("Error fetching IG details:", detErr.response?.data || detErr.message);
+                  igUsername = "Instagram User";
+                }
+                break;
               }
-              break;
+            } catch (pageErr) {
+              console.warn(`⚠️ Could not check IG account for page ${p.id}:`, pageErr.response?.data?.error?.message || pageErr.message);
             }
           }
           
@@ -233,6 +237,7 @@ exports.handleCallback = async (req, res) => {
           } else {
             console.log(`⚠️ No IG Business Account found on Page for user: ${targetUser.email}`);
             console.log(`   → Make sure your Instagram is a Business/Creator account linked to your Facebook Page.`);
+            return res.redirect(`${FRONTEND_URL}/social?error=${encodeURIComponent("No Instagram Business account found. Ensure it is linked to your Facebook Page.")}`);
           }
         }
         
