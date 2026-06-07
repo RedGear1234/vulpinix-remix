@@ -157,6 +157,7 @@ exports.handleCallback = async (req, res) => {
           } catch (e) {}
         }
 
+        let igDetailsData = {};
         if (pages.length > 0) {
           // We'll take the first page that has a linked Instagram account, or just the first page
           let selectedPage = pages[0];
@@ -167,9 +168,15 @@ exports.handleCallback = async (req, res) => {
               selectedPage = p;
               igAccountId = igRes.data.instagram_business_account.id;
               
-              // Get IG username
-              const igDetails = await axios.get(`https://graph.facebook.com/v18.0/${igAccountId}?fields=username&access_token=${p.access_token || accessToken}`);
-              igUsername = igDetails.data.username;
+              // Get IG details
+              try {
+                const igDetails = await axios.get(`https://graph.facebook.com/v18.0/${igAccountId}?fields=username,name,profile_picture_url,biography,followers_count,follows_count,media_count&access_token=${p.access_token || accessToken}`);
+                igDetailsData = igDetails.data;
+                igUsername = igDetails.data.username;
+              } catch (detErr) {
+                console.error("Error fetching IG details:", detErr.response?.data || detErr.message);
+                igUsername = "Instagram User";
+              }
               break;
             }
           }
@@ -212,7 +219,13 @@ exports.handleCallback = async (req, res) => {
             targetUser.socialAccounts.instagram = {
               accessToken: accessToken,
               igAccountId: igAccountId,
-              username: igUsername,
+              username: igUsername || igDetailsData.username,
+              name: igDetailsData.name || "",
+              profilePictureUrl: igDetailsData.profile_picture_url || "",
+              biography: igDetailsData.biography || "",
+              followersCount: igDetailsData.followers_count || 0,
+              followsCount: igDetailsData.follows_count || 0,
+              mediaCount: igDetailsData.media_count || 0,
               pageId: fbPageId,
               pageAccessToken: fbPageToken
             };
@@ -622,6 +635,54 @@ exports.getSocialAccounts = async (req, res) => {
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    let igDetails = null;
+    if (user.socialAccounts?.instagram?.igAccountId) {
+      const ig = user.socialAccounts.instagram;
+      const token = ig.pageAccessToken || ig.accessToken;
+      if (token) {
+        try {
+          const igRes = await axios.get(`https://graph.facebook.com/v18.0/${ig.igAccountId}?fields=username,name,profile_picture_url,biography,followers_count,follows_count,media_count&access_token=${token}`);
+          if (igRes.data) {
+            igDetails = {
+              username: igRes.data.username,
+              name: igRes.data.name || "",
+              profilePictureUrl: igRes.data.profile_picture_url || "",
+              biography: igRes.data.biography || "",
+              followersCount: igRes.data.followers_count || 0,
+              followsCount: igRes.data.follows_count || 0,
+              mediaCount: igRes.data.media_count || 0,
+            };
+            
+            // Save to database
+            user.socialAccounts.instagram.username = igRes.data.username;
+            user.socialAccounts.instagram.name = igRes.data.name || "";
+            user.socialAccounts.instagram.profilePictureUrl = igRes.data.profile_picture_url || "";
+            user.socialAccounts.instagram.biography = igRes.data.biography || "";
+            user.socialAccounts.instagram.followersCount = igRes.data.followers_count || 0;
+            user.socialAccounts.instagram.followsCount = igRes.data.follows_count || 0;
+            user.socialAccounts.instagram.mediaCount = igRes.data.media_count || 0;
+            user.markModified('socialAccounts');
+            await user.save();
+          }
+        } catch (igErr) {
+          console.warn("⚠️ Could not fetch latest Instagram details in status endpoint:", igErr.response?.data || igErr.message);
+        }
+      }
+    }
+
+    if (!igDetails && user.socialAccounts?.instagram?.igAccountId) {
+      const ig = user.socialAccounts.instagram;
+      igDetails = {
+        username: ig.username,
+        name: ig.name || "",
+        profilePictureUrl: ig.profilePictureUrl || "",
+        biography: ig.biography || "",
+        followersCount: ig.followersCount || 0,
+        followsCount: ig.followsCount || 0,
+        mediaCount: ig.mediaCount || 0,
+      };
+    }
+
     const socialStatus = {
       facebook: !!user.socialAccounts?.facebook?.accessToken,
       instagram: !!user.socialAccounts?.instagram?.igAccountId,
@@ -641,7 +702,7 @@ exports.getSocialAccounts = async (req, res) => {
       }
     };
 
-    res.json({ success: true, socialStatus });
+    res.json({ success: true, socialStatus, instagramInfo: igDetails });
   } catch (err) {
     console.error("Error fetching social accounts:", err);
     res.status(500).json({ error: "Server error" });

@@ -19,7 +19,19 @@ const userSchema = new mongoose.Schema(
     onboardingCompleted: { type: Boolean, default: false },
     socialAccounts: {
       facebook: { accessToken: String, pageId: String, pageAccessToken: String },
-      instagram: { accessToken: String, igAccountId: String, username: String, pageId: String, pageAccessToken: String },
+      instagram: { 
+        accessToken: String, 
+        igAccountId: String, 
+        username: String, 
+        pageId: String, 
+        pageAccessToken: String,
+        name: { type: String, default: "" },
+        profilePictureUrl: { type: String, default: "" },
+        biography: { type: String, default: "" },
+        followersCount: { type: Number, default: 0 },
+        followsCount: { type: Number, default: 0 },
+        mediaCount: { type: Number, default: 0 }
+      },
       twitter: { accessToken: String, refreshToken: String, username: String, tokenSecret: String },
       linkedin: { accessToken: String, linkedinId: String, linkedinName: String },
       youtube: { accessToken: String, refreshToken: String, channelId: String, channelTitle: String },

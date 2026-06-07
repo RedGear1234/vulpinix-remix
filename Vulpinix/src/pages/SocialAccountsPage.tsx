@@ -107,6 +107,24 @@ const S = `
   .vxsa-btn-ghost:hover{background:rgba(255,255,255,0.08);color:#94a3b8;}
   @media(max-width:1000px){.vxsa-split{grid-template-columns:230px 1fr;}.vxsa-stats{grid-template-columns:repeat(2,1fr);}}
   @media(max-width:760px){.vxsa-split{grid-template-columns:1fr;}.vxsa-scroll{padding:20px 16px 80px;}}
+  .vxsa-ig-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:24px;margin-bottom:24px;display:flex;gap:24px;align-items:center;}
+  .vxsa-ig-avatar-container{position:relative;flex-shrink:0;}
+  .vxsa-ig-avatar-ring{padding:3px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;}
+  .vxsa-ig-avatar{width:80px;height:80px;border-radius:50%;border:3px solid #070b12;object-fit:cover;}
+  .vxsa-ig-info{flex:1;display:flex;flex-direction:column;gap:6px;}
+  .vxsa-ig-title-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .vxsa-ig-name{font-size:18px;font-weight:800;color:#f1f5f9;}
+  .vxsa-ig-username{font-size:14px;color:#e1306c;font-weight:600;}
+  .vxsa-ig-bio{font-size:13px;color:#94a3b8;line-height:1.5;margin:4px 0;}
+  .vxsa-ig-metrics{display:flex;gap:24px;margin-top:4px;}
+  .vxsa-ig-metric{display:flex;flex-direction:column;gap:2px;}
+  .vxsa-ig-metric-val{font-size:15px;font-weight:800;color:#f1f5f9;}
+  .vxsa-ig-metric-lbl{font-size:11px;color:#64748b;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;}
+  @media(max-width:600px){
+    .vxsa-ig-card{flex-direction:column;text-align:center;align-items:center;padding:20px;}
+    .vxsa-ig-metrics{justify-content:center;gap:18px;}
+    .vxsa-ig-title-row{justify-content:center;}
+  }
 `;
 
 export function getLinkedAccounts():string[]{try{return JSON.parse(localStorage.getItem("linkedSocialAccounts")||"[]");}catch{return[];}}
@@ -120,6 +138,15 @@ export default function SocialAccountsPage(){
   const [userName,setUserName]=useState("User");
   const [linked,setLinked]=useState<string[]>([]);
   const [handles,setHandles]=useState<Record<string,string>>({});
+  const [instagramInfo,setInstagramInfo]=useState<{
+    username:string;
+    name:string;
+    profilePictureUrl:string;
+    biography:string;
+    followersCount:number;
+    followsCount:number;
+    mediaCount:number;
+  }|null>(null);
   const [loading,setLoading]=useState(false);
   const [selected,setSelected]=useState(SOCIAL_PLATFORMS[0].id);
   // Real per-platform data from campaigns
@@ -140,10 +167,18 @@ export default function SocialAccountsPage(){
         const h:Record<string,string>={};
         Object.entries(data.socialStatus.handles||{}).forEach(([k,v])=>{if(v)h[k]=v as string;});
         setHandles(h);localStorage.setItem("socialHandles",JSON.stringify(h));
+        if(data.instagramInfo){
+          setInstagramInfo(data.instagramInfo);
+          localStorage.setItem("instagramInfo",JSON.stringify(data.instagramInfo));
+        } else {
+          setInstagramInfo(null);
+          localStorage.removeItem("instagramInfo");
+        }
       }
     }catch{
       setLinked(getLinkedAccounts());
       try{setHandles(JSON.parse(localStorage.getItem("socialHandles")||"{}"));}catch{}
+      try{setInstagramInfo(JSON.parse(localStorage.getItem("instagramInfo")||"null"));}catch{}
     }finally{setLoading(false);}
     // Load real campaign analytics per platform
     const token=localStorage.getItem("authToken");
@@ -304,10 +339,47 @@ export default function SocialAccountsPage(){
                   <div className="vxsa-panel-body">
                     {isLinked?(
                       <>
-                        {handles[selected]&&(
+                        {selected === "instagram" && instagramInfo ? (
+                          <div className="vxsa-ig-card">
+                            <div className="vxsa-ig-avatar-container">
+                              <div className="vxsa-ig-avatar-ring">
+                                <img 
+                                  src={instagramInfo.profilePictureUrl || "https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=150"} 
+                                  alt={instagramInfo.name || instagramInfo.username} 
+                                  className="vxsa-ig-avatar" 
+                                />
+                              </div>
+                            </div>
+                            <div className="vxsa-ig-info">
+                              <div className="vxsa-ig-title-row">
+                                <span className="vxsa-ig-name">{instagramInfo.name || "Instagram Account"}</span>
+                                <span className="vxsa-ig-username">
+                                  {instagramInfo.username.startsWith('@') ? instagramInfo.username : `@${instagramInfo.username}`}
+                                </span>
+                              </div>
+                              {instagramInfo.biography && (
+                                <p className="vxsa-ig-bio">{instagramInfo.biography}</p>
+                              )}
+                              <div className="vxsa-ig-metrics">
+                                <div className="vxsa-ig-metric">
+                                  <span className="vxsa-ig-metric-val">{fmtN(instagramInfo.followersCount)}</span>
+                                  <span className="vxsa-ig-metric-lbl">Followers</span>
+                                </div>
+                                <div className="vxsa-ig-metric">
+                                  <span className="vxsa-ig-metric-val">{fmtN(instagramInfo.followsCount)}</span>
+                                  <span className="vxsa-ig-metric-lbl">Following</span>
+                                </div>
+                                <div className="vxsa-ig-metric">
+                                  <span className="vxsa-ig-metric-val">{fmtN(instagramInfo.mediaCount)}</span>
+                                  <span className="vxsa-ig-metric-lbl">Posts</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : handles[selected] && (
                           <div className="vxsa-handle">
                             <div style={{width:20,height:20,borderRadius:6,background:platform.gradient,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}}>{platform.icon(11)}</div>
-                            @{handles[selected]}
+                            {handles[selected].startsWith('@') ? handles[selected] : `@${handles[selected]}`}
                           </div>
                         )}
                         <div className="vxsa-section-title"><BarChart3 size={12}/> Campaign Performance on {platform.name}</div>
