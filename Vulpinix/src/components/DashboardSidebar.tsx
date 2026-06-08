@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard, BarChart3, Upload, User,
@@ -178,6 +179,48 @@ const SB = `
   .vxsb-link-ai.is-active::before {
     background: linear-gradient(180deg, #fbbf24, #f97316);
   }
+
+  /* ── Analytics sub-items ─────────────────────────────── */
+  .vxsb-sub-nav {
+    margin: 2px 0 4px 14px;
+    border-left: 1px solid rgba(167,139,250,0.15);
+    padding-left: 10px;
+    overflow: hidden;
+    transition: max-height 0.25s ease, opacity 0.2s ease;
+  }
+  .vxsb-sub-nav.collapsed { max-height: 0; opacity: 0; pointer-events: none; }
+  .vxsb-sub-nav.expanded  { max-height: 200px; opacity: 1; }
+  .vxsb-sub-link {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+    border: 1px solid transparent;
+    margin-bottom: 2px;
+    color: #4a5568;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .vxsb-sub-link:hover { color: #a0aec0; background: rgba(255,255,255,0.04); }
+  .vxsb-sub-link.is-active {
+    color: #e1a0c4;
+    background: rgba(225,48,108,0.10);
+    border-color: rgba(225,48,108,0.2);
+  }
+  .vxsb-sub-link-ic {
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.04);
+    color: #475569;
+    transition: all 0.18s;
+  }
+  .vxsb-sub-link:hover .vxsb-sub-link-ic { background: rgba(255,255,255,0.07); color: #94a3b8; }
+  .vxsb-sub-link.is-active .vxsb-sub-link-ic { background: rgba(225,48,108,0.15); color: #f472b6; }
 
   /* ── Divider ─────────────────────────────────────────── */
   .vxsb-divider {
@@ -370,11 +413,14 @@ const MAIN_NAV = [
   { label: "Upload Campaign", icon: <Upload size={18} />,          path: "/upload" },
   { label: "Create Post",     icon: <PenSquare size={18} />,       path: "/create-post" },
   { label: "Scheduled Posts", icon: <Calendar size={18} />,        path: "/dashboard/scheduled" },
-  { label: "My Analytics",      icon: <BarChart3 size={18} />,    path: "/dashboard/campaigns" },
-  { label: "Instagram Insights", icon: <Instagram size={18} />,   path: "/dashboard/instagram" },
-  { label: "Social Accounts",    icon: <Share2 size={18} />,       path: "/social" },
+  { label: "My Analytics",   icon: <BarChart3 size={18} />,        path: "/dashboard/campaigns" },
+  { label: "Social Accounts", icon: <Share2 size={18} />,          path: "/social" },
   { label: "My Profile",      icon: <User size={18} />,            path: "/profile" },
   { label: "Settings",        icon: <Settings size={18} />,        path: "/settings" },
+];
+
+const ANALYTICS_SUB = [
+  { label: "Instagram Insights", icon: <Instagram size={13} />, path: "/dashboard/instagram" },
 ];
 
 const SETTINGS_NAV = [
@@ -399,6 +445,10 @@ interface Props {
 export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [analyticsOpen, setAnalyticsOpen] = useState(
+    location.pathname.startsWith("/dashboard/campaigns") ||
+    location.pathname.startsWith("/dashboard/instagram")
+  );
 
   const isActive = (path: string) => location.pathname === path;
   const isSettings = location.pathname.startsWith("/settings");
@@ -426,17 +476,41 @@ export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props
           {/* Main navigation */}
           <div className="vxsb-group">
             <div className="vxsb-group-label">Main Menu</div>
-            {MAIN_NAV.map(item => (
-              <div
-                key={item.path}
-                className={`vxsb-link ${isActive(item.path) ? "is-active" : ""}`}
-                onClick={() => navigate(item.path)}
-              >
-                <div className="vxsb-link-icon">{item.icon}</div>
-                <span className="vxsb-link-text">{item.label}</span>
-                <ChevronRight size={14} className="vxsb-link-arrow" />
-              </div>
-            ))}
+            {MAIN_NAV.map(item => {
+              const isAnalytics = item.path === "/dashboard/campaigns";
+              return (
+                <div key={item.path}>
+                  <div
+                    className={`vxsb-link ${isActive(item.path) ? "is-active" : ""}`}
+                    onClick={() => {
+                      if (isAnalytics) setAnalyticsOpen(o => !o);
+                      navigate(item.path);
+                    }}
+                  >
+                    <div className="vxsb-link-icon">{item.icon}</div>
+                    <span className="vxsb-link-text">{item.label}</span>
+                    {isAnalytics
+                      ? <ChevronRight size={14} className="vxsb-link-arrow" style={{ transition: "transform 0.2s", transform: analyticsOpen ? "rotate(90deg)" : "rotate(0deg)", opacity: 1 }} />
+                      : <ChevronRight size={14} className="vxsb-link-arrow" />
+                    }
+                  </div>
+                  {isAnalytics && (
+                    <div className={`vxsb-sub-nav ${analyticsOpen ? "expanded" : "collapsed"}`}>
+                      {ANALYTICS_SUB.map(sub => (
+                        <div
+                          key={sub.path}
+                          className={`vxsb-sub-link ${isActive(sub.path) ? "is-active" : ""}`}
+                          onClick={() => navigate(sub.path)}
+                        >
+                          <div className="vxsb-sub-link-ic">{sub.icon}</div>
+                          {sub.label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <div className="vxsb-divider" />
