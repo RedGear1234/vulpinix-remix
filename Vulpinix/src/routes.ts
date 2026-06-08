@@ -26,6 +26,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ScheduledPostsPage from "./pages/ScheduledPostsPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import DataDeletionPage from "./pages/DataDeletionPage";
+import InstagramInsightsPage from "./pages/InstagramInsightsPage";
 
 export const router = createBrowserRouter([
   {
@@ -127,6 +128,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard/campaigns/:id/analytics",
         Component: CampaignAnalyticsPage,
+      },
+      {
+        path: "dashboard/instagram",
+        Component: InstagramInsightsPage,
       },
       {
         path: "settings",

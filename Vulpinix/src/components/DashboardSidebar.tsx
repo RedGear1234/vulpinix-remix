@@ -3,7 +3,7 @@ import {
   LayoutDashboard, BarChart3, Upload, User,
   LogOut, Share2, Settings, Calendar,
   MessageSquare, Sparkles, PenSquare, ChevronRight,
-  Building2, Briefcase, Mic2, Bot, Crown, CreditCard, Code2, Bell
+  Building2, Briefcase, Mic2, Bot, Crown, CreditCard, Code2, Bell, Instagram
 } from "lucide-react";
 import { VulpinixLogo } from "./VulpinixLogo";
 
@@ -370,8 +370,9 @@ const MAIN_NAV = [
   { label: "Upload Campaign", icon: <Upload size={18} />,          path: "/upload" },
   { label: "Create Post",     icon: <PenSquare size={18} />,       path: "/create-post" },
   { label: "Scheduled Posts", icon: <Calendar size={18} />,        path: "/dashboard/scheduled" },
-  { label: "My Analytics",    icon: <BarChart3 size={18} />,       path: "/dashboard/campaigns" },
-  { label: "Social Accounts", icon: <Share2 size={18} />,          path: "/social" },
+  { label: "My Analytics",      icon: <BarChart3 size={18} />,    path: "/dashboard/campaigns" },
+  { label: "Instagram Insights", icon: <Instagram size={18} />,   path: "/dashboard/instagram" },
+  { label: "Social Accounts",    icon: <Share2 size={18} />,       path: "/social" },
   { label: "My Profile",      icon: <User size={18} />,            path: "/profile" },
   { label: "Settings",        icon: <Settings size={18} />,        path: "/settings" },
 ];

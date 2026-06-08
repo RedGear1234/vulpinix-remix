@@ -779,6 +779,162 @@ exports.getSocialAccounts = async (req, res) => {
 };
 
 // ── AI Caption Generator ───────────────────────────────────────────────────────
+// ── Instagram Media Insights ───────────────────────────────────────────────────
+exports.getInstagramInsights = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.query.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    let user = null;
+    if (userId && userId.includes('@')) {
+      user = await User.findOne({ email: userId });
+    } else if (userId) {
+      try { user = await User.findById(userId); } catch (e) {}
+    }
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const ig = user.socialAccounts?.instagram;
+    if (!ig?.igAccountId) {
+      return res.status(400).json({ error: 'No Instagram account connected', code: 'NOT_CONNECTED' });
+    }
+
+    const token = ig.pageAccessToken || ig.accessToken;
+    if (!token) return res.status(400).json({ error: 'Instagram token missing' });
+
+    const igId = ig.igAccountId;
+
+    // 1. Fetch account-level insights (reach, impressions, profile_views, follower_count)
+    let accountInsights = {};
+    try {
+      const acctRes = await axios.get(
+        `https://graph.facebook.com/v18.0/${igId}/insights`,
+        {
+          params: {
+            metric: 'reach,impressions,profile_views,follower_count',
+            period: 'day',
+            since: Math.floor(Date.now() / 1000) - 28 * 86400,
+            until: Math.floor(Date.now() / 1000),
+            access_token: token
+          }
+        }
+      );
+      const insightData = acctRes.data?.data || [];
+      for (const metric of insightData) {
+        const total = (metric.values || []).reduce((s, v) => s + (v.value || 0), 0);
+        accountInsights[metric.name] = total;
+        // Build time series for charts
+        accountInsights[`${metric.name}_series`] = (metric.values || []).slice(-14).map(v => ({
+          date: new Date(v.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          value: v.value || 0
+        }));
+      }
+    } catch (acctErr) {
+      console.warn('[IG INSIGHTS] Account-level insights failed:', acctErr.response?.data?.error?.message || acctErr.message);
+    }
+
+    // 2. Fetch recent media posts
+    let mediaPosts = [];
+    try {
+      const mediaRes = await axios.get(
+        `https://graph.facebook.com/v18.0/${igId}/media`,
+        {
+          params: {
+            fields: 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
+            limit: 12,
+            access_token: token
+          }
+        }
+      );
+      const rawMedia = mediaRes.data?.data || [];
+
+      // 3. Fetch per-post insights (likes, comments, video_views, saved, reach, impressions)
+      mediaPosts = await Promise.all(rawMedia.map(async (post) => {
+        let insights = {};
+        try {
+          // Metrics vary by media type
+          const isVideo = post.media_type === 'VIDEO' || post.media_type === 'REELS';
+          const metricList = isVideo
+            ? 'likes,comments,video_views,saved,reach,impressions,plays'
+            : 'likes,comments,saved,reach,impressions';
+
+          const insRes = await axios.get(
+            `https://graph.facebook.com/v18.0/${post.id}/insights`,
+            { params: { metric: metricList, access_token: token } }
+          );
+
+          for (const m of insRes.data?.data || []) {
+            insights[m.name] = m.values?.[0]?.value ?? m.value ?? 0;
+          }
+        } catch (insErr) {
+          // Fallback to like_count/comments_count from media object
+          insights = {
+            likes: post.like_count || 0,
+            comments: post.comments_count || 0
+          };
+        }
+
+        return {
+          id: post.id,
+          caption: post.caption ? post.caption.slice(0, 100) + (post.caption.length > 100 ? '…' : '') : '',
+          mediaType: post.media_type,
+          mediaUrl: post.media_url || post.thumbnail_url || null,
+          permalink: post.permalink,
+          timestamp: post.timestamp,
+          likes: insights.likes ?? post.like_count ?? 0,
+          comments: insights.comments ?? post.comments_count ?? 0,
+          videoViews: insights.video_views ?? insights.plays ?? 0,
+          saved: insights.saved ?? 0,
+          reach: insights.reach ?? 0,
+          impressions: insights.impressions ?? 0,
+          engagement: (insights.likes ?? 0) + (insights.comments ?? 0) + (insights.saved ?? 0)
+        };
+      }));
+    } catch (mediaErr) {
+      console.warn('[IG INSIGHTS] Media fetch failed:', mediaErr.response?.data?.error?.message || mediaErr.message);
+    }
+
+    // 4. Aggregate totals from media posts
+    const totals = mediaPosts.reduce((acc, p) => {
+      acc.totalLikes += p.likes;
+      acc.totalComments += p.comments;
+      acc.totalVideoViews += p.videoViews;
+      acc.totalSaved += p.saved;
+      acc.totalReach += p.reach;
+      acc.totalImpressions += p.impressions;
+      return acc;
+    }, { totalLikes: 0, totalComments: 0, totalVideoViews: 0, totalSaved: 0, totalReach: 0, totalImpressions: 0 });
+
+    // 5. Engagement rate
+    const followers = ig.followersCount || accountInsights.follower_count || 0;
+    const avgEngagement = mediaPosts.length > 0
+      ? mediaPosts.reduce((s, p) => s + p.engagement, 0) / mediaPosts.length
+      : 0;
+    const engagementRate = followers > 0 ? ((avgEngagement / followers) * 100).toFixed(2) : '0.00';
+
+    res.json({
+      success: true,
+      account: {
+        username: ig.username,
+        name: ig.name,
+        profilePictureUrl: ig.profilePictureUrl,
+        biography: ig.biography,
+        followersCount: ig.followersCount || 0,
+        followsCount: ig.followsCount || 0,
+        mediaCount: ig.mediaCount || 0,
+      },
+      accountInsights,
+      totals,
+      engagementRate,
+      posts: mediaPosts
+    });
+
+  } catch (err) {
+    console.error('❌ [IG INSIGHTS] Error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to fetch Instagram insights', details: err.response?.data?.error?.message || err.message });
+  }
+};
+
 exports.generateCaption = async (req, res) => {
   try {
     const { imageBase64, mimeType, isImage, fileName, fileType } = req.body;
