@@ -31,6 +31,7 @@ const getOAuthUrl = (platform, userId) => {
         'pages_show_list',
         'pages_read_engagement',
         'pages_manage_posts',
+        'pages_manage_ads',
         'read_insights'
       ].join(',');
       return `https://www.facebook.com/v18.0/dialog/oauth?client_id=${fbAppId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${encodeURIComponent(stateString)}&scope=${fbScope}&auth_type=rerequest`;
