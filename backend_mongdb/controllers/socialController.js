@@ -29,6 +29,8 @@ const getOAuthUrl = (platform, userId) => {
         'instagram_content_publish',
         'instagram_manage_insights',
         'instagram_business_manage_insights',
+        'instagram_manage_comments',
+        'instagram_business_manage_comments',
         'pages_show_list',
         'pages_read_engagement',
         'pages_manage_posts',
@@ -1017,6 +1019,94 @@ exports.getInstagramInsights = async (req, res) => {
   } catch (err) {
     console.error('❌ [IG INSIGHTS] Error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to fetch Instagram insights', details: err.response?.data?.error?.message || err.message });
+  }
+};
+
+exports.getInstagramComments = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { mediaId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const ig = (user.socialConnections || []).find(c => c.platform === 'instagram');
+    if (!ig || !ig.accessToken) {
+      return res.status(400).json({ error: 'Instagram account not connected' });
+    }
+
+    const token = ig.accessToken;
+
+    console.log(`[IG COMMENTS] Fetching comments for media ${mediaId}...`);
+    const commentsRes = await axios.get(
+      `https://graph.facebook.com/v21.0/${mediaId}/comments`,
+      {
+        params: {
+          fields: 'id,text,timestamp,username,like_count,replies{id,text,timestamp,username,like_count}',
+          access_token: token
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      comments: commentsRes.data?.data || []
+    });
+
+  } catch (err) {
+    console.error('❌ [IG COMMENTS] Error fetching comments:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to fetch comments', details: err.response?.data?.error?.message || err.message });
+  }
+};
+
+exports.postInstagramComment = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { targetId } = req.params;
+    const { message, isReply } = req.body;
+
+    if (!message || message.trim() === '') {
+      return res.status(400).json({ error: 'Comment message is required' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const ig = (user.socialConnections || []).find(c => c.platform === 'instagram');
+    if (!ig || !ig.accessToken) {
+      return res.status(400).json({ error: 'Instagram account not connected' });
+    }
+
+    const token = ig.accessToken;
+
+    console.log(`[IG COMMENTS] Posting comment/reply to target ${targetId}...`);
+    
+    let url;
+    if (isReply) {
+      url = `https://graph.facebook.com/v21.0/${targetId}/replies`;
+    } else {
+      url = `https://graph.facebook.com/v21.0/${targetId}/comments`;
+    }
+
+    const postRes = await axios.post(url, null, {
+      params: {
+        message: message,
+        access_token: token
+      }
+    });
+
+    res.json({
+      success: true,
+      commentId: postRes.data?.id
+    });
+
+  } catch (err) {
+    console.error('❌ [IG COMMENTS] Error posting comment:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to post comment', details: err.response?.data?.error?.message || err.message });
   }
 };
 

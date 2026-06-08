@@ -45,6 +45,24 @@ const S = `
   .igp-notice{border-radius:16px;padding:32px;background:rgba(225,48,108,0.05);border:1px dashed rgba(225,48,108,0.2);text-align:center;margin-bottom:20px;}
   @media(max-width:1100px){.igp-kpis{grid-template-columns:repeat(3,1fr);}.igp-posts{grid-template-columns:repeat(2,1fr);}.igp-grid{grid-template-columns:1fr;}}
   @media(max-width:640px){.igp-scroll{padding:20px 16px 80px;}.igp-kpis{grid-template-columns:repeat(2,1fr);}.igp-posts{grid-template-columns:1fr;}}
+  .ig-comments-drawer{position:fixed;top:0;right:0;width:420px;height:100vh;background:rgba(13,17,23,0.95);backdrop-filter:blur(16px);border-left:1px solid rgba(255,255,255,0.08);z-index:100;box-shadow:-10px 0 30px rgba(0,0,0,0.5);display:flex;flex-direction:column;font-family:'Inter',sans-serif;}
+  .ig-comments-header{padding:20px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;}
+  .ig-comments-list{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;}
+  .ig-comment-item{display:flex;flex-direction:column;gap:4px;padding:12px;background:rgba(255,255,255,0.02);border-radius:12px;border:1px solid rgba(255,255,255,0.04);}
+  .ig-comment-meta{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#64748b;}
+  .ig-comment-user{font-weight:700;color:#e2e8f0;}
+  .ig-comment-text{font-size:13px;color:#94a3b8;line-height:1.4;}
+  .ig-comment-reply{margin-left:16px;padding-left:12px;border-left:2px solid rgba(225,48,108,0.2);display:flex;flex-direction:column;gap:4px;margin-top:8px;}
+  .ig-comments-input-area{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08);background:rgba(15,22,36,0.5);display:flex;flex-direction:column;gap:10px;}
+  .ig-comments-input-row{display:flex;gap:10px;}
+  .ig-comments-input{flex:1;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;color:#f1f5f9;font-size:13px;font-family:inherit;}
+  .ig-comments-input:focus{outline:none;border-color:rgba(225,48,108,0.5);}
+  .ig-comments-send{background:#E1306C;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;}
+  .ig-comments-send:hover{background:#d82460;}
+  .ig-comments-replying-to{font-size:11px;color:#a78bfa;display:flex;justify-content:space-between;align-items:center;}
+  .ig-comment-reply-btn{font-size:11px;color:#833AB4;background:none;border:none;cursor:pointer;padding:0;font-weight:600;}
+  .ig-comment-reply-btn:hover{color:#E1306C;}
+  .ig-comments-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99;}
 `;
 
 function fmt(n: number) {
@@ -74,6 +92,14 @@ export default function InstagramInsightsPage() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
+  // Comments and Moderation State
+  const [selectedPost, setSelectedPost] = useState<IGPost | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newCommentText, setNewCommentText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
+  const [postingComment, setPostingComment] = useState(false);
+
   const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
   const userName = userInfo.name?.split(" ")[0] || "User";
   const userInitial = userName[0]?.toUpperCase() || "U";
@@ -89,6 +115,56 @@ export default function InstagramInsightsPage() {
       else setError(d.error || "Failed to load Instagram insights");
     } catch (e) { setError("Network error. Check your connection."); }
     finally { setLoading(false); setRefreshing(false); }
+  };
+
+  const fetchComments = async (postId: string) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+    setCommentsLoading(true);
+    try {
+      const r = await fetch(`${API_BASE}/api/social/instagram/comments/${postId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const d = await r.json();
+      if (d.success) {
+        setComments(d.comments || []);
+      }
+    } catch (e) {
+      console.error("Error loading comments", e);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handlePostComment = async () => {
+    if (!newCommentText.trim() || !selectedPost) return;
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+    setPostingComment(true);
+    
+    const targetId = replyingTo ? replyingTo.id : selectedPost.id;
+    const isReply = !!replyingTo;
+
+    try {
+      const r = await fetch(`${API_BASE}/api/social/instagram/comments/${targetId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ message: newCommentText, isReply })
+      });
+      const d = await r.json();
+      if (d.success) {
+        setNewCommentText("");
+        setReplyingTo(null);
+        fetchComments(selectedPost.id);
+      }
+    } catch (e) {
+      console.error("Error posting comment", e);
+    } finally {
+      setPostingComment(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -252,7 +328,14 @@ export default function InstagramInsightsPage() {
                   ) : (
                     <div className="igp-posts">
                       {data.posts.map((post, i) => (
-                        <motion.div key={post.id} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.04 * i }} className="igp-post" onClick={() => post.permalink && window.open(post.permalink, "_blank")}>
+                        <motion.div 
+                          key={post.id} 
+                          initial={{ opacity: 0, scale: 0.96 }} 
+                          animate={{ opacity: 1, scale: 1 }} 
+                          transition={{ delay: 0.04 * i }} 
+                          className="igp-post" 
+                          onClick={() => { setSelectedPost(post); fetchComments(post.id); }}
+                        >
                           <div className="igp-post-thumb">
                             {post.mediaUrl
                               ? <img src={post.mediaUrl} alt={`Post ${i + 1}`} onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -287,7 +370,14 @@ export default function InstagramInsightsPage() {
                             </div>
                             <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <div style={{ fontSize: 10, color: "#475569" }}>{new Date(post.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
-                              {post.permalink && <ExternalLink size={11} color="#64748b" />}
+                              {post.permalink && (
+                                <button 
+                                  style={{ background: "none", border: "none", cursor: "pointer", display: "flex" }} 
+                                  onClick={(e) => { e.stopPropagation(); window.open(post.permalink, "_blank"); }}
+                                >
+                                  <ExternalLink size={11} color="#64748b" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </motion.div>
@@ -300,6 +390,104 @@ export default function InstagramInsightsPage() {
           </div>
         </div>
       </div>
+
+      {/* Slide Drawer for Comments */}
+      {selectedPost && (
+        <>
+          <div className="ig-comments-backdrop" onClick={() => { setSelectedPost(null); setComments([]); setReplyingTo(null); }} />
+          <motion.div 
+            initial={{ x: "100%" }} 
+            animate={{ x: 0 }} 
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="ig-comments-drawer"
+          >
+            <div className="ig-comments-header">
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#f1f5f9" }}>Comments & Moderation</div>
+                <div style={{ fontSize: 11, color: "#64748b" }}>Post ID: {selectedPost.id}</div>
+              </div>
+              <button 
+                className="igp-btn" 
+                style={{ padding: "6px 12px" }} 
+                onClick={() => { setSelectedPost(null); setComments([]); setReplyingTo(null); }}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="ig-comments-list">
+              {commentsLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+                  <div style={{ width: 24, height: 24, border: "2px solid rgba(225,48,108,0.2)", borderTopColor: "#E1306C", borderRadius: "50%", animation: "igp-spin 0.8s linear infinite" }} />
+                </div>
+              ) : comments.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "#64748b", fontSize: 13 }}>No comments yet.</div>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} className="ig-comment-item">
+                    <div className="ig-comment-meta">
+                      <span className="ig-comment-user">@{comment.username || "user"}</span>
+                      <span>{new Date(comment.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                    </div>
+                    <div className="ig-comment-text">{comment.text}</div>
+                    <div style={{ marginTop: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 10, color: "#64748b" }}>💖 {comment.like_count || 0} likes</span>
+                      <button 
+                        className="ig-comment-reply-btn" 
+                        onClick={() => setReplyingTo({ id: comment.id, username: comment.username })}
+                      >
+                        Reply
+                      </button>
+                    </div>
+
+                    {/* Replies */}
+                    {comment.replies?.data && comment.replies.data.map((reply: any) => (
+                      <div key={reply.id} className="ig-comment-reply">
+                        <div className="ig-comment-meta">
+                          <span className="ig-comment-user" style={{ color: "#a78bfa" }}>@{reply.username || "user"}</span>
+                          <span>{new Date(reply.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                        </div>
+                        <div className="ig-comment-text" style={{ fontSize: 12 }}>{reply.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="ig-comments-input-area">
+              {replyingTo && (
+                <div className="ig-comments-replying-to">
+                  <span>Replying to <strong>@{replyingTo.username}</strong></span>
+                  <button 
+                    style={{ background: "none", border: "none", color: "#e1306c", cursor: "pointer", fontSize: 10, fontWeight: 700 }} 
+                    onClick={() => setReplyingTo(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+              <div className="ig-comments-input-row">
+                <input 
+                  type="text" 
+                  placeholder={replyingTo ? "Write a reply..." : "Write a comment..."} 
+                  value={newCommentText}
+                  onChange={(e) => setNewCommentText(e.target.value)}
+                  className="ig-comments-input"
+                  onKeyDown={(e) => { if (e.key === "Enter") handlePostComment(); }}
+                />
+                <button 
+                  onClick={handlePostComment} 
+                  disabled={postingComment || !newCommentText.trim()}
+                  className="ig-comments-send"
+                >
+                  {postingComment ? "..." : "Send"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
     </div>
   );
 }
