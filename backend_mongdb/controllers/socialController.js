@@ -1021,20 +1021,29 @@ exports.getInstagramInsights = async (req, res) => {
 
 exports.getInstagramComments = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user?.id || req.user?._id || req.query.userId;
     const { mediaId } = req.params;
 
-    const user = await User.findById(userId);
+    let user = null;
+    if (userId && userId.includes('@')) {
+      user = await User.findOne({ email: userId });
+    } else if (userId) {
+      try { user = await User.findById(userId); } catch (e) {}
+    }
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const ig = (user.socialConnections || []).find(c => c.platform === 'instagram');
-    if (!ig || !ig.accessToken) {
+    const ig = user.socialAccounts?.instagram;
+    if (!ig || !ig.igAccountId) {
       return res.status(400).json({ error: 'Instagram account not connected' });
     }
 
-    const token = ig.accessToken;
+    const token = ig.pageAccessToken || ig.accessToken;
+    if (!token) {
+      return res.status(400).json({ error: 'Instagram token missing' });
+    }
 
     console.log(`[IG COMMENTS] Fetching comments for media ${mediaId}...`);
     const commentsRes = await axios.get(
@@ -1060,7 +1069,7 @@ exports.getInstagramComments = async (req, res) => {
 
 exports.postInstagramComment = async (req, res) => {
   try {
-    const userId = req.userId;
+    const userId = req.user?.id || req.user?._id || req.query.userId;
     const { targetId } = req.params;
     const { message, isReply } = req.body;
 
@@ -1068,17 +1077,26 @@ exports.postInstagramComment = async (req, res) => {
       return res.status(400).json({ error: 'Comment message is required' });
     }
 
-    const user = await User.findById(userId);
+    let user = null;
+    if (userId && userId.includes('@')) {
+      user = await User.findOne({ email: userId });
+    } else if (userId) {
+      try { user = await User.findById(userId); } catch (e) {}
+    }
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const ig = (user.socialConnections || []).find(c => c.platform === 'instagram');
-    if (!ig || !ig.accessToken) {
+    const ig = user.socialAccounts?.instagram;
+    if (!ig || !ig.igAccountId) {
       return res.status(400).json({ error: 'Instagram account not connected' });
     }
 
-    const token = ig.accessToken;
+    const token = ig.pageAccessToken || ig.accessToken;
+    if (!token) {
+      return res.status(400).json({ error: 'Instagram token missing' });
+    }
 
     console.log(`[IG COMMENTS] Posting comment/reply to target ${targetId}...`);
     
