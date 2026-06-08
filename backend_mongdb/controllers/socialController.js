@@ -20,7 +20,20 @@ const getOAuthUrl = (platform, userId) => {
     case 'instagram':
     case 'facebook':
       const fbAppId = process.env.FACEBOOK_APP_ID || 'YOUR_FACEBOOK_APP_ID';
-      const fbScope = 'public_profile,email,instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,pages_manage_posts';
+      // instagram_manage_insights        — read media/post-level insights (likes, comments, reach, impressions, saved)
+      // instagram_business_manage_insights — read account-level insights (reach, impressions, profile_views, audience demographics)
+      const fbScope = [
+        'public_profile',
+        'email',
+        'instagram_basic',
+        'instagram_content_publish',
+        'instagram_manage_insights',
+        'instagram_business_manage_insights',
+        'pages_show_list',
+        'pages_read_engagement',
+        'pages_manage_posts',
+        'read_insights'
+      ].join(',');
       return `https://www.facebook.com/v18.0/dialog/oauth?client_id=${fbAppId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${encodeURIComponent(stateString)}&scope=${fbScope}&auth_type=rerequest`;
       
     case 'twitter':
@@ -804,33 +817,90 @@ exports.getInstagramInsights = async (req, res) => {
 
     const igId = ig.igAccountId;
 
-    // 1. Fetch account-level insights (reach, impressions, profile_views, follower_count)
+    // 1. Fetch account-level insights via instagram_business_manage_insights permission
+    //    Uses v21 metric_type=total_value format required by Meta App Review
     let accountInsights = {};
     try {
+      // ── Total-value metrics (last 30 days) ─────────────────────────────────
+      // These metrics require instagram_business_manage_insights
+      const totalMetrics = 'reach,impressions,profile_views,accounts_engaged,total_interactions,follower_count';
+      const since = Math.floor(Date.now() / 1000) - 30 * 86400;
+      const until = Math.floor(Date.now() / 1000);
+
       const acctRes = await axios.get(
-        `https://graph.facebook.com/v18.0/${igId}/insights`,
+        `https://graph.facebook.com/v21.0/${igId}/insights`,
         {
           params: {
-            metric: 'reach,impressions,profile_views,follower_count',
+            metric: totalMetrics,
+            metric_type: 'total_value',   // Required for instagram_business_manage_insights
             period: 'day',
-            since: Math.floor(Date.now() / 1000) - 28 * 86400,
-            until: Math.floor(Date.now() / 1000),
+            since,
+            until,
             access_token: token
           }
         }
       );
+
       const insightData = acctRes.data?.data || [];
       for (const metric of insightData) {
-        const total = (metric.values || []).reduce((s, v) => s + (v.value || 0), 0);
-        accountInsights[metric.name] = total;
-        // Build time series for charts
-        accountInsights[`${metric.name}_series`] = (metric.values || []).slice(-14).map(v => ({
-          date: new Date(v.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          value: v.value || 0
-        }));
+        // total_value format: { name, period, total_value: { value } }
+        accountInsights[metric.name] = metric.total_value?.value ?? 0;
       }
+
+      // ── Time-series for reach chart (day granularity) ─────────────────────
+      try {
+        const tsRes = await axios.get(
+          `https://graph.facebook.com/v21.0/${igId}/insights`,
+          {
+            params: {
+              metric: 'reach,impressions',
+              period: 'day',
+              since,
+              until,
+              access_token: token
+            }
+          }
+        );
+        for (const m of tsRes.data?.data || []) {
+          const total = (m.values || []).reduce((s, v) => s + (v.value || 0), 0);
+          accountInsights[`${m.name}_total`] = total;
+          accountInsights[`${m.name}_series`] = (m.values || []).slice(-14).map(v => ({
+            date: new Date(v.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            value: v.value || 0
+          }));
+        }
+      } catch (tsErr) {
+        console.warn('[IG INSIGHTS] Time-series fetch failed:', tsErr.response?.data?.error?.message || tsErr.message);
+      }
+
+      console.log('[IG INSIGHTS] ✅ Account-level insights fetched using instagram_business_manage_insights');
     } catch (acctErr) {
-      console.warn('[IG INSIGHTS] Account-level insights failed:', acctErr.response?.data?.error?.message || acctErr.message);
+      console.warn('[IG INSIGHTS] Account-level insights (v21 total_value) failed, falling back to period=day:', acctErr.response?.data?.error?.message || acctErr.message);
+      // Fallback: try older period format
+      try {
+        const fallbackRes = await axios.get(
+          `https://graph.facebook.com/v18.0/${igId}/insights`,
+          {
+            params: {
+              metric: 'reach,impressions,profile_views',
+              period: 'day',
+              since: Math.floor(Date.now() / 1000) - 28 * 86400,
+              until: Math.floor(Date.now() / 1000),
+              access_token: token
+            }
+          }
+        );
+        for (const metric of fallbackRes.data?.data || []) {
+          const total = (metric.values || []).reduce((s, v) => s + (v.value || 0), 0);
+          accountInsights[metric.name] = total;
+          accountInsights[`${metric.name}_series`] = (metric.values || []).slice(-14).map(v => ({
+            date: new Date(v.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            value: v.value || 0
+          }));
+        }
+      } catch (fbErr) {
+        console.warn('[IG INSIGHTS] Fallback insights also failed:', fbErr.response?.data?.error?.message || fbErr.message);
+      }
     }
 
     // 2. Fetch recent media posts
@@ -848,26 +918,37 @@ exports.getInstagramInsights = async (req, res) => {
       );
       const rawMedia = mediaRes.data?.data || [];
 
-      // 3. Fetch per-post insights (likes, comments, video_views, saved, reach, impressions)
+      // 3. Fetch per-post insights — requires instagram_manage_insights + instagram_business_manage_insights
+      //    Metric names as defined in Meta Graph API docs for IG Media Insights
       mediaPosts = await Promise.all(rawMedia.map(async (post) => {
         let insights = {};
         try {
-          // Metrics vary by media type
           const isVideo = post.media_type === 'VIDEO' || post.media_type === 'REELS';
-          const metricList = isVideo
-            ? 'likes,comments,video_views,saved,reach,impressions,plays'
-            : 'likes,comments,saved,reach,impressions';
+          const isCarousel = post.media_type === 'CAROUSEL_ALBUM';
+
+          // Correct metric names per Meta docs (instagram_business_manage_insights)
+          let metricList;
+          if (isVideo) {
+            metricList = 'likes,comments,shares,saved,reach,impressions,plays,total_interactions';
+          } else if (isCarousel) {
+            metricList = 'likes,comments,shares,saved,reach,impressions,total_interactions,carousel_album_reach,carousel_album_impressions';
+          } else {
+            // IMAGE
+            metricList = 'likes,comments,shares,saved,reach,impressions,total_interactions';
+          }
 
           const insRes = await axios.get(
-            `https://graph.facebook.com/v18.0/${post.id}/insights`,
+            `https://graph.facebook.com/v21.0/${post.id}/insights`,
             { params: { metric: metricList, access_token: token } }
           );
 
           for (const m of insRes.data?.data || []) {
             insights[m.name] = m.values?.[0]?.value ?? m.value ?? 0;
           }
+          console.log(`[IG INSIGHTS] ✅ Post ${post.id} insights fetched (instagram_business_manage_insights)`);
         } catch (insErr) {
-          // Fallback to like_count/comments_count from media object
+          console.warn(`[IG INSIGHTS] Post ${post.id} insights failed:`, insErr.response?.data?.error?.message || insErr.message);
+          // Fallback to basic counts from the media object fields
           insights = {
             likes: post.like_count || 0,
             comments: post.comments_count || 0
@@ -883,11 +964,13 @@ exports.getInstagramInsights = async (req, res) => {
           timestamp: post.timestamp,
           likes: insights.likes ?? post.like_count ?? 0,
           comments: insights.comments ?? post.comments_count ?? 0,
-          videoViews: insights.video_views ?? insights.plays ?? 0,
+          shares: insights.shares ?? 0,
+          videoViews: insights.plays ?? insights.video_views ?? 0,
           saved: insights.saved ?? 0,
           reach: insights.reach ?? 0,
           impressions: insights.impressions ?? 0,
-          engagement: (insights.likes ?? 0) + (insights.comments ?? 0) + (insights.saved ?? 0)
+          totalInteractions: insights.total_interactions ?? 0,
+          engagement: insights.total_interactions ?? ((insights.likes ?? 0) + (insights.comments ?? 0) + (insights.saved ?? 0))
         };
       }));
     } catch (mediaErr) {
@@ -898,12 +981,14 @@ exports.getInstagramInsights = async (req, res) => {
     const totals = mediaPosts.reduce((acc, p) => {
       acc.totalLikes += p.likes;
       acc.totalComments += p.comments;
+      acc.totalShares += p.shares;
       acc.totalVideoViews += p.videoViews;
       acc.totalSaved += p.saved;
       acc.totalReach += p.reach;
       acc.totalImpressions += p.impressions;
+      acc.totalInteractions += p.totalInteractions;
       return acc;
-    }, { totalLikes: 0, totalComments: 0, totalVideoViews: 0, totalSaved: 0, totalReach: 0, totalImpressions: 0 });
+    }, { totalLikes: 0, totalComments: 0, totalShares: 0, totalVideoViews: 0, totalSaved: 0, totalReach: 0, totalImpressions: 0, totalInteractions: 0 });
 
     // 5. Engagement rate
     const followers = ig.followersCount || accountInsights.follower_count || 0;
