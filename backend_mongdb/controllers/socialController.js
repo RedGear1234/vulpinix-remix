@@ -21,16 +21,13 @@ const getOAuthUrl = (platform, userId) => {
     case 'facebook':
       const fbAppId = process.env.FACEBOOK_APP_ID || 'YOUR_FACEBOOK_APP_ID';
       // instagram_manage_insights        — read media/post-level insights (likes, comments, reach, impressions, saved)
-      // instagram_business_manage_insights — read account-level insights (reach, impressions, profile_views, audience demographics)
       const fbScope = [
         'public_profile',
         'email',
         'instagram_basic',
         'instagram_content_publish',
         'instagram_manage_insights',
-        'instagram_business_manage_insights',
         'instagram_manage_comments',
-        'instagram_business_manage_comments',
         'pages_show_list',
         'pages_read_engagement',
         'pages_manage_posts',
