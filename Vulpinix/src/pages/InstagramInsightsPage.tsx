@@ -96,6 +96,7 @@ export default function InstagramInsightsPage() {
   const [selectedPost, setSelectedPost] = useState<IGPost | null>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState("");
   const [newCommentText, setNewCommentText] = useState("");
   const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
   const [postingComment, setPostingComment] = useState(false);
@@ -121,6 +122,7 @@ export default function InstagramInsightsPage() {
     const token = localStorage.getItem("authToken");
     if (!token) return;
     setCommentsLoading(true);
+    setCommentsError("");
     try {
       const r = await fetch(`${API_BASE}/api/social/instagram/comments/${postId}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -128,9 +130,12 @@ export default function InstagramInsightsPage() {
       const d = await r.json();
       if (d.success) {
         setComments(d.comments || []);
+      } else {
+        setCommentsError(d.details || d.error || "Failed to load comments");
       }
     } catch (e) {
       console.error("Error loading comments", e);
+      setCommentsError("Network error. Could not connect to API.");
     } finally {
       setCommentsLoading(false);
     }
@@ -419,6 +424,22 @@ export default function InstagramInsightsPage() {
               {commentsLoading ? (
                 <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
                   <div style={{ width: 24, height: 24, border: "2px solid rgba(225,48,108,0.2)", borderTopColor: "#E1306C", borderRadius: "50%", animation: "igp-spin 0.8s linear infinite" }} />
+                </div>
+              ) : commentsError ? (
+                <div style={{ textAlign: "center", padding: "30px 20px" }}>
+                  <AlertCircle size={32} style={{ margin: "0 auto 10px", color: "#E1306C", opacity: 0.8 }} />
+                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6, color: "#f1f5f9" }}>Failed to Load Comments</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.4, marginBottom: 16 }}>{commentsError}</div>
+                  <div style={{ fontSize: 12, color: "#cbd5e1", lineHeight: 1.4, marginBottom: 16, background: "rgba(225,48,108,0.08)", padding: "10px", borderRadius: "8px", border: "1px solid rgba(225,48,108,0.15)" }}>
+                    💡 <strong>Action Required:</strong> Reconnect your Instagram account to authorize comments.
+                  </div>
+                  <button 
+                    className="igp-btn" 
+                    style={{ fontSize: 11, padding: "8px 16px", background: "#E1306C", color: "#fff", border: "none" }}
+                    onClick={() => navigate("/social")}
+                  >
+                    Go to Social Settings
+                  </button>
                 </div>
               ) : comments.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "40px 0", color: "#64748b", fontSize: 13 }}>No comments yet.</div>
