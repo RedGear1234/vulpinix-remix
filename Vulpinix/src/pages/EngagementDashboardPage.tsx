@@ -4,8 +4,8 @@ import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import {
   TrendingUp, ArrowLeft, RefreshCw, AlertCircle, Heart, Eye,
-  MessageCircle, Play, Bookmark, ExternalLink, MessageSquare,
-  Facebook, Instagram, Send, Calendar, Clock, Share2
+  MessageCircle, ExternalLink, MessageSquare,
+  Facebook, Instagram, Share2
 } from "lucide-react";
 import { DashboardSidebar } from "../components/DashboardSidebar";
 import { DashboardTopBar } from "../components/DashboardTopBar";
@@ -101,7 +101,7 @@ const S = `
 interface IGPost {
   id: string; caption: string; mediaType: string; mediaUrl: string | null;
   permalink: string; timestamp: string; likes: number; comments: number;
-  videoViews: number; saved: number; reach: number; impressions: number;
+  shares: number; videoViews: number; saved: number; reach: number; impressions: number;
   totalInteractions: number; engagement: number;
 }
 
