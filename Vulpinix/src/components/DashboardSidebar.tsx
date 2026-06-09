@@ -420,6 +420,7 @@ const MAIN_NAV = [
 ];
 
 const ANALYTICS_SUB = [
+  { label: "Engagement Dashboard", icon: <MessageSquare size={13} />, path: "/dashboard/engagement" },
   { label: "Instagram Insights", icon: <Instagram size={13} />, path: "/dashboard/instagram" },
 ];
 
@@ -447,7 +448,8 @@ export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props
   const location = useLocation();
   const [analyticsOpen, setAnalyticsOpen] = useState(
     location.pathname.startsWith("/dashboard/campaigns") ||
-    location.pathname.startsWith("/dashboard/instagram")
+    location.pathname.startsWith("/dashboard/instagram") ||
+    location.pathname.startsWith("/dashboard/engagement")
   );
 
   const isActive = (path: string) => location.pathname === path;

@@ -27,6 +27,8 @@ import ScheduledPostsPage from "./pages/ScheduledPostsPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import DataDeletionPage from "./pages/DataDeletionPage";
 import InstagramInsightsPage from "./pages/InstagramInsightsPage";
+import EngagementDashboardPage from "./pages/EngagementDashboardPage";
+
 
 export const router = createBrowserRouter([
   {
@@ -133,6 +135,11 @@ export const router = createBrowserRouter([
         path: "dashboard/instagram",
         Component: InstagramInsightsPage,
       },
+      {
+        path: "dashboard/engagement",
+        Component: EngagementDashboardPage,
+      },
+
       {
         path: "settings",
         Component: SettingsPage,

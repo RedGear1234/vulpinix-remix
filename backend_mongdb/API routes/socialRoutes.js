@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authorizePlatform, handleCallback, getSocialAccounts, disconnectSocialAccount, generateCaption, getInstagramInsights, getInstagramComments, postInstagramComment } = require('../controllers/socialController');
+const { authorizePlatform, handleCallback, getSocialAccounts, disconnectSocialAccount, generateCaption, getInstagramInsights, getInstagramComments, postInstagramComment, getFacebookPosts, getFacebookComments, postFacebookComment } = require('../controllers/socialController');
 const { requireAuth } = require('../middleware/auth');
 
 // @route   GET /api/social/status
@@ -22,6 +22,21 @@ router.get('/instagram/comments/:mediaId', requireAuth, getInstagramComments);
 // @desc    Posts a comment or reply to an Instagram post/comment
 // @access  Protected
 router.post('/instagram/comments/:targetId', requireAuth, postInstagramComment);
+
+// @route   GET /api/social/facebook/posts
+// @desc    Fetches real Facebook page posts and account info for authenticated user
+// @access  Protected
+router.get('/facebook/posts', requireAuth, getFacebookPosts);
+
+// @route   GET /api/social/facebook/comments/:postId
+// @desc    Gets comments for a specific Facebook post
+// @access  Protected
+router.get('/facebook/comments/:postId', requireAuth, getFacebookComments);
+
+// @route   POST /api/social/facebook/comments/:targetId
+// @desc    Posts a comment or reply to a Facebook post/comment
+// @access  Protected
+router.post('/facebook/comments/:targetId', requireAuth, postFacebookComment);
 
 // @route   DELETE /api/social/:platform
 // @desc    Disconnects a social account

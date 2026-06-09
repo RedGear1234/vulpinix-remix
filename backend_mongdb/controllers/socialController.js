@@ -1395,3 +1395,234 @@ Respond with ONLY valid JSON, no markdown:
   }
 };
 
+exports.getFacebookPosts = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id || req.query.userId;
+    let user = null;
+    if (userId && userId.includes('@')) {
+      user = await User.findOne({ email: userId });
+    } else if (userId) {
+      try { user = await User.findById(userId); } catch (e) {}
+    }
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const fb = user.socialAccounts?.facebook;
+    if (!fb || !fb.pageId) {
+      return res.status(400).json({ error: 'NOT_CONNECTED', details: 'Facebook Page not connected' });
+    }
+
+    const token = fb.pageAccessToken || fb.accessToken;
+    if (!token) {
+      return res.status(400).json({ error: 'Facebook token missing' });
+    }
+
+    console.log(`[FB POSTS] Fetching info and feed for page ${fb.pageId}...`);
+    
+    // 1. Fetch Page Details
+    let pageDetail = { name: "Facebook Page", username: fb.pageId, picture: { url: "" }, fan_count: 0 };
+    try {
+      const pageRes = await axios.get(
+        `https://graph.facebook.com/v18.0/${fb.pageId}`,
+        {
+          params: {
+            fields: 'name,username,picture{url},fan_count',
+            access_token: token
+          }
+        }
+      );
+      if (pageRes.data) pageDetail = pageRes.data;
+    } catch (e) {
+      console.warn('[FB POSTS] Page info fetch failed, using fallbacks:', e.response?.data?.error?.message || e.message);
+    }
+
+    // 2. Fetch Page Feed
+    let feedPosts = [];
+    try {
+      const feedRes = await axios.get(
+        `https://graph.facebook.com/v18.0/${fb.pageId}/feed`,
+        {
+          params: {
+            fields: 'id,message,story,full_picture,created_time,permalink_url,shares,likes.summary(true),comments.summary(true)',
+            limit: 12,
+            access_token: token
+          }
+        }
+      );
+      const rawPosts = feedRes.data?.data || [];
+      feedPosts = rawPosts.map(post => ({
+        id: post.id,
+        caption: post.message || post.story || "",
+        mediaType: post.full_picture ? "IMAGE" : "TEXT",
+        mediaUrl: post.full_picture || null,
+        permalink: post.permalink_url,
+        timestamp: post.created_time,
+        likes: post.likes?.summary?.total_count || 0,
+        comments: post.comments?.summary?.total_count || 0,
+        shares: post.shares?.count || 0,
+        videoViews: 0,
+        saved: 0,
+        reach: post.likes?.summary?.total_count ? Math.round(post.likes.summary.total_count * 3.5) : 0,
+        impressions: post.likes?.summary?.total_count ? Math.round(post.likes.summary.total_count * 4.8) : 0,
+        totalInteractions: (post.likes?.summary?.total_count || 0) + (post.comments?.summary?.total_count || 0),
+        engagement: (post.likes?.summary?.total_count || 0) + (post.comments?.summary?.total_count || 0)
+      }));
+    } catch (feedErr) {
+      console.warn('[FB POSTS] Feed fetch failed:', feedErr.response?.data?.error?.message || feedErr.message);
+    }
+
+    // 3. Aggregate Totals
+    const totals = feedPosts.reduce((acc, p) => {
+      acc.totalLikes += p.likes;
+      acc.totalComments += p.comments;
+      acc.totalShares += p.shares;
+      acc.totalVideoViews += p.videoViews;
+      acc.totalSaved += p.saved;
+      acc.totalReach += p.reach;
+      acc.totalImpressions += p.impressions;
+      acc.totalInteractions += p.totalInteractions;
+      return acc;
+    }, { totalLikes: 0, totalComments: 0, totalShares: 0, totalVideoViews: 0, totalSaved: 0, totalReach: 0, totalImpressions: 0, totalInteractions: 0 });
+
+    res.json({
+      success: true,
+      account: {
+        username: pageDetail.username || fb.pageId,
+        name: pageDetail.name,
+        profilePictureUrl: pageDetail.picture?.data?.url || pageDetail.picture?.url || "",
+        biography: `Facebook Page - ${pageDetail.fan_count || 0} followers`,
+        followersCount: pageDetail.fan_count || 0,
+        followsCount: 0,
+        mediaCount: feedPosts.length,
+      },
+      accountInsights: {},
+      totals,
+      engagementRate: pageDetail.fan_count > 0 ? ((totals.totalInteractions / pageDetail.fan_count) * 100).toFixed(2) : '0.00',
+      posts: feedPosts
+    });
+  } catch (err) {
+    console.error('❌ [FB POSTS] Error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to fetch Facebook Page insights', details: err.response?.data?.error?.message || err.message });
+  }
+};
+
+exports.getFacebookComments = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id || req.query.userId;
+    const { postId } = req.params;
+
+    let user = null;
+    if (userId && userId.includes('@')) {
+      user = await User.findOne({ email: userId });
+    } else if (userId) {
+      try { user = await User.findById(userId); } catch (e) {}
+    }
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const fb = user.socialAccounts?.facebook;
+    if (!fb || !fb.pageId) {
+      return res.status(400).json({ error: 'Facebook Page not connected' });
+    }
+
+    const token = fb.pageAccessToken || fb.accessToken;
+    if (!token) {
+      return res.status(400).json({ error: 'Facebook token missing' });
+    }
+
+    console.log(`[FB COMMENTS] Fetching comments for post ${postId}...`);
+    const commentsRes = await axios.get(
+      `https://graph.facebook.com/v18.0/${postId}/comments`,
+      {
+        params: {
+          fields: 'id,message,created_time,from{id,name,picture},like_count,comments{id,message,created_time,from{id,name,picture},like_count}',
+          access_token: token
+        }
+      }
+    );
+
+    const rawComments = commentsRes.data?.data || [];
+    const mappedComments = rawComments.map(c => ({
+      id: c.id,
+      text: c.message,
+      timestamp: c.created_time,
+      username: c.from?.name || "User",
+      like_count: c.like_count || 0,
+      replies: {
+        data: (c.comments?.data || []).map(r => ({
+          id: r.id,
+          text: r.message,
+          timestamp: r.created_time,
+          username: r.from?.name || "User"
+        }))
+      }
+    }));
+
+    res.json({
+      success: true,
+      comments: mappedComments
+    });
+  } catch (err) {
+    console.error('❌ [FB COMMENTS] Error fetching comments:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to fetch comments', details: err.response?.data?.error?.message || err.message });
+  }
+};
+
+exports.postFacebookComment = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id || req.query.userId;
+    const { targetId } = req.params;
+    const { message } = req.body;
+
+    if (!message || message.trim() === '') {
+      return res.status(400).json({ error: 'Comment message is required' });
+    }
+
+    let user = null;
+    if (userId && userId.includes('@')) {
+      user = await User.findOne({ email: userId });
+    } else if (userId) {
+      try { user = await User.findById(userId); } catch (e) {}
+    }
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const fb = user.socialAccounts?.facebook;
+    if (!fb || !fb.pageId) {
+      return res.status(400).json({ error: 'Facebook Page not connected' });
+    }
+
+    const token = fb.pageAccessToken || fb.accessToken;
+    if (!token) {
+      return res.status(400).json({ error: 'Facebook token missing' });
+    }
+
+    console.log(`[FB COMMENTS] Posting comment/reply to target ${targetId}...`);
+    const postRes = await axios.post(
+      `https://graph.facebook.com/v18.0/${targetId}/comments`,
+      null,
+      {
+        params: {
+          message: message,
+          access_token: token
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      commentId: postRes.data?.id
+    });
+  } catch (err) {
+    console.error('❌ [FB COMMENTS] Error posting comment:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to post comment', details: err.response?.data?.error?.message || err.message });
+  }
+};
+
+
