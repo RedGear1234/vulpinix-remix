@@ -29,7 +29,6 @@ import DataDeletionPage from "./pages/DataDeletionPage";
 import InstagramInsightsPage from "./pages/InstagramInsightsPage";
 import EngagementDashboardPage from "./pages/EngagementDashboardPage";
 
-
 export const router = createBrowserRouter([
   {
     path: "/",
