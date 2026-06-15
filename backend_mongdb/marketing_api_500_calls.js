@@ -21,9 +21,9 @@ const APP_ID            = process.env.FACEBOOK_APP_ID        || '208502046569195
 const API_VERSION       = 'v21.0';
 const BASE              = 'graph.facebook.com';
 
-const DELAY_MS          = 400;   // ms between each call — safe for ad-account limits
+const DELAY_MS          = 1000;  // 1s between calls — well within rate limits
 const PAUSE_EVERY       = 100;   // pause after this many calls
-const PAUSE_DURATION_MS = 12000; // 12s cooldown every 100 calls
+const PAUSE_DURATION_MS = 30000; // 30s cooldown every 100 calls
 const TARGET_CALLS      = 520;
 
 // ─────────────────────────────────────────────────────────────────────────────
