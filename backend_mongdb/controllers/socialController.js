@@ -1016,6 +1016,14 @@ exports.getInstagramInsights = async (req, res) => {
 
   } catch (err) {
     console.error('❌ [IG INSIGHTS] Error:', err.response?.data || err.message);
+    const igErrCode = err.response?.data?.error?.code;
+    const igErrMsg  = err.response?.data?.error?.message || '';
+    const isAuthErr = igErrCode === 190 || igErrCode === 102 || igErrCode === 2500
+      || igErrMsg.toLowerCase().includes('token') || igErrMsg.toLowerCase().includes('session')
+      || igErrMsg.toLowerCase().includes('permission');
+    if (isAuthErr) {
+      return res.status(400).json({ error: 'NOT_CONNECTED', details: 'Instagram token expired. Please reconnect your Instagram account.' });
+    }
     res.status(500).json({ error: 'Failed to fetch Instagram insights', details: err.response?.data?.error?.message || err.message });
   }
 };

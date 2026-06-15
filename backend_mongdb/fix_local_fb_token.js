@@ -55,10 +55,27 @@ async function run() {
     pageId:           FB_PAGE_ID,
     pageAccessToken:  pageToken
   };
+
+  // Also save Instagram using the same token (linked to the same FB Page)
+  const IG_ACCOUNT_ID = '17841401233354736'; // Kaustubh's IG business account
+  user.socialAccounts.instagram = {
+    accessToken:       FB_ACCESS_TOKEN,
+    pageAccessToken:   pageToken,
+    igAccountId:       IG_ACCOUNT_ID,
+    username:          'vulpinix',
+    name:              'Vulpinix',
+    profilePictureUrl: '',
+    biography:         '',
+    followersCount:    0,
+    followsCount:      0,
+    mediaCount:        0,
+    pageId:            FB_PAGE_ID,
+  };
+
   user.markModified('socialAccounts');
   await user.save();
 
-  console.log(`✅ Facebook token saved for ${USER_EMAIL}`);
+  console.log(`✅ Facebook + Instagram tokens saved for ${USER_EMAIL}`);
   console.log('   → Now refresh the Engagement Dashboard in your local app.');
   await mongoose.disconnect();
 }
