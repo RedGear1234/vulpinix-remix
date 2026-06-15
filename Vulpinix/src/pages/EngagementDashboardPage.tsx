@@ -172,8 +172,14 @@ export default function EngagementDashboardPage() {
         if (activeTab === "facebook") setFbData(null);
         else setIgData(null);
         setError("NOT_CONNECTED");
+      } else if (r.status === 401) {
+        // Token expired — clear auth and redirect to login
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("isAuthenticated");
+        navigate("/auth", { replace: true });
+        return;
       } else if (!r.ok) {
-        throw new Error(d.details || d.error || "Request failed");
+        throw new Error(d.details || d.error || d.message || "Request failed");
       } else if (d.success) {
         if (activeTab === "facebook") setFbData(d);
         else setIgData(d);
