@@ -1,19 +1,17 @@
 /**
  * fix_local_fb_token.js
- * One-time script to inject a valid Facebook token into the local MongoDB
- * so the Engagement Dashboard works in local dev.
- * 
+ * Injects a valid Facebook Page + Instagram token into MongoDB for local dev.
  * Run: node fix_local_fb_token.js
  */
 require('dotenv').config();
 const mongoose = require('mongoose');
-const User = require('./models/user');
+const axios    = require('axios');
+const User     = require('./models/user');
 
-// ── FILL THESE IN ──────────────────────────────────────────────────────────────
-const USER_EMAIL      = 'shubhamchavan@live.com';  // Your Vulpinix login email
-const FB_ACCESS_TOKEN = process.env.FB_MARKETING_TEST_TOKEN || ''; // from .env
-const FB_PAGE_ID      = '1111932568671242';         // Kaustubh's page ID
-// ──────────────────────────────────────────────────────────────────────────────
+const USER_EMAIL      = 'shubhamchavan@live.com';
+const FB_ACCESS_TOKEN = process.env.FB_MARKETING_TEST_TOKEN || '';
+const FB_PAGE_ID      = '1111932568671242';   // Vulpinix Facebook Page
+const IG_ACCOUNT_ID   = '17841411291910138';  // Vulpinix Instagram Business Account
 
 async function run() {
   if (!FB_ACCESS_TOKEN) {
@@ -22,7 +20,7 @@ async function run() {
   }
 
   await mongoose.connect(process.env.MONGO_URI);
-  console.log('✅ Connected to local MongoDB');
+  console.log('✅ Connected to MongoDB');
 
   const user = await User.findOne({ email: USER_EMAIL });
   if (!user) {
@@ -30,34 +28,47 @@ async function run() {
     process.exit(1);
   }
 
-  // Fetch page access token using the user token
-  const axios = require('axios');
+  // Step 1: Get page access token
   let pageToken = FB_ACCESS_TOKEN;
   try {
+    // Try /me/accounts first
     const pagesRes = await axios.get(
       `https://graph.facebook.com/v18.0/me/accounts?access_token=${FB_ACCESS_TOKEN}`
     );
     const pages = pagesRes.data?.data || [];
     const page  = pages.find(p => p.id === FB_PAGE_ID) || pages[0];
-    if (page) {
+    if (page?.access_token) {
       pageToken = page.access_token;
-      console.log(`✅ Got page token for page: ${page.name} (${page.id})`);
+      console.log(`✅ Page token via /me/accounts: ${page.name}`);
     } else {
-      console.warn('⚠️  No pages found via /me/accounts. Using user token as page token.');
+      throw new Error('empty');
     }
-  } catch (e) {
-    console.warn('⚠️  Could not fetch page token:', e.response?.data?.error?.message || e.message);
+  } catch {
+    // Fallback: directly fetch the known page ID
+    try {
+      const pageRes = await axios.get(
+        `https://graph.facebook.com/v18.0/${FB_PAGE_ID}?fields=name,access_token&access_token=${FB_ACCESS_TOKEN}`
+      );
+      if (pageRes.data?.access_token) {
+        pageToken = pageRes.data.access_token;
+        console.log(`✅ Page token via direct lookup: ${pageRes.data.name}`);
+      } else {
+        console.warn('⚠️  No page token found – using user token as fallback');
+      }
+    } catch (e2) {
+      console.warn('⚠️  Page token fetch failed:', e2.response?.data?.error?.message || e2.message);
+    }
   }
 
+  // Step 2: Save both Facebook and Instagram to DB
   if (!user.socialAccounts) user.socialAccounts = {};
+
   user.socialAccounts.facebook = {
-    accessToken:      FB_ACCESS_TOKEN,
-    pageId:           FB_PAGE_ID,
-    pageAccessToken:  pageToken
+    accessToken:     FB_ACCESS_TOKEN,
+    pageId:          FB_PAGE_ID,
+    pageAccessToken: pageToken
   };
 
-  // Also save Instagram using the same token (linked to the same FB Page)
-  const IG_ACCOUNT_ID = '17841401233354736'; // Kaustubh's IG business account
   user.socialAccounts.instagram = {
     accessToken:       FB_ACCESS_TOKEN,
     pageAccessToken:   pageToken,
@@ -69,14 +80,14 @@ async function run() {
     followersCount:    0,
     followsCount:      0,
     mediaCount:        0,
-    pageId:            FB_PAGE_ID,
+    pageId:            FB_PAGE_ID
   };
 
   user.markModified('socialAccounts');
   await user.save();
 
   console.log(`✅ Facebook + Instagram tokens saved for ${USER_EMAIL}`);
-  console.log('   → Now refresh the Engagement Dashboard in your local app.');
+  console.log('   → Refresh the Engagement Dashboard now!');
   await mongoose.disconnect();
 }
 
