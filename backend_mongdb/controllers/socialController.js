@@ -1504,6 +1504,15 @@ exports.getFacebookPosts = async (req, res) => {
     });
   } catch (err) {
     console.error('❌ [FB POSTS] Error:', err.response?.data || err.message);
+    // Treat token expiry / auth errors as NOT_CONNECTED so the frontend shows the reconnect button
+    const fbErrCode = err.response?.data?.error?.code;
+    const fbErrMsg  = err.response?.data?.error?.message || '';
+    const isAuthErr = fbErrCode === 190 || fbErrCode === 102 || fbErrCode === 2500
+      || fbErrMsg.toLowerCase().includes('token') || fbErrMsg.toLowerCase().includes('session')
+      || fbErrMsg.toLowerCase().includes('permission');
+    if (isAuthErr) {
+      return res.status(400).json({ error: 'NOT_CONNECTED', details: 'Facebook token expired. Please reconnect your Facebook Page.' });
+    }
     res.status(500).json({ error: 'Failed to fetch Facebook Page insights', details: err.response?.data?.error?.message || err.message });
   }
 };
