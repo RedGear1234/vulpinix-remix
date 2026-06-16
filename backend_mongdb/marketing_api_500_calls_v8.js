@@ -22,9 +22,9 @@ const AD_ACCOUNT_ID     = 'act_26806024709091463'; // Hardcoded known working ad
 const API_VERSION       = 'v21.0';
 const BASE              = 'graph.facebook.com';
 
-const DELAY_MS          = 2200;   // 2.2s delay between calls
-const PAUSE_EVERY       = 60;     // pause every 60 calls
-const PAUSE_DURATION_MS = 30000;  // 30s cooldown
+const DELAY_MS          = 3200;   // 3.2s delay between calls (safely under 36 calls/100s limit)
+const PAUSE_EVERY       = 40;     // pause every 40 calls
+const PAUSE_DURATION_MS = 40000;  // 40s cooldown
 const TARGET_CALLS      = 520;
 
 // ─────────────────────────────────────────────────────────────────────────────
