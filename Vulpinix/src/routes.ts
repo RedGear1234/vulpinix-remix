@@ -29,6 +29,7 @@ import DataDeletionPage from "./pages/DataDeletionPage";
 import InstagramInsightsPage from "./pages/InstagramInsightsPage";
 import EngagementDashboardPage from "./pages/EngagementDashboardPage";
 import HashtagTrackingPage from "./pages/HashtagTrackingPage";
+import CommunityManagementPage from "./pages/CommunityManagementPage";
 
 export const router = createBrowserRouter([
   {
@@ -138,6 +139,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard/hashtags",
         Component: HashtagTrackingPage,
+      },
+      {
+        path: "dashboard/community",
+        Component: CommunityManagementPage,
       },
       {
         path: "dashboard/engagement",

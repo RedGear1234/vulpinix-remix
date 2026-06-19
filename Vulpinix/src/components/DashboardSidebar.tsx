@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Upload, User,
   LogOut, Share2, Settings, Calendar,
   MessageSquare, Sparkles, PenSquare, ChevronRight,
-  Building2, Briefcase, Mic2, Bot, Crown, CreditCard, Code2, Bell, Instagram, Hash
+  Building2, Briefcase, Mic2, Bot, Crown, CreditCard, Code2, Bell, Instagram, Hash, Inbox
 } from "lucide-react";
 import { VulpinixLogo } from "./VulpinixLogo";
 
@@ -423,6 +423,7 @@ const ANALYTICS_SUB = [
   { label: "Engagement Dashboard", icon: <MessageSquare size={13} />, path: "/dashboard/engagement" },
   { label: "Instagram Insights", icon: <Instagram size={13} />, path: "/dashboard/instagram" },
   { label: "Hashtag Tracking", icon: <Hash size={13} />, path: "/dashboard/hashtags" },
+  { label: "Inbox", icon: <Inbox size={13} />, path: "/dashboard/community" },
 ];
 
 const SETTINGS_NAV = [
@@ -451,7 +452,8 @@ export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props
     location.pathname.startsWith("/dashboard/campaigns") ||
     location.pathname.startsWith("/dashboard/instagram") ||
     location.pathname.startsWith("/dashboard/engagement") ||
-    location.pathname.startsWith("/dashboard/hashtags")
+    location.pathname.startsWith("/dashboard/hashtags") ||
+    location.pathname.startsWith("/dashboard/community")
   );
 
   const isActive = (path: string) => location.pathname === path;

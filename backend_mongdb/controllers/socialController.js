@@ -1152,6 +1152,173 @@ exports.getHashtagInsights = async (req, res) => {
   }
 };
 
+// ── Community Inbox ─────────────────────────────────────────────────────────────
+// Aggregates recent IG post comments + FB page post comments into a unified inbox.
+// Each comment includes: username, profile_picture_url, text, timestamp, platform, postId.
+// Requires: instagram_manage_comments, pages_read_engagement
+exports.getCommunityInbox = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.query.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    let user = null;
+    if (userId.includes('@')) {
+      user = await User.findOne({ email: userId });
+    } else {
+      try { user = await User.findById(userId); } catch (e) {}
+    }
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const ig = user.socialAccounts?.instagram;
+    const fb = user.socialAccounts?.facebook;
+    const hasIG = ig?.igAccountId && (ig.pageAccessToken || ig.accessToken);
+    const hasFB = fb?.accessToken && fb?.pageId;
+
+    if (!hasIG && !hasFB) {
+      return res.status(400).json({ error: 'No social account connected', code: 'NOT_CONNECTED' });
+    }
+
+    const interactions = [];
+
+    // ── Instagram: fetch recent posts then their comments ─────────────────────
+    if (hasIG) {
+      const igToken = ig.pageAccessToken || ig.accessToken;
+      const igId    = ig.igAccountId;
+      try {
+        // Get the 6 most recent posts
+        const mediaRes = await axios.get(`https://graph.facebook.com/v21.0/${igId}/media`, {
+          params: { fields: 'id,caption,media_url,permalink,timestamp', limit: 6, access_token: igToken }
+        });
+        const posts = mediaRes.data?.data || [];
+
+        for (const post of posts) {
+          try {
+            const commRes = await axios.get(`https://graph.facebook.com/v21.0/${post.id}/comments`, {
+              params: {
+                fields: 'id,text,timestamp,username,like_count,replies{id,text,timestamp,username,like_count}',
+                limit: 20,
+                access_token: igToken
+              }
+            });
+            const comments = commRes.data?.data || [];
+            for (const c of comments) {
+              interactions.push({
+                id: c.id,
+                platform: 'instagram',
+                type: 'comment',
+                postId: post.id,
+                postPreview: post.caption ? post.caption.slice(0, 60) + '…' : 'Instagram Post',
+                postThumbnail: post.media_url || null,
+                postPermalink: post.permalink || null,
+                username: c.username || 'instagram_user',
+                // Instagram Graph API doesn't return profile pics for commenters directly
+                // We display a generated avatar using the username initial
+                profilePictureUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(c.username || 'U')}&background=E1306C&color=fff&size=64&bold=true`,
+                text: c.text || '',
+                likeCount: c.like_count || 0,
+                timestamp: c.timestamp,
+                replies: (c.replies?.data || []).map(r => ({
+                  id: r.id,
+                  username: r.username || 'instagram_user',
+                  profilePictureUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(r.username || 'U')}&background=833AB4&color=fff&size=64&bold=true`,
+                  text: r.text || '',
+                  likeCount: r.like_count || 0,
+                  timestamp: r.timestamp
+                }))
+              });
+            }
+          } catch (cErr) {
+            console.warn(`[INBOX] IG comments failed for post ${post.id}:`, cErr.response?.data?.error?.message || cErr.message);
+          }
+        }
+        console.log(`[INBOX] ✅ Instagram: ${interactions.filter(i => i.platform === 'instagram').length} comments loaded`);
+      } catch (igErr) {
+        console.warn('[INBOX] IG media fetch failed:', igErr.response?.data?.error?.message || igErr.message);
+      }
+    }
+
+    // ── Facebook Page: fetch recent posts then their comments ─────────────────
+    if (hasFB) {
+      const fbToken  = fb.accessToken;
+      const fbPageId = fb.pageId;
+      try {
+        const fbPostsRes = await axios.get(`https://graph.facebook.com/v21.0/${fbPageId}/posts`, {
+          params: {
+            fields: 'id,message,full_picture,permalink_url,created_time',
+            limit: 6,
+            access_token: fbToken
+          }
+        });
+        const fbPosts = fbPostsRes.data?.data || [];
+
+        for (const post of fbPosts) {
+          try {
+            const commRes = await axios.get(`https://graph.facebook.com/v21.0/${post.id}/comments`, {
+              params: {
+                fields: 'id,message,created_time,from{name,picture{url}},like_count,comments{id,message,created_time,from{name,picture{url}},like_count}',
+                limit: 20,
+                access_token: fbToken
+              }
+            });
+            const comments = commRes.data?.data || [];
+            for (const c of comments) {
+              const fromName = c.from?.name || 'Facebook User';
+              const fromPic  = c.from?.picture?.data?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fromName)}&background=1877F2&color=fff&size=64&bold=true`;
+              interactions.push({
+                id: c.id,
+                platform: 'facebook',
+                type: 'comment',
+                postId: post.id,
+                postPreview: post.message ? post.message.slice(0, 60) + '…' : 'Facebook Post',
+                postThumbnail: post.full_picture || null,
+                postPermalink: post.permalink_url || null,
+                username: fromName,
+                profilePictureUrl: fromPic,
+                text: c.message || '',
+                likeCount: c.like_count || 0,
+                timestamp: c.created_time,
+                replies: (c.comments?.data || []).map(r => ({
+                  id: r.id,
+                  username: r.from?.name || 'Facebook User',
+                  profilePictureUrl: r.from?.picture?.data?.url || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.from?.name || 'U')}&background=38bdf8&color=fff&size=64&bold=true`,
+                  text: r.message || '',
+                  likeCount: r.like_count || 0,
+                  timestamp: r.created_time
+                }))
+              });
+            }
+          } catch (cErr) {
+            console.warn(`[INBOX] FB comments failed for post ${post.id}:`, cErr.response?.data?.error?.message || cErr.message);
+          }
+        }
+        console.log(`[INBOX] ✅ Facebook: ${interactions.filter(i => i.platform === 'facebook').length} comments loaded`);
+      } catch (fbErr) {
+        console.warn('[INBOX] FB posts fetch failed:', fbErr.response?.data?.error?.message || fbErr.message);
+      }
+    }
+
+    // Sort all interactions newest-first
+    interactions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    res.json({
+      success: true,
+      totalInteractions: interactions.length,
+      igConnected: !!hasIG,
+      fbConnected: !!hasFB,
+      interactions
+    });
+
+  } catch (err) {
+    console.error('❌ [INBOX] Error:', err.response?.data || err.message);
+    const code = err.response?.data?.error?.code;
+    const msg  = err.response?.data?.error?.message || '';
+    if (code === 190 || code === 102 || msg.toLowerCase().includes('token')) {
+      return res.status(400).json({ error: 'NOT_CONNECTED', details: 'Social token expired. Please reconnect.' });
+    }
+    res.status(500).json({ error: 'Failed to fetch inbox', details: msg || err.message });
+  }
+};
+
 exports.getInstagramComments = async (req, res) => {
 
   try {
