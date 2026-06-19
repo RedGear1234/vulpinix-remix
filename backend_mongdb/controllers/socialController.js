@@ -1028,7 +1028,132 @@ exports.getInstagramInsights = async (req, res) => {
   }
 };
 
+// ── Instagram Hashtag Tracking ─────────────────────────────────────────────────
+// Requires: instagram_business_manage_insights permission
+// Flow:
+//   1. GET /ig_hashtag_search?user_id={igId}&q={hashtag} → hashtag ID
+//   2. GET /{hashtag-id}/top_media?user_id={igId}        → top posts
+//   3. GET /{hashtag-id}/recent_media?user_id={igId}     → recent posts
+exports.getHashtagInsights = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.query.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { tag } = req.query;
+    if (!tag) return res.status(400).json({ error: 'Missing tag query param (e.g. ?tag=travel)' });
+
+    // Normalize tag — strip leading # if any
+    const cleanTag = tag.replace(/^#/, '').trim().toLowerCase();
+    if (!cleanTag) return res.status(400).json({ error: 'Empty hashtag' });
+
+    let user = null;
+    if (userId.includes('@')) {
+      user = await User.findOne({ email: userId });
+    } else {
+      try { user = await User.findById(userId); } catch (e) {}
+    }
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const ig = user.socialAccounts?.instagram;
+    if (!ig?.igAccountId) {
+      return res.status(400).json({ error: 'No Instagram account connected', code: 'NOT_CONNECTED' });
+    }
+
+    const token = ig.pageAccessToken || ig.accessToken;
+    if (!token) return res.status(400).json({ error: 'Instagram token missing' });
+
+    const igId = ig.igAccountId;
+
+    // Step 1: Search for the hashtag ID
+    let hashtagId = null;
+    try {
+      const searchRes = await axios.get('https://graph.facebook.com/v21.0/ig_hashtag_search', {
+        params: { user_id: igId, q: cleanTag, access_token: token }
+      });
+      hashtagId = searchRes.data?.data?.[0]?.id;
+      console.log(`[HASHTAG] Found ID for #${cleanTag}: ${hashtagId}`);
+    } catch (searchErr) {
+      console.error('[HASHTAG] Hashtag search failed:', searchErr.response?.data?.error?.message || searchErr.message);
+      return res.status(400).json({
+        error: 'Hashtag search failed',
+        details: searchErr.response?.data?.error?.message || searchErr.message
+      });
+    }
+
+    if (!hashtagId) {
+      return res.status(404).json({ error: `Hashtag #${cleanTag} not found or has no public posts.` });
+    }
+
+    const mediaFields = 'id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count';
+
+    // Step 2: Top media
+    let topPosts = [];
+    try {
+      const topRes = await axios.get(`https://graph.facebook.com/v21.0/${hashtagId}/top_media`, {
+        params: { user_id: igId, fields: mediaFields, limit: 12, access_token: token }
+      });
+      topPosts = topRes.data?.data || [];
+      console.log(`[HASHTAG] ✅ Top media for #${cleanTag}: ${topPosts.length} posts`);
+    } catch (topErr) {
+      console.warn('[HASHTAG] top_media failed:', topErr.response?.data?.error?.message || topErr.message);
+    }
+
+    // Step 3: Recent media
+    let recentPosts = [];
+    try {
+      const recentRes = await axios.get(`https://graph.facebook.com/v21.0/${hashtagId}/recent_media`, {
+        params: { user_id: igId, fields: mediaFields, limit: 12, access_token: token }
+      });
+      recentPosts = recentRes.data?.data || [];
+      console.log(`[HASHTAG] ✅ Recent media for #${cleanTag}: ${recentPosts.length} posts`);
+    } catch (recentErr) {
+      console.warn('[HASHTAG] recent_media failed:', recentErr.response?.data?.error?.message || recentErr.message);
+    }
+
+    const normalizePost = (p, type) => ({
+      id: p.id,
+      caption: p.caption ? p.caption.slice(0, 150) + (p.caption.length > 150 ? '…' : '') : '',
+      mediaType: p.media_type || 'IMAGE',
+      mediaUrl: p.media_url || null,
+      permalink: p.permalink || null,
+      timestamp: p.timestamp || null,
+      likes: p.like_count || 0,
+      comments: p.comments_count || 0,
+      postType: type
+    });
+
+    const topIds = new Set(topPosts.map(p => p.id));
+    const allPosts = [
+      ...topPosts.map(p => normalizePost(p, 'top')),
+      ...recentPosts.filter(r => !topIds.has(r.id)).map(p => normalizePost(p, 'recent'))
+    ];
+
+    const totalLikes    = allPosts.reduce((s, p) => s + p.likes, 0);
+    const totalComments = allPosts.reduce((s, p) => s + p.comments, 0);
+    const avgLikes      = allPosts.length > 0 ? Math.round(totalLikes / allPosts.length) : 0;
+    const avgComments   = allPosts.length > 0 ? Math.round(totalComments / allPosts.length) : 0;
+
+    res.json({
+      success: true,
+      hashtag: cleanTag,
+      hashtagId,
+      stats: { totalPosts: allPosts.length, topPostsCount: topPosts.length, recentPostsCount: recentPosts.length, totalLikes, totalComments, avgLikes, avgComments },
+      posts: allPosts
+    });
+
+  } catch (err) {
+    console.error('❌ [HASHTAG] Error:', err.response?.data || err.message);
+    const code = err.response?.data?.error?.code;
+    const msg  = err.response?.data?.error?.message || '';
+    if (code === 190 || code === 102 || msg.toLowerCase().includes('token')) {
+      return res.status(400).json({ error: 'NOT_CONNECTED', details: 'Instagram token expired. Please reconnect.' });
+    }
+    res.status(500).json({ error: 'Failed to fetch hashtag data', details: msg || err.message });
+  }
+};
+
 exports.getInstagramComments = async (req, res) => {
+
   try {
     const userId = req.user?.id || req.user?._id || req.query.userId;
     const { mediaId } = req.params;
