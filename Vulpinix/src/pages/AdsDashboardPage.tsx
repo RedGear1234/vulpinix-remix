@@ -102,6 +102,64 @@ const S = `
     background-size:200%;animation:ads-skel 1.5s ease infinite;}
   @keyframes ads-skel{0%{background-position:200%}100%{background-position:-200%}}
   @media(max-width:900px){.ads-kpi-grid{grid-template-columns:repeat(2,1fr);}.ads-grid-2{grid-template-columns:1fr;}}
+
+  /* ── Demo FB Ad ──────────────────────────────────────── */
+  .demo-section{margin-bottom:28px;}
+  .demo-section-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+    color:#334155;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .demo-section-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.05);}
+  .demo-fb-wrap{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start;}
+  .demo-fb-card{border-radius:16px;overflow:hidden;
+    background:#18191a;border:1px solid rgba(255,255,255,0.09);
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+  .demo-fb-header{display:flex;align-items:center;gap:10px;padding:12px 14px 0;}
+  .demo-fb-avatar{width:38px;height:38px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(135deg,#7c3aed,#2563eb);
+    display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff;}
+  .demo-fb-name{font-size:13px;font-weight:700;color:#e4e6ea;line-height:1.2;}
+  .demo-fb-sponsored{font-size:11px;color:#8a8d91;display:flex;align-items:center;gap:3px;}
+  .demo-fb-dots{margin-left:auto;color:#8a8d91;font-size:18px;cursor:pointer;padding:0 4px;
+    border-radius:50%;transition:background 0.15s;}
+  .demo-fb-dots:hover{background:rgba(255,255,255,0.07);}
+  .demo-fb-copy{padding:10px 14px 8px;font-size:13px;color:#e4e6ea;line-height:1.55;
+    white-space:pre-wrap;}
+  .demo-fb-img{width:100%;display:block;object-fit:cover;max-height:220px;}
+  .demo-fb-cta-bar{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px;background:#242526;}
+  .demo-fb-cta-info{}
+  .demo-fb-cta-url{font-size:10px;color:#8a8d91;text-transform:uppercase;letter-spacing:0.04em;}
+  .demo-fb-cta-headline{font-size:13px;font-weight:700;color:#e4e6ea;margin:1px 0;}
+  .demo-fb-cta-desc{font-size:11px;color:#8a8d91;}
+  .demo-fb-cta-btn{padding:7px 14px;border-radius:7px;background:#e4e6ea;color:#050505;
+    font-size:13px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;
+    transition:background 0.15s;flex-shrink:0;}
+  .demo-fb-cta-btn:hover{background:#fff;}
+  .demo-fb-actions{display:flex;border-top:1px solid rgba(255,255,255,0.07);}
+  .demo-fb-action{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:9px 0;font-size:13px;font-weight:600;color:#8a8d91;cursor:pointer;
+    transition:background 0.15s;border-radius:4px;}
+  .demo-fb-action:hover{background:rgba(255,255,255,0.06);color:#e4e6ea;}
+  .demo-fb-reactions{display:flex;align-items:center;gap:6px;padding:6px 14px;
+    border-top:1px solid rgba(255,255,255,0.05);}
+  .demo-fb-react-icons{display:flex;}
+  .demo-fb-react-icons span{width:18px;height:18px;border-radius:50%;display:inline-flex;
+    align-items:center;justify-content:center;font-size:11px;margin-left:-4px;
+    border:1px solid #18191a;}
+  .demo-fb-react-count{font-size:12px;color:#8a8d91;}
+  .demo-metrics{display:flex;flex-direction:column;gap:12px;}
+  .demo-metric-card{border-radius:14px;padding:18px 20px;
+    background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);
+    display:flex;align-items:center;gap:16px;transition:all 0.2s;}
+  .demo-metric-card:hover{border-color:rgba(255,255,255,0.12);transform:translateX(2px);}
+  .demo-metric-icon{width:42px;height:42px;border-radius:12px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;}
+  .demo-metric-label{font-size:11px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.07em;color:#475569;}
+  .demo-metric-val{font-size:22px;font-weight:900;line-height:1.1;}
+  .demo-metric-sub{font-size:11px;color:#475569;margin-top:2px;}
+  .demo-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+    border-radius:20px;font-size:10px;font-weight:700;background:rgba(24,119,242,0.12);
+    border:1px solid rgba(24,119,242,0.25);color:#60a5fa;margin-left:auto;}
 `;
 
 function fmtN(n: number) {
@@ -113,6 +171,89 @@ function fmtN(n: number) {
 function StatusBadge({ status }: { status: string }) {
   const cls = status === "ACTIVE" ? "ads-badge-active" : status === "PAUSED" ? "ads-badge-paused" : "ads-badge-archived";
   return <span className={`ads-badge ${cls}`}>{status}</span>;
+}
+
+function DemoFacebookAd() {
+  const metrics = [
+    { label: "Impressions", val: "2.4M",  sub: "Unique accounts reached",  color: "#60a5fa", bg: "rgba(59,130,246,0.12)",  icon: "👁️" },
+    { label: "Clicks",      val: "18.5K", sub: "Link clicks to website",   color: "#a78bfa", bg: "rgba(139,92,246,0.12)", icon: "🖱️" },
+    { label: "CTR",         val: "3.2%",  sub: "Click-through rate",       color: "#34d399", bg: "rgba(16,185,129,0.12)", icon: "📈" },
+    { label: "Spend",       val: "$124",  sub: "Total amount spent",       color: "#fb923c", bg: "rgba(249,115,22,0.12)", icon: "💰" },
+    { label: "Conversions",val: "312",   sub: "Actions completed",        color: "#f472b6", bg: "rgba(236,72,153,0.12)", icon: "🎯" },
+    { label: "CPC",        val: "$0.67", sub: "Cost per click",           color: "#38bdf8", bg: "rgba(14,165,233,0.12)", icon: "⚡" },
+  ];
+  return (
+    <motion.div className="demo-section" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+      <div className="demo-section-label">
+        <span style={{ fontSize: 14 }}>📘</span> Facebook Ad Preview
+        <span className="demo-chip">Sample Campaign · Active</span>
+      </div>
+      <div className="demo-fb-wrap">
+        {/* Facebook Ad Card */}
+        <div className="demo-fb-card">
+          {/* Header */}
+          <div className="demo-fb-header">
+            <div className="demo-fb-avatar">V</div>
+            <div>
+              <div className="demo-fb-name">Vulpinix</div>
+              <div className="demo-fb-sponsored">
+                <span>Sponsored</span>
+                <span>·</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#8a8d91"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+              </div>
+            </div>
+            <div className="demo-fb-dots">···</div>
+          </div>
+          {/* Body copy */}
+          <div className="demo-fb-copy">{`🚀 Scale your brand with AI-powered social media tools.
+
+Schedule posts, analyze performance, and grow across every platform — all in one place.`}</div>
+          {/* Ad Image */}
+          <img src="/facebook_demo_ad.png" alt="Vulpinix Ad Creative" className="demo-fb-img" />
+          {/* CTA bar */}
+          <div className="demo-fb-cta-bar">
+            <div className="demo-fb-cta-info">
+              <div className="demo-fb-cta-url">vulpinix.com</div>
+              <div className="demo-fb-cta-headline">Grow Your Brand with AI</div>
+              <div className="demo-fb-cta-desc">AI-powered social media management</div>
+            </div>
+            <button className="demo-fb-cta-btn">Learn More</button>
+          </div>
+          {/* Reactions row */}
+          <div className="demo-fb-reactions">
+            <div className="demo-fb-react-icons">
+              <span style={{ background: "#1877F2" }}>👍</span>
+              <span style={{ background: "#E1306C" }}>❤️</span>
+              <span style={{ background: "#F7B928" }}>😮</span>
+            </div>
+            <span className="demo-fb-react-count">2.1K · 312 comments · 84 shares</span>
+          </div>
+          {/* Action buttons */}
+          <div className="demo-fb-actions">
+            {[["👍","Like"],["💬","Comment"],["↗","Share"]].map(([ic, lb]) => (
+              <div key={lb} className="demo-fb-action"><span>{ic}</span><span>{lb}</span></div>
+            ))}
+          </div>
+        </div>
+        {/* Metrics */}
+        <div className="demo-metrics">
+          {metrics.map((m, i) => (
+            <motion.div key={m.label} className="demo-metric-card"
+              initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.06 }}>
+              <div className="demo-metric-icon" style={{ background: m.bg }}>
+                <span style={{ fontSize: 18 }}>{m.icon}</span>
+              </div>
+              <div>
+                <div className="demo-metric-label">{m.label}</div>
+                <div className="demo-metric-val" style={{ color: m.color }}>{m.val}</div>
+                <div className="demo-metric-sub">{m.sub}</div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 type Tab = "all" | "facebook" | "instagram";
@@ -210,6 +351,9 @@ export default function AdsDashboardPage() {
                 <button key={id} className={`ads-tab ${tab === id ? cls : ""}`} onClick={() => setTab(id)}>{label}</button>
               ))}
             </div>
+
+            {/* Always-visible Demo Facebook Ad */}
+            {!loading && <DemoFacebookAd />}
 
             {/* Error / Connect state */}
             {error === "connect" && (
