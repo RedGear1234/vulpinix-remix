@@ -4,7 +4,7 @@ import {
   LayoutDashboard, BarChart3, Upload, User,
   LogOut, Share2, Settings, Calendar,
   MessageSquare, Sparkles, PenSquare, ChevronRight,
-  Building2, Briefcase, Mic2, Bot, Crown, CreditCard, Code2, Bell, Instagram, Hash, Inbox
+  Building2, Briefcase, Mic2, Bot, Crown, CreditCard, Code2, Bell, Instagram, Hash, Inbox, DollarSign
 } from "lucide-react";
 import { VulpinixLogo } from "./VulpinixLogo";
 
@@ -189,7 +189,7 @@ const SB = `
     transition: max-height 0.25s ease, opacity 0.2s ease;
   }
   .vxsb-sub-nav.collapsed { max-height: 0; opacity: 0; pointer-events: none; }
-  .vxsb-sub-nav.expanded  { max-height: 200px; opacity: 1; }
+  .vxsb-sub-nav.expanded  { max-height: 260px; opacity: 1; }
   .vxsb-sub-link {
     display: flex;
     align-items: center;
@@ -422,6 +422,7 @@ const MAIN_NAV = [
 const ANALYTICS_SUB = [
   { label: "Engagement Dashboard", icon: <MessageSquare size={13} />, path: "/dashboard/engagement" },
   { label: "Instagram Insights", icon: <Instagram size={13} />, path: "/dashboard/instagram" },
+  { label: "Ads Dashboard", icon: <DollarSign size={13} />, path: "/dashboard/ads" },
   { label: "Hashtag Tracking", icon: <Hash size={13} />, path: "/dashboard/hashtags" },
   { label: "Inbox", icon: <Inbox size={13} />, path: "/dashboard/community" },
 ];
@@ -453,7 +454,8 @@ export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props
     location.pathname.startsWith("/dashboard/instagram") ||
     location.pathname.startsWith("/dashboard/engagement") ||
     location.pathname.startsWith("/dashboard/hashtags") ||
-    location.pathname.startsWith("/dashboard/community")
+    location.pathname.startsWith("/dashboard/community") ||
+    location.pathname.startsWith("/dashboard/ads")
   );
 
   const isActive = (path: string) => location.pathname === path;
