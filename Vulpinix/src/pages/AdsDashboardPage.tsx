@@ -4,11 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardSidebar } from "../components/DashboardSidebar";
 import { DashboardTopBar } from "../components/DashboardTopBar";
 import { API_BASE } from "../config/api";
-import { toast } from "sonner";
 import {
   DollarSign, TrendingUp, Eye, MousePointer, Target,
   RefreshCw, ExternalLink, AlertCircle, CheckCircle2,
-  BarChart3, Zap, ArrowUpRight, ArrowDownRight, Activity
+  BarChart3, Zap, ArrowUpRight, Activity
 } from "lucide-react";
 
 const S = `
