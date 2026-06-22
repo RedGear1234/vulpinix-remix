@@ -135,7 +135,7 @@ const publishCampaign = async (campaign) => {
             // ✅ Pre-validate that the saved token is still alive before attempting to publish
             let skipPublish = false;
             try {
-              await axios.get(`https://graph.facebook.com/v18.0/me?access_token=${metaToken}&fields=id`);
+              await axios.get(`https://graph.facebook.com/v21.0/me?access_token=${metaToken}&fields=id`);
             } catch (tokenCheckErr) {
               const errMsg = tokenCheckErr.response?.data?.error?.message || tokenCheckErr.message;
               console.error("❌ [PUBLISH] Saved Meta token is EXPIRED or INVALID:", errMsg);
@@ -153,12 +153,12 @@ const publishCampaign = async (campaign) => {
               if (!pageToken) {
                 console.log("🔍 [PUBLISH] No saved page token. Fetching live from Meta...");
                 try {
-                  const pagesRes = await axios.get(`https://graph.facebook.com/v18.0/me/accounts?access_token=${metaToken}`);
+                  const pagesRes = await axios.get(`https://graph.facebook.com/v21.0/me/accounts?access_token=${metaToken}`);
                   let pages = pagesRes.data.data || [];
                   if (pages.length === 0) {
                     // Fallback: force-fetch the known page
                     try {
-                      const forceRes = await axios.get(`https://graph.facebook.com/v18.0/1111932568671242?fields=access_token,name&access_token=${metaToken}`);
+                      const forceRes = await axios.get(`https://graph.facebook.com/v21.0/1111932568671242?fields=access_token,name&access_token=${metaToken}`);
                       if (forceRes.data?.access_token) pages = [forceRes.data];
                     } catch (e) { console.log("❌ [PUBLISH] Force-fetch failed:", e.message); }
                   }
@@ -267,7 +267,7 @@ const publishCampaign = async (campaign) => {
                     if (!igAccountId) {
                       console.log("🔍 [IG] No saved IG account ID. Fetching from Page...");
                       const igPageRes = await axios.get(
-                        `https://graph.facebook.com/v18.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`
+                        `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`
                       );
                       igAccountId = igPageRes.data?.instagram_business_account?.id;
                       console.log("🔍 [IG] Live IG Account ID:", igAccountId);
@@ -285,7 +285,7 @@ const publishCampaign = async (campaign) => {
                       // Create IG media container
                       console.log("🔍 [IG] Creating media container with URL:", publicImageUrl);
                       const containerRes = await axios.post(
-                        `https://graph.facebook.com/v18.0/${igAccountId}/media`,
+                        `https://graph.facebook.com/v21.0/${igAccountId}/media`,
                         {
                           image_url: publicImageUrl,
                           caption: adCaption || adCopyText || campaignName,
@@ -301,7 +301,7 @@ const publishCampaign = async (campaign) => {
                         for (let i = 0; i < 5; i++) {
                           await new Promise(r => setTimeout(r, 3000));
                           const statusRes = await axios.get(
-                            `https://graph.facebook.com/v18.0/${creationId}?fields=status_code&access_token=${pageToken}`
+                            `https://graph.facebook.com/v21.0/${creationId}?fields=status_code&access_token=${pageToken}`
                           );
                           const statusCode = statusRes.data?.status_code;
                           console.log(`🔍 [IG] Poll ${i + 1}/5 — status: ${statusCode}`);
@@ -315,7 +315,7 @@ const publishCampaign = async (campaign) => {
                         if (isReady) {
                           // Publish the container
                           const publishRes = await axios.post(
-                            `https://graph.facebook.com/v18.0/${igAccountId}/media_publish`,
+                            `https://graph.facebook.com/v21.0/${igAccountId}/media_publish`,
                             { creation_id: creationId, access_token: pageToken }
                           );
                           console.log("✅ [IG] Published successfully! Post ID:", publishRes.data?.id);
