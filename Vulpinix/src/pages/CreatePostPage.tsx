@@ -105,11 +105,50 @@ const S = `
 
   .vxcp-success{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:200;}
   .vxcp-success-card{background:#0f1628;border:1px solid rgba(34,197,94,0.3);border-radius:24px;padding:48px 40px;text-align:center;max-width:400px;}
+  .vxcp-type-tabs{display:flex;gap:0;margin-bottom:24px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:5px;width:fit-content;}
+  .vxcp-type-tab{padding:9px 22px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;color:#475569;display:flex;align-items:center;gap:7px;}
+  .vxcp-type-tab.active-post{background:linear-gradient(135deg,#a78bfa,#38bdf8);color:#fff;box-shadow:0 4px 14px rgba(167,139,250,0.3);}
+  .vxcp-type-tab.active-video{background:linear-gradient(135deg,#1877F2,#0a52c4);color:#fff;box-shadow:0 4px 16px rgba(24,119,242,0.35);}
+  .vxcp-type-tab:hover:not(.active-post):not(.active-video){background:rgba(255,255,255,0.05);color:#94a3b8;}
+  .vxcp-fb-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:8px;background:rgba(24,119,242,0.15);border:1px solid rgba(24,119,242,0.3);color:#60a5fa;font-size:10px;font-weight:700;}
+  .vxcp-video-drop{border:2px dashed rgba(24,119,242,0.3);border-radius:18px;padding:48px 24px;text-align:center;cursor:pointer;transition:all 0.25s;background:rgba(24,119,242,0.03);position:relative;overflow:hidden;}
+  .vxcp-video-drop:hover{border-color:rgba(24,119,242,0.6);background:rgba(24,119,242,0.07);}
+  .vxcp-video-preview{border-radius:14px;overflow:hidden;background:#000;position:relative;margin-bottom:14px;}
+  .vxcp-video-preview video{width:100%;max-height:280px;display:block;object-fit:contain;background:#000;}
+  .vxcp-video-preview-remove{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.15);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px);display:flex;align-items:center;gap:5px;transition:background 0.15s;}
+  .vxcp-video-preview-remove:hover{background:rgba(239,68,68,0.7);}
+  .vxcp-field-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#334155;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .vxcp-field-label .req{color:#ef4444;}
+  .vxcp-input{width:100%;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#f1f5f9;font-size:14px;font-family:'Inter',sans-serif;outline:none;box-sizing:border-box;transition:border-color 0.2s;}
+  .vxcp-input:focus{border-color:rgba(24,119,242,0.5);}
+  .vxcp-input::placeholder{color:#475569;}
+  .vxcp-input-area{width:100%;min-height:100px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#f1f5f9;font-size:14px;font-family:'Inter',sans-serif;outline:none;box-sizing:border-box;resize:vertical;line-height:1.6;transition:border-color 0.2s;}
+  .vxcp-input-area:focus{border-color:rgba(24,119,242,0.5);}
+  .vxcp-input-area::placeholder{color:#475569;}
+  .vxcp-page-select{width:100%;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#f1f5f9;font-size:14px;font-family:'Inter',sans-serif;outline:none;box-sizing:border-box;appearance:none;cursor:pointer;transition:border-color 0.2s;}
+  .vxcp-page-select:focus{border-color:rgba(24,119,242,0.5);}
+  .vxcp-btn-fb{width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,#1877F2,#0a52c4);border:none;color:#fff;font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 8px 24px rgba(24,119,242,0.35);transition:transform 0.2s,box-shadow 0.2s;margin-bottom:12px;}
+  .vxcp-btn-fb:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 32px rgba(24,119,242,0.5);}
+  .vxcp-btn-fb:disabled{opacity:0.5;cursor:not-allowed;}
+  .vxcp-video-success{border-radius:24px;padding:48px 36px;background:rgba(24,119,242,0.05);border:1px solid rgba(24,119,242,0.18);text-align:center;}
 `;
+
 export default function CreatePostPage() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
   const [userName, setUserName] = useState("there");
+  const [postType, setPostType] = useState<"post" | "video">("post");
+  // ── Video Post state ────────────────────────────────────────────────────────
+  const [videoFile, setVideoFile] = useState<string | null>(null);
+  const [videoFileName, setVideoFileName] = useState("");
+  const [videoTitle, setVideoTitle] = useState("");
+  const [videoDesc, setVideoDesc] = useState("");
+  const [fbPage, setFbPage] = useState("");
+  const [videoPosting, setVideoPosting] = useState(false);
+  const [videoPosted, setVideoPosted] = useState(false);
+  const [videoPostId, setVideoPostId] = useState("");
+  // ── Regular post state ──────────────────────────────────────────────────────
   const [caption, setCaption] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [privacy, setPrivacy] = useState("public");
@@ -122,6 +161,7 @@ export default function CreatePostPage() {
   const [publishResults, setPublishResults] = useState<Record<string, { status: string; error?: string; id?: string }>>({});
 
   const [linkedAccounts, setLinkedAccounts] = useState<string[]>([]);
+
 
   const todayStr = new Date().toLocaleDateString("en-CA");
   const now = new Date();
@@ -164,9 +204,46 @@ export default function CreatePostPage() {
     setLinkedAccounts(accounts);
     // Don't auto-select any platform â€” let the user explicitly choose where to post
     setSelectedPlatforms([]);
+    if (accounts.includes("facebook")) setFbPage("My Facebook Page");
   }, [navigate]);
 
+  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) { alert("Please select a video file."); return; }
+    if (file.size > 200 * 1024 * 1024) { alert("Video must be under 200MB."); return; }
+    setVideoFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = ev => { if (ev.target?.result) setVideoFile(ev.target.result as string); };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleVideoPublish = async () => {
+    if (!videoFile || !videoTitle.trim() || !fbPage) return;
+    setVideoPosting(true);
+    try {
+      const token = localStorage.getItem("authToken");
+      const u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const res = await fetch(`${API_BASE}/api/campaign/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          userId: u.email, userName: u.name, userEmail: u.email,
+          campaignName: videoTitle.substring(0, 60), budget: "0",
+          platforms: ["facebook"], adCaption: videoDesc || videoTitle,
+          adVideo: videoFile, videoTitle, videoDescription: videoDesc, fbPageName: fbPage,
+        })
+      });
+      const data = await res.json();
+      if (data.publishResults?.facebook?.id) setVideoPostId(data.publishResults.facebook.id);
+    } catch (err) { console.error("Video publish error:", err); }
+    setVideoPosting(false);
+    setVideoPosted(true);
+  };
+
   const togglePlatform = (id: string) => {
+
     setSelectedPlatforms(prev => {
       const next = prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id];
       // If YouTube was deselected, clear any existing videos
@@ -302,7 +379,137 @@ export default function CreatePostPage() {
                 </div>
               </div>
 
-              {linkedAccounts.length === 0 ? (
+              {/* ── Post Type Tabs ── */}
+              <div className="vxcp-type-tabs">
+                <div id="tab-post" className={`vxcp-type-tab ${postType === "post" ? "active-post" : ""}`} onClick={() => setPostType("post")}>
+                  <ImageIcon size={14} /> Post
+                </div>
+                <div id="tab-video-post" className={`vxcp-type-tab ${postType === "video" ? "active-video" : ""}`} onClick={() => setPostType("video")}>
+                  <Video size={14} /> Video Post
+                  <span className="vxcp-fb-badge"><Facebook size={9} /> Facebook</span>
+                </div>
+              </div>
+
+              {/* ══════════ VIDEO POST FLOW ══════════ */}
+              {postType === "video" && (
+                <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }}>
+                  {!videoPosted ? (
+                    <div className="vxcp-grid">
+                      <div>
+                        {/* Upload */}
+                        <motion.div className="vxcp-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
+                          <div className="vxcp-card-title"><Video size={14} /> Upload Video File</div>
+                          <input ref={videoRef} type="file" accept="video/*" style={{ display: "none" }} onChange={handleVideoFileChange} />
+                          {!videoFile ? (
+                            <div className="vxcp-video-drop" onClick={() => videoRef.current?.click()}>
+                              <Video size={44} color="#1877F2" style={{ margin: "0 auto 16px", opacity: 0.7 }} />
+                              <div style={{ fontSize: 16, fontWeight: 800, color: "#e2e8f0", marginBottom: 6 }}>Click to upload a video</div>
+                              <div style={{ fontSize: 12, color: "#475569" }}>MP4, MOV, AVI · Max 200MB</div>
+                              <div style={{ marginTop: 16, display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 10, background: "rgba(24,119,242,0.12)", border: "1px solid rgba(24,119,242,0.25)", color: "#60a5fa", fontSize: 12, fontWeight: 700 }}>
+                                <Facebook size={12} /> Publish to Facebook Page
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="vxcp-video-preview">
+                                <video src={videoFile} controls style={{ width: "100%", maxHeight: 280, objectFit: "contain", background: "#000" }} />
+                                <button className="vxcp-video-preview-remove" onClick={() => { setVideoFile(null); setVideoFileName(""); }}>
+                                  <X size={11} /> Remove
+                                </button>
+                              </div>
+                              <div style={{ fontSize: 12, color: "#475569", textAlign: "center" }}>📹 {videoFileName}</div>
+                            </div>
+                          )}
+                        </motion.div>
+
+                        {/* Video Details */}
+                        <motion.div className="vxcp-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+                          <div className="vxcp-card-title">Video Details</div>
+                          <div style={{ marginBottom: 16 }}>
+                            <div className="vxcp-field-label">Title <span className="req">*</span></div>
+                            <input id="video-title" className="vxcp-input" placeholder="Enter a title for your video…" value={videoTitle} onChange={e => setVideoTitle(e.target.value)} maxLength={255} />
+                            <div style={{ fontSize: 11, color: "#334155", textAlign: "right", marginTop: 4 }}>{videoTitle.length}/255</div>
+                          </div>
+                          <div>
+                            <div className="vxcp-field-label">Description</div>
+                            <textarea id="video-description" className="vxcp-input-area" placeholder="Describe your video — this becomes the Facebook post caption…" value={videoDesc} onChange={e => setVideoDesc(e.target.value)} maxLength={5000} />
+                          </div>
+                        </motion.div>
+                      </div>
+
+                      {/* RIGHT: FB Page + Publish */}
+                      <div>
+                        <motion.div className="vxcp-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
+                          <div className="vxcp-card-title"><Facebook size={13} /> Facebook Page</div>
+                          {linkedAccounts.includes("facebook") ? (
+                            <div>
+                              <div className="vxcp-field-label">Select Page <span className="req">*</span></div>
+                              <div style={{ position: "relative" }}>
+                                <select id="fb-page-select" className="vxcp-page-select" value={fbPage} onChange={e => setFbPage(e.target.value)}>
+                                  <option value="">— Select a Facebook Page —</option>
+                                  <option value="My Facebook Page">My Facebook Page (connected)</option>
+                                </select>
+                                <ChevronDown size={14} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: "#475569", pointerEvents: "none" }} />
+                              </div>
+                              {fbPage && (
+                                <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 10, background: "rgba(24,119,242,0.08)", border: "1px solid rgba(24,119,242,0.18)", display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                                  <CheckCircle2 size={13} color="#22c55e" />
+                                  <span style={{ color: "#22c55e", fontWeight: 700 }}>Page selected:</span>
+                                  <span style={{ color: "#94a3b8" }}>{fbPage}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ textAlign: "center", padding: "20px 0" }}>
+                              <div style={{ fontSize: 13, color: "#475569", marginBottom: 12 }}>No Facebook account connected.</div>
+                              <button className="vxcp-btn-primary" style={{ width: "auto", padding: "10px 20px", fontSize: 13 }} onClick={() => navigate("/social")}>
+                                <Facebook size={14} /> Connect Facebook
+                              </button>
+                            </div>
+                          )}
+                        </motion.div>
+
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }}>
+                          <button
+                            id="publish-video-btn"
+                            className="vxcp-btn-fb"
+                            onClick={handleVideoPublish}
+                            disabled={videoPosting || !videoFile || !videoTitle.trim() || !fbPage}
+                          >
+                            {videoPosting
+                              ? <><span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} /> Publishing…</>
+                              : <><Facebook size={16} /> Publish Video to Facebook</>
+                            }
+                          </button>
+                          <button className="vxcp-btn-secondary" onClick={() => navigate("/dashboard")}>Cancel</button>
+                        </motion.div>
+                      </div>
+                    </div>
+                  ) : (
+                    <motion.div className="vxcp-video-success" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                      <CheckCircle2 size={52} color="#22c55e" style={{ margin: "0 auto 16px", display: "block" }} />
+                      <div style={{ fontSize: 22, fontWeight: 800, color: "#f1f5f9", marginBottom: 8 }}>Video Published! 🎉</div>
+                      <div style={{ fontSize: 13, color: "#64748b", marginBottom: 24, lineHeight: 1.8 }}>
+                        Your video <strong style={{ color: "#e2e8f0" }}>"{videoTitle}"</strong> has been successfully published<br />
+                        and now appears on your Facebook Page: <strong style={{ color: "#60a5fa" }}>{fbPage}</strong>
+                      </div>
+                      {videoPostId && <div style={{ fontSize: 11, color: "#334155", marginBottom: 20 }}>Post ID: {videoPostId}</div>}
+                      <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+                        <button className="vxcp-btn-fb" style={{ width: "auto", padding: "11px 24px", fontSize: 13 }} onClick={() => window.open("https://www.facebook.com", "_blank")}>
+                          <Facebook size={14} /> View on Facebook
+                        </button>
+                        <button className="vxcp-btn-secondary" style={{ width: "auto", padding: "11px 24px", fontSize: 13 }} onClick={() => { setVideoPosted(false); setVideoFile(null); setVideoTitle(""); setVideoDesc(""); }}>
+                          Post Another Video
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* ══════════ REGULAR POST FLOW ══════════ */}
+              {postType === "post" && linkedAccounts.length === 0 ? (
+
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ textAlign: "center", padding: "80px 40px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 24 }}>
                   <div style={{ width: 72, height: 72, borderRadius: 20, background: "rgba(234,179,8,0.1)", border: "1px solid rgba(234,179,8,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
                     <Lock size={32} color="#eab308" />
