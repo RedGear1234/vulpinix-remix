@@ -31,6 +31,7 @@ import EngagementDashboardPage from "./pages/EngagementDashboardPage";
 import HashtagTrackingPage from "./pages/HashtagTrackingPage";
 import CommunityManagementPage from "./pages/CommunityManagementPage";
 import AdsDashboardPage from "./pages/AdsDashboardPage";
+import BrandedContentPage from "./pages/BrandedContentPage";
 
 export const router = createBrowserRouter([
   {
@@ -152,6 +153,10 @@ export const router = createBrowserRouter([
       {
         path: "dashboard/ads",
         Component: AdsDashboardPage,
+      },
+      {
+        path: "dashboard/branded-content",
+        Component: BrandedContentPage,
       },
 
       {

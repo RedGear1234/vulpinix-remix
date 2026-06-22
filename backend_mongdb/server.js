@@ -45,6 +45,7 @@ app.use("/api/users", require("./API routes/userroutes"));
 app.use("/api/social", require("./API routes/socialRoutes"));
 app.use("/api/agent",   require("./API routes/agentRoutes"));
 app.use("/api/ads",    require("./API routes/adsRoutes"));
+app.use("/api/branded-content", require("./API routes/brandedContentRoutes"));
 app.use("/api/webhook", require("./API routes/webhookRoutes"));
 
 app.get("/", (req, res) => {

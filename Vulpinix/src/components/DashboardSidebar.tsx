@@ -189,7 +189,7 @@ const SB = `
     transition: max-height 0.25s ease, opacity 0.2s ease;
   }
   .vxsb-sub-nav.collapsed { max-height: 0; opacity: 0; pointer-events: none; }
-  .vxsb-sub-nav.expanded  { max-height: 260px; opacity: 1; }
+  .vxsb-sub-nav.expanded  { max-height: 320px; opacity: 1; }
   .vxsb-sub-link {
     display: flex;
     align-items: center;
@@ -423,6 +423,7 @@ const ANALYTICS_SUB = [
   { label: "Engagement Dashboard", icon: <MessageSquare size={13} />, path: "/dashboard/engagement" },
   { label: "Instagram Insights", icon: <Instagram size={13} />, path: "/dashboard/instagram" },
   { label: "Ads Dashboard", icon: <DollarSign size={13} />, path: "/dashboard/ads" },
+  { label: "Branded Content", icon: <Briefcase size={13} />, path: "/dashboard/branded-content" },
   { label: "Hashtag Tracking", icon: <Hash size={13} />, path: "/dashboard/hashtags" },
   { label: "Inbox", icon: <Inbox size={13} />, path: "/dashboard/community" },
 ];
@@ -455,7 +456,8 @@ export function DashboardSidebar({ userName = "User", userInitial = "U" }: Props
     location.pathname.startsWith("/dashboard/engagement") ||
     location.pathname.startsWith("/dashboard/hashtags") ||
     location.pathname.startsWith("/dashboard/community") ||
-    location.pathname.startsWith("/dashboard/ads")
+    location.pathname.startsWith("/dashboard/ads") ||
+    location.pathname.startsWith("/dashboard/branded-content")
   );
 
   const isActive = (path: string) => location.pathname === path;
