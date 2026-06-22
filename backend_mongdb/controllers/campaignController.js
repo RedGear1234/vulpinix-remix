@@ -27,6 +27,7 @@ const publishCampaign = async (campaign) => {
       platforms,
       adImage,
       adVideo,
+      videoTitle,
       userEmail,
       userId,
       campaignName,
@@ -180,11 +181,50 @@ const publishCampaign = async (campaign) => {
               } else {
                 // --- STEP 4: Publish to Facebook ---
                 if (isFacebookSelected) {
-                  console.log("🔍 [FB] Publishing to Facebook Page feed...");
+                  console.log("🔍 [FB] Publishing to Facebook Page...");
                   try {
-                    if (publicImageUrl) {
-                      // Post with image via /photos (published=true)
-                      const FormData = require('form-data');
+                    const FormData = require('form-data');
+
+                    if (adVideo && adVideo.startsWith('data:video')) {
+                      // ── VIDEO POST ──────────────────────────────────────────
+                      console.log("🎬 [FB] Detected video payload — uploading to /{pageId}/videos...");
+                      const base64Data = adVideo.split(';base64,').pop();
+                      const videoBuffer = Buffer.from(base64Data, 'base64');
+
+                      // Detect MIME type from data URI (e.g. data:video/mp4;base64,...)
+                      const mimeMatch = adVideo.match(/data:(video\/[^;]+);base64,/);
+                      const mimeType = mimeMatch ? mimeMatch[1] : 'video/mp4';
+                      const ext = mimeType.split('/')[1] || 'mp4';
+
+                      const videoForm = new FormData();
+                      videoForm.append('source', videoBuffer, {
+                        filename: `post_video.${ext}`,
+                        contentType: mimeType
+                      });
+                      videoForm.append('description', adCaption || adCopyText || campaignName || '');
+                      // title is the video title if provided, else campaign name
+                      const vtitle = videoTitle || campaignName || 'Video Post';
+                      videoForm.append('title', vtitle);
+                      videoForm.append('access_token', pageToken);
+
+                      console.log(`🎬 [FB] Uploading ${(videoBuffer.length / 1024 / 1024).toFixed(2)} MB video (${mimeType}) to page ${pageId}...`);
+                      const fbVideoRes = await axios.post(
+                        `https://graph.facebook.com/v21.0/${pageId}/videos`,
+                        videoForm,
+                        {
+                          headers: videoForm.getHeaders(),
+                          maxBodyLength: Infinity,
+                          maxContentLength: Infinity,
+                          timeout: 120000 // 2 min timeout for large videos
+                        }
+                      );
+                      const videoId = fbVideoRes.data?.id;
+                      console.log("✅ [FB] Video post success. Video ID:", videoId);
+                      isPublishedAny = true;
+                      publishResults.facebook = { status: "success", id: videoId };
+
+                    } else if (publicImageUrl) {
+                      // ── IMAGE POST ──────────────────────────────────────────
                       const fbForm = new FormData();
                       const base64Data = adImage.split(';base64,').pop();
                       const imageBuffer = Buffer.from(base64Data, 'base64');
@@ -192,16 +232,17 @@ const publishCampaign = async (campaign) => {
                       fbForm.append('message', adCaption || adCopyText || campaignName);
                       fbForm.append('access_token', pageToken);
                       const fbRes = await axios.post(
-                        `https://graph.facebook.com/v18.0/${pageId}/photos`,
+                        `https://graph.facebook.com/v21.0/${pageId}/photos`,
                         fbForm,
                         { headers: fbForm.getHeaders() }
                       );
                       console.log("✅ [FB] Photo post success. Photo ID:", fbRes.data.id);
                       isPublishedAny = true;
                       publishResults.facebook = { status: "success", id: fbRes.data.id };
+
                     } else {
-                      // Text-only post
-                      const fbRes = await axios.post(`https://graph.facebook.com/v18.0/${pageId}/feed`, {
+                      // ── TEXT-ONLY POST ──────────────────────────────────────
+                      const fbRes = await axios.post(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
                         message: adCaption || adCopyText || campaignName,
                         access_token: pageToken
                       });
@@ -211,10 +252,11 @@ const publishCampaign = async (campaign) => {
                     }
                   } catch (fbErr) {
                     const errorMsg = fbErr.response?.data?.error?.message || fbErr.message;
-                    console.error("❌ [FB] Publish failed:", errorMsg);
+                    console.error("❌ [FB] Publish failed:", errorMsg, fbErr.response?.data);
                     publishResults.facebook = { status: "failed", error: errorMsg };
                   }
                 }
+
 
                 // --- STEP 5: Publish to Instagram ---
                 if (isInstagramSelected) {
