@@ -25,16 +25,21 @@ const getOAuthUrl = (platform, userId) => {
         'public_profile',
         'email',
         'instagram_basic',
+        'instagram_business_basic',
         'instagram_content_publish',
+        'instagram_business_content_publish',
         'instagram_manage_insights',
+        'instagram_business_manage_insights',
         'instagram_manage_comments',
+        'instagram_branded_content_ads_brand',
         'pages_show_list',
         'pages_read_engagement',
         'pages_manage_posts',
         'pages_manage_ads',
-        'read_insights'
+        'read_insights',
+        'ads_read'
       ].join(',');
-      return `https://www.facebook.com/v18.0/dialog/oauth?client_id=${fbAppId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${encodeURIComponent(stateString)}&scope=${fbScope}&auth_type=rerequest`;
+      return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${fbAppId}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&state=${encodeURIComponent(stateString)}&scope=${fbScope}&auth_type=rerequest`;
       
     case 'twitter':
       const twitterClientId = process.env.TWITTER_CLIENT_ID;
